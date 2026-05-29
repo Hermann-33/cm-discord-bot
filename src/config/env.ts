@@ -17,6 +17,7 @@ const envSchema = z.object({
   DISCORD_LEADERBOARD_CHANNEL_ID: requiredString,
   DISCORD_LEADERBOARD_MESSAGE_ID: optionalMessageId,
   DISCORD_COMMAND_CHANNEL_ID: requiredString,
+  DISCORD_AURA_COMMAND_BLOCKED_CHANNEL_ID: requiredString,
   DISCORD_CLIENT_ID: requiredString,
   DISCORD_GUILD_ID: requiredString,
   SUPABASE_URL: requiredString.url(),
@@ -28,6 +29,7 @@ export type AppConfig = {
   discordLeaderboardChannelId: string;
   discordLeaderboardMessageId?: string;
   discordCommandChannelId: string;
+  discordAuraCommandBlockedChannelId: string;
   discordClientId: string;
   discordGuildId: string;
   supabaseUrl: string;
@@ -50,6 +52,7 @@ export function loadConfig(): AppConfig {
     discordLeaderboardChannelId: parsed.data.DISCORD_LEADERBOARD_CHANNEL_ID,
     discordLeaderboardMessageId: parsed.data.DISCORD_LEADERBOARD_MESSAGE_ID,
     discordCommandChannelId: parsed.data.DISCORD_COMMAND_CHANNEL_ID,
+    discordAuraCommandBlockedChannelId: parsed.data.DISCORD_AURA_COMMAND_BLOCKED_CHANNEL_ID,
     discordClientId: parsed.data.DISCORD_CLIENT_ID,
     discordGuildId: parsed.data.DISCORD_GUILD_ID,
     supabaseUrl: parsed.data.SUPABASE_URL,

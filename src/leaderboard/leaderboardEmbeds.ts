@@ -1,9 +1,20 @@
-import { EmbedBuilder } from "discord.js";
+import {
+  ContainerBuilder,
+  MessageFlags,
+  SeparatorBuilder,
+  TextDisplayBuilder,
+  type MessageCreateOptions,
+  type MessageEditOptions
+} from "discord.js";
 import type { AuraAmount, LeaderboardRow, LeaderboardType } from "./types";
 
 const PAGE_SIZE = 10;
 const MAX_DISPLAY_NAME_LENGTH = 30;
-const CM_GREEN = 0x22c55e;
+const LEADERBOARD_DISPLAY_NAME_LENGTH = 18;
+const RANK_LABEL_WIDTH = 2;
+const AURA_LABEL_WIDTH = 9;
+export const CM_GREEN = 0x22c55e;
+export const AURA_EMOJI = "<:aura:1509816131282669688>";
 
 const medalByRank: Record<number, string> = {
   1: "\u{1F947}",
@@ -25,41 +36,72 @@ function escapeDiscordMarkdown(value: string): string {
   return value.replace(/([\\`*_{}[\]()#+\-.!|>~])/g, "\\$1");
 }
 
-export function sanitizeDisplayName(rawName: string): string {
+export function sanitizeDisplayName(
+  rawName: string,
+  maxLength = MAX_DISPLAY_NAME_LENGTH
+): string {
   const normalized = rawName
     .replace(/[\r\n]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 
   const fallbackName = normalized.length > 0 ? normalized : "Unknown Discord user";
-  const truncated = truncateName(fallbackName);
+  const truncated = truncateName(fallbackName, maxLength);
 
   return escapeDiscordMarkdown(truncated).replace(/@/g, "@\u200B");
 }
 
 function formatRankLabel(rank: number): string {
-  return medalByRank[rank] ?? `**${rank}.**`;
+  return `\`${String(rank).padStart(RANK_LABEL_WIDTH, " ")}\``;
 }
 
-export function formatAura(aura: AuraAmount): string {
+function formatRankSuffix(rank: number): string {
+  const medal = medalByRank[rank];
+  return medal ? ` ${medal}` : "";
+}
+
+export function formatAura(aura: AuraAmount | null | undefined): string {
+  if (aura === null || aura === undefined) {
+    return "0";
+  }
+
   if (typeof aura === "number") {
-    return new Intl.NumberFormat("en-US").format(aura);
+    return Number.isFinite(aura)
+      ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(aura)
+      : "0";
   }
 
-  return aura.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const normalized = aura.trim();
+
+  if (!/^\d+$/.test(normalized)) {
+    return "0";
+  }
+
+  return normalized.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-function formatLeaderboardLine(row: LeaderboardRow): string {
-  const displayName = sanitizeDisplayName(row.discord_display_name);
-  return `${formatRankLabel(row.rank)} **${displayName}** \u2014 **${formatAura(row.aura)}**`;
+export function formatAuraLabel(aura: AuraAmount | null | undefined): string {
+  return `\`${formatAura(aura).padStart(AURA_LABEL_WIDTH, " ")}\``;
 }
 
-function buildLeaderboardDescription(rows: LeaderboardRow[], intro: string): string {
+function formatLeaderboardUserName(row: LeaderboardRow): string {
+  return sanitizeDisplayName(row.discord_display_name, LEADERBOARD_DISPLAY_NAME_LENGTH);
+}
+
+function formatLeaderboardRow(row: LeaderboardRow): string {
+  const formattedRow = `${formatRankLabel(row.rank)} ${formatAuraLabel(
+    row.aura
+  )} ${formatLeaderboardUserName(row)}${formatRankSuffix(row.rank)}`;
+
+  return row.rank === 1 ? `### ${formattedRow}` : formattedRow;
+}
+
+function buildLeaderboardRowsText(rows: LeaderboardRow[]): string {
   if (rows.length === 0) {
-    return `${intro}\n\nNo linked Discord users with Aura yet.`;
+    return "No linked users yet.";
   }
 
-  return `${intro}\n\n${rows.map(formatLeaderboardLine).join("\n")}`;
+  return rows.map(formatLeaderboardRow).join("\n");
 }
 
 function getRowsByType(rows: LeaderboardRow[], leaderboardType: LeaderboardType): LeaderboardRow[] {
@@ -69,35 +111,64 @@ function getRowsByType(rows: LeaderboardRow[], leaderboardType: LeaderboardType)
     .slice(0, PAGE_SIZE);
 }
 
-function buildLeaderboardEmbed(
+function buildLeaderboardBoard(
   rows: LeaderboardRow[],
   leaderboardType: LeaderboardType,
   title: string,
   intro: string
-): EmbedBuilder {
+): ContainerBuilder {
   const leaderboardRows = getRowsByType(rows, leaderboardType);
 
-  return new EmbedBuilder()
-    .setTitle(title)
-    .setDescription(buildLeaderboardDescription(leaderboardRows, intro))
-    .setColor(CM_GREEN)
-    .setFooter({ text: "Cheater's Market Aura \u2022 Updates every 5 minutes" })
-    .setTimestamp(new Date());
+  return new ContainerBuilder()
+    .setAccentColor(CM_GREEN)
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(`## ${title}\n\n${intro}`),
+      new TextDisplayBuilder().setContent(buildLeaderboardRowsText(leaderboardRows))
+    );
 }
 
-export function buildLeaderboardEmbeds(rows: LeaderboardRow[]): EmbedBuilder[] {
+function buildLeaderboardComponents(rows: LeaderboardRow[]) {
+  const updatedAtUnix = Math.floor(Date.now() / 1000);
+
   return [
-    buildLeaderboardEmbed(
+    new TextDisplayBuilder().setContent(
+      `## ${AURA_EMOJI} Cheater's Market Aura Leaderboard`
+    ),
+    buildLeaderboardBoard(
       rows,
       "lifetime",
       "Top 10 Lifetime Aura Earned",
       "Top linked Discord users ranked by lifetime earned Aura."
     ),
-    buildLeaderboardEmbed(
+    new SeparatorBuilder().setDivider(true),
+    buildLeaderboardBoard(
       rows,
       "available",
       "Top 10 Available Aura",
       "Top linked Discord users ranked by available Aura balance."
+    ),
+    new TextDisplayBuilder().setContent(
+      `-# Updated <t:${updatedAtUnix}:R> \u2022 Updates every 5 minutes`
     )
   ];
+}
+
+export function buildLeaderboardCreatePayload(
+  rows: LeaderboardRow[]
+): Omit<MessageCreateOptions, "allowedMentions"> {
+  return {
+    flags: MessageFlags.IsComponentsV2,
+    components: buildLeaderboardComponents(rows)
+  };
+}
+
+export function buildLeaderboardEditPayload(
+  rows: LeaderboardRow[]
+): Omit<MessageEditOptions, "allowedMentions"> {
+  return {
+    flags: MessageFlags.IsComponentsV2,
+    components: buildLeaderboardComponents(rows),
+    content: null,
+    embeds: []
+  };
 }

@@ -7,7 +7,10 @@ import {
   fetchLeaderboardMessage
 } from "../discord/leaderboardMessage";
 import { logger, sanitizeError } from "../logger/logger";
-import { buildLeaderboardEmbeds } from "./leaderboardEmbeds";
+import {
+  buildLeaderboardCreatePayload,
+  buildLeaderboardEditPayload
+} from "./leaderboardEmbeds";
 import { SupabaseLeaderboardClient } from "./supabaseLeaderboardClient";
 
 const UPDATE_INTERVAL_MS = 5 * 60 * 1000;
@@ -48,12 +51,12 @@ export class LeaderboardUpdater {
 
   private async createInitialMessageAndExit(): Promise<void> {
     const rows = await this.leaderboardClient.fetchLeaderboards();
-    const embeds = buildLeaderboardEmbeds(rows);
+    const messagePayload = buildLeaderboardCreatePayload(rows);
     const channel = await fetchLeaderboardChannel(
       this.discordClient,
       this.config.discordLeaderboardChannelId
     );
-    const message = await createLeaderboardMessage(channel, { embeds });
+    const message = await createLeaderboardMessage(channel, messagePayload);
 
     logger.info("leaderboard message created", {
       messageId: message.id
@@ -71,7 +74,7 @@ export class LeaderboardUpdater {
 
     try {
       const rows = await this.leaderboardClient.fetchLeaderboards();
-      const embeds = buildLeaderboardEmbeds(rows);
+      const messagePayload = buildLeaderboardEditPayload(rows);
       const channel = await fetchLeaderboardChannel(
         this.discordClient,
         this.config.discordLeaderboardChannelId
@@ -81,7 +84,7 @@ export class LeaderboardUpdater {
         this.config.discordLeaderboardMessageId as string
       );
 
-      await editLeaderboardMessage(message, { embeds });
+      await editLeaderboardMessage(message, messagePayload);
       logger.info("leaderboard message edited");
       return "refreshed";
     } catch (error) {
