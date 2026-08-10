@@ -4,6 +4,7 @@ import {
   type ChatInputCommandInteraction
 } from "discord.js";
 import type { AppConfig } from "../config/env";
+import { safeAllowedMentions } from "../discord/leaderboardMessage";
 import { logger, sanitizeError } from "../logger/logger";
 import { LeaderboardUpdater } from "../leaderboard/leaderboardUpdater";
 
@@ -15,7 +16,8 @@ async function replyEphemeral(
 ): Promise<void> {
   await interaction.reply({
     content,
-    flags: MessageFlags.Ephemeral
+    flags: MessageFlags.Ephemeral,
+    allowedMentions: safeAllowedMentions
   });
 }
 
@@ -32,6 +34,11 @@ export async function handleRefreshLeaderboardCommand(
   leaderboardUpdater: LeaderboardUpdater
 ): Promise<void> {
   if (interaction.commandName !== REFRESH_LEADERBOARD_COMMAND_NAME) {
+    return;
+  }
+
+  if (interaction.guildId !== config.discordGuildId) {
+    await replyEphemeral(interaction, "This command is not available in this server.");
     return;
   }
 
@@ -55,7 +62,15 @@ export async function handleRefreshLeaderboardCommand(
   });
 
   try {
-    const refreshResult = await leaderboardUpdater.refreshNow({ failOnError: true });
+    const refreshResult = await leaderboardUpdater.refreshNow({
+      failOnError: true,
+      context: {
+        mode: "manual",
+        actorDiscordUserId: interaction.user.id,
+        eventId: interaction.id,
+        source: "interaction"
+      }
+    });
 
     if (refreshResult === "already-running") {
       await interaction.editReply("Leaderboard refresh already in progress.");

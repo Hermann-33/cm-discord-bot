@@ -14,3 +14,17 @@ export type UserAuraRow = {
   available_aura: AuraAmount;
   lifetime_earned_aura: AuraAmount;
 };
+
+export type LeaderboardFetchContext =
+  | { mode: "scheduled" }
+  | {
+      mode: "manual";
+      actorDiscordUserId: string;
+      eventId: string;
+      source: "interaction" | "message";
+    };
+
+export interface AuraReadClient {
+  fetchLeaderboards(context?: LeaderboardFetchContext): Promise<LeaderboardRow[]>;
+  fetchUserAura(discordUserId: string): Promise<UserAuraRow | null>;
+}

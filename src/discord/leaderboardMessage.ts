@@ -7,7 +7,12 @@ import type {
   TextBasedChannel
 } from "discord.js";
 
-export const safeAllowedMentions: MessageMentionOptions = { parse: [] };
+export const safeAllowedMentions: MessageMentionOptions = {
+  parse: [],
+  users: [],
+  roles: [],
+  repliedUser: false
+};
 
 type LeaderboardChannel = TextBasedChannel & {
   send(options: MessageCreateOptions): Promise<Message>;

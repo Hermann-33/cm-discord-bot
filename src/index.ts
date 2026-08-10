@@ -6,6 +6,8 @@ import { createDiscordClient } from "./discord/discordClient";
 import { logger, sanitizeError } from "./logger/logger";
 import { SupabaseLeaderboardClient } from "./leaderboard/supabaseLeaderboardClient";
 import { LeaderboardUpdater } from "./leaderboard/leaderboardUpdater";
+import { InternalDiscordApiClient } from "./internalApi/client";
+import { handleSupportLookupCommand } from "./commands/supportLookupCommands";
 
 let config: AppConfig;
 
@@ -18,7 +20,10 @@ try {
 }
 
 const discordClient = createDiscordClient();
-const leaderboardClient = new SupabaseLeaderboardClient(config);
+const internalApiClient = config.internalApi.enabled
+  ? new InternalDiscordApiClient(config.internalApi, config.discordGuildId)
+  : undefined;
+const leaderboardClient = internalApiClient ?? new SupabaseLeaderboardClient(config.supabase!);
 const leaderboardUpdater = new LeaderboardUpdater(config, discordClient, leaderboardClient);
 
 let isShuttingDown = false;
@@ -73,6 +78,14 @@ discordClient.on(Events.InteractionCreate, (interaction) => {
       logger.error("sanitized interaction failure", sanitizeError(error));
     }
   );
+
+  if (internalApiClient) {
+    void handleSupportLookupCommand(interaction, config, internalApiClient).catch(
+      (error: unknown) => {
+        logger.error("sanitized support interaction failure", sanitizeError(error));
+      }
+    );
+  }
 });
 
 discordClient.login(config.discordBotToken).catch(async (error: unknown) => {

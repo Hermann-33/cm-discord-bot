@@ -11,7 +11,7 @@ import {
   buildLeaderboardCreatePayload,
   buildLeaderboardEditPayload
 } from "./leaderboardEmbeds";
-import { SupabaseLeaderboardClient } from "./supabaseLeaderboardClient";
+import type { AuraReadClient, LeaderboardFetchContext } from "./types";
 
 const UPDATE_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -24,7 +24,7 @@ export class LeaderboardUpdater {
   constructor(
     private readonly config: AppConfig,
     private readonly discordClient: Client,
-    private readonly leaderboardClient: SupabaseLeaderboardClient
+    private readonly leaderboardClient: AuraReadClient
   ) {}
 
   async start(): Promise<"running" | "bootstrap-complete"> {
@@ -64,7 +64,10 @@ export class LeaderboardUpdater {
     logger.info("add leaderboard message id to env before starting the update loop");
   }
 
-  async refreshNow(options: { failOnError: boolean }): Promise<LeaderboardRefreshResult> {
+  async refreshNow(options: {
+    failOnError: boolean;
+    context?: LeaderboardFetchContext;
+  }): Promise<LeaderboardRefreshResult> {
     if (this.isUpdating) {
       logger.warn("update skipped due to overlap");
       return "already-running";
@@ -73,7 +76,7 @@ export class LeaderboardUpdater {
     this.isUpdating = true;
 
     try {
-      const rows = await this.leaderboardClient.fetchLeaderboards();
+      const rows = await this.leaderboardClient.fetchLeaderboards(options.context);
       const messagePayload = buildLeaderboardEditPayload(rows);
       const channel = await fetchLeaderboardChannel(
         this.discordClient,

@@ -7,11 +7,12 @@ import {
   formatAuraLabel,
   sanitizeDisplayName
 } from "../leaderboard/leaderboardEmbeds";
-import { SupabaseLeaderboardClient } from "../leaderboard/supabaseLeaderboardClient";
-import type { UserAuraRow } from "../leaderboard/types";
+import type { AuraReadClient, UserAuraRow } from "../leaderboard/types";
 
 const commandAllowedMentions: MessageMentionOptions = {
   parse: [],
+  users: [],
+  roles: [],
   repliedUser: false
 };
 
@@ -70,7 +71,7 @@ function buildAuraBalanceEmbed(userAura: UserAuraRow): EmbedBuilder {
 export async function handleAuraCommand(
   message: Message,
   config: AppConfig,
-  leaderboardClient: SupabaseLeaderboardClient
+  leaderboardClient: AuraReadClient
 ): Promise<void> {
   if (message.author.bot) {
     return;

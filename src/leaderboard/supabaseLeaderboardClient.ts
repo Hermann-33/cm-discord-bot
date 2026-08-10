@@ -1,7 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import type { AppConfig } from "../config/env";
-import type { LeaderboardRow, UserAuraRow } from "./types";
+import type { AuraReadClient, LeaderboardRow, UserAuraRow } from "./types";
 
 const auraAmountSchema = z.union([
   z.number().int().nonnegative(),
@@ -29,11 +28,11 @@ const userAuraResponseSchema = z.union([
   z.null()
 ]);
 
-export class SupabaseLeaderboardClient {
+export class SupabaseLeaderboardClient implements AuraReadClient {
   private readonly supabase: SupabaseClient;
 
-  constructor(config: AppConfig) {
-    this.supabase = createClient(config.supabaseUrl, config.supabaseServiceRoleKey, {
+  constructor(config: { url: string; serviceRoleKey: string }) {
+    this.supabase = createClient(config.url, config.serviceRoleKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
