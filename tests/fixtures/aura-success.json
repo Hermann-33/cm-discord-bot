@@ -1,0 +1,30 @@
+{
+  "embeds": [
+    {
+      "title": "@​Alice\\_\\*'s Aura",
+      "description": "Your linked Cheater's Market Aura balance.",
+      "color": 2278750,
+      "fields": [
+        {
+          "name": "Available",
+          "value": "<:aura:1509816131282669688> `      123`",
+          "inline": true
+        },
+        {
+          "name": "Lifetime Earned",
+          "value": "<:aura:1509816131282669688> `      456`",
+          "inline": true
+        }
+      ],
+      "footer": {
+        "text": "Cheater's Market Aura"
+      }
+    }
+  ],
+  "allowedMentions": {
+    "parse": [],
+    "users": [],
+    "roles": [],
+    "repliedUser": false
+  }
+}

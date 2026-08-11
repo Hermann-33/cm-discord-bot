@@ -1,0 +1,7 @@
+{
+  "options": [],
+  "name": "refresh-leaderboard",
+  "description": "Force refresh the Aura leaderboard message.",
+  "default_member_permissions": "32",
+  "type": 1
+}

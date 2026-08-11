@@ -1,0 +1,45 @@
+{
+  "flags": 32768,
+  "components": [
+    {
+      "type": 10,
+      "content": "## <:aura:1509816131282669688> Cheater's Market Aura Leaderboard"
+    },
+    {
+      "type": 17,
+      "accent_color": 2278750,
+      "components": [
+        {
+          "type": 10,
+          "content": "## Top 10 Lifetime Aura Earned\n\nTop linked Discord users ranked by lifetime earned Aura."
+        },
+        {
+          "type": 10,
+          "content": "### ` 1` `   12,345` Alice 🥇\n` 2` `      900` @​Bob\\_\\* 🥈"
+        }
+      ]
+    },
+    {
+      "type": 14,
+      "divider": true
+    },
+    {
+      "type": 17,
+      "accent_color": 2278750,
+      "components": [
+        {
+          "type": 10,
+          "content": "## Top 10 Available Aura\n\nTop linked Discord users ranked by available Aura balance."
+        },
+        {
+          "type": 10,
+          "content": "### ` 1` `      500` Anonymous 🥇"
+        }
+      ]
+    },
+    {
+      "type": 10,
+      "content": "-# Updated <t:1767225600:R> • Updates every 5 minutes"
+    }
+  ]
+}

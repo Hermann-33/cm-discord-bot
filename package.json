@@ -1,0 +1,29 @@
+{
+  "name": "cm-discord-bot",
+  "version": "2.0.0",
+  "description": "Cheater's Market Discord bot backed by the Internal Integrations API.",
+  "main": "dist/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/api/signing.test.ts tests/api/client.test.ts tests/config/env.test.ts tests/commands/aura.test.ts tests/commands/refreshLeaderboard.test.ts tests/leaderboard/format.test.ts tests/leaderboard/service.test.ts tests/scheduler/leaderboardSchedule.test.ts tests/scheduler/shutdown.test.ts tests/discord/registerCommands.test.ts tests/logger/redaction.test.ts tests/architecture.test.ts",
+    "register:commands": "tsx src/discord/registerCommands.ts",
+    "start": "node dist/index.js"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "discord.js": "14.27.0",
+    "dotenv": "17.4.2",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "25.9.1",
+    "tsx": "4.22.3",
+    "typescript": "6.0.3"
+  }
+}
