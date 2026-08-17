@@ -58,7 +58,6 @@ const envSchema = z.object({
   DISCORD_AURA_COMMAND_BLOCKED_CHANNEL_ID: snowflake,
   DISCORD_LEADERBOARD_MESSAGE_ID: optionalSnowflake,
   BOT_ADMIN_USER_IDS: optionalSnowflakeList,
-  BOT_ADMIN_COMMAND_CHANNEL_ID: optionalSnowflake,
   BOT_AUDIT_LOG_CHANNEL_ID: optionalSnowflake,
   CM_INTERNAL_INTEGRATIONS_API_ORIGIN: trimmedRequiredString.refine(isOriginOnlyHttps),
   CM_INTERNAL_INTEGRATIONS_API_CLIENT_ID: integrationId,
@@ -84,7 +83,6 @@ export type AppConfig = {
   discordAuraCommandBlockedChannelId: string;
   discordLeaderboardMessageId?: string;
   botAdminUserIds: readonly string[];
-  botAdminCommandChannelId?: string;
   botAuditLogChannelId?: string;
   internalApi: InternalApiConfig;
 };
@@ -108,7 +106,6 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     discordAuraCommandBlockedChannelId: parsed.data.DISCORD_AURA_COMMAND_BLOCKED_CHANNEL_ID,
     discordLeaderboardMessageId: parsed.data.DISCORD_LEADERBOARD_MESSAGE_ID,
     botAdminUserIds: parsed.data.BOT_ADMIN_USER_IDS ?? [],
-    botAdminCommandChannelId: parsed.data.BOT_ADMIN_COMMAND_CHANNEL_ID,
     botAuditLogChannelId: parsed.data.BOT_AUDIT_LOG_CHANNEL_ID,
     internalApi: {
       origin: new URL(parsed.data.CM_INTERNAL_INTEGRATIONS_API_ORIGIN).origin,
