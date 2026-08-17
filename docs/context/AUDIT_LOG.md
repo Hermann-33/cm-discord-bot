@@ -44,28 +44,26 @@ Exhaustive audit of active bot source, all root tests/fixtures, package/build/en
 - `/refresh-leaderboard` has explicit runtime guild/channel/permission guards;
 - Components V2 leaderboard and overlap lock match implementation;
 - legacy is excluded and regression-tested;
-- architecture tests enforce the two-read-operation API boundary.
+- architecture tests enforce the two-read-operation API boundary at that historical point.
 
 ### Material findings
 
-- no GitHub CI/status exists at current head, and fresh local test/typecheck/build/npm-audit execution was unavailable;
-- command registration currently requires complete runtime config including Internal API HMAC material;
-- logger sanitization is not universal secret/PII redaction;
-- Node type definitions are newer than the minimum runtime;
-- `.gitignore` does not ignore ZIP archives;
-- smaller defensive/test gaps remain.
+- no GitHub CI/status existed at audited head, and fresh local test/typecheck/build/npm-audit execution was unavailable;
+- command registration required complete runtime config including Internal API HMAC material;
+- logger sanitization was not universal secret/PII redaction;
+- Node type definitions were newer than minimum runtime;
+- `.gitignore` did not ignore ZIP archives;
+- smaller defensive/test gaps remained.
 
 ### Backend drift discovered
 
-Live DB now contains service-role-only internal integration adjustment functions for `users.aura.adjust` and `users.wallet.adjust` with persistent idempotency/request-hash protection and audit integration. This did not, by itself, prove bot-facing HTTP mutation endpoints/permission existed.
+Live DB contained service-role-only internal integration adjustment functions for `users.aura.adjust` and `users.wallet.adjust` with persistent idempotency/request-hash protection and audit integration. This did not, by itself, prove bot-facing HTTP mutation endpoints/permission existed.
 
 ### Historical audit conclusion later superseded
 
-At audit time, ADR-0003 classified `cm aura` as slash-migration debt. The audit therefore recommended conversion to `/aura` and eventual Message Content removal.
+At audit time, ADR-0003 classified `cm aura` as slash-migration debt. That conclusion is superseded by ADR-0005, which intentionally keeps `cm aura` as a customer message command and reserves slash commands for staff/admin operations.
 
-That product conclusion is **superseded by ADR-0005**. Current policy intentionally keeps `cm aura` as a customer message command and reserves slash commands for staff/admin operations. This correction does not alter the audit's source/security findings about how `cm aura` is currently guarded.
-
-Verdict: `COMPLETE` for source/static/live-metadata audit; `PARTIAL` for production-hardening readiness because execution gates remain.
+Verdict: `COMPLETE` for source/static/live-metadata audit; `PARTIAL` for production-hardening readiness because execution gates remained.
 
 ---
 
@@ -101,19 +99,19 @@ Authoritative backend Internal Integrations API and bot-quickstart documentation
 
 ### Material corrections
 
-- production operation catalog is broader than the bot currently consumes;
+- production operation catalog is broader than the bot initially consumed;
 - `users.aura.adjust` is contract-documented at `POST /api/internal/integrations/v1/users/aura/adjust`;
 - `users.wallet.adjust` is contract-documented at `POST /api/internal/integrations/v1/users/wallet/adjust`;
 - mutation retries require stable business idempotency key/body with fresh transport timestamp/nonce/signature;
 - exact per-client `allowedOperations` means endpoint existence is not bot authorization;
-- previous context saying Aura/wallet HTTP paths were unverified is obsolete.
+- previous context saying Aura/wallet HTTP paths were unverified became obsolete.
 
-### Unresolved contract/security issues
+### Unresolved contract/security issues at that point
 
-- bot credential operation scope remains unverified;
-- exact DTOs must be read before implementing new typed client methods;
-- authoritative full contract says external identity is lookup-only while quickstart mutation examples use `external_identity`; mutation selector support requires route/source verification;
-- ADR-0004 requires backend-authoritative preview/confirm or equivalent confirmation state, while supplied Aura/wallet docs expose direct execute endpoints and no dedicated adjustment preview endpoint.
+- bot credential operation scope remained unverified;
+- exact DTOs needed verification before new typed client methods;
+- selector prose conflicted with quickstart examples;
+- ADR-0004 required backend-authoritative preview/confirm or equivalent confirmation state, while supplied Aura/wallet docs exposed direct execute endpoints and no dedicated adjustment preview endpoint.
 
 ### Scope and safety
 
@@ -121,38 +119,87 @@ No production bot code, Discord state, website source, API credential, Supabase 
 
 ### Verdict
 
-`COMPLETE` for repository documentation re-baseline; implementation readiness remains gated by the unresolved items above.
+`COMPLETE` for repository documentation re-baseline; implementation readiness remained gated by unresolved items above.
 
 ---
 
-## 2026-08-17 — TASK-CM-ADMIN-001 — Private user/order admin console candidate
+## 2026-08-17 — TASK-CM-ADMIN-001 — Private user/order admin console
 
-### Branch and scope
+### Initial implementation branch
 
-Implemented only on `task/cm-admin-console`; production `master` was not changed. `/cm` was not registered/deployed and no live Internal API mutation was executed.
+Implemented first on `task/cm-admin-console` without registering/deploying `/cm` or performing a live Internal API mutation.
 
 ### Verified dependency facts
 
-Website source was inspected read-only at commit `20f6cb52344bade858099febcec2d1c59312f2e5` before adding strict DTOs. It verifies: user overview returns at most 10 recent orders; order details and fulfillment diagnostics DTOs; canonical refund preview/execute; no manual-fulfillment mutation operation; and Aura/wallet adjustment request schemas use `userLookupSelectorSchema`, resolving the earlier selector-document discrepancy.
+Website source was inspected read-only at commit `20f6cb52344bade858099febcec2d1c59312f2e5` before adding strict DTOs. It verified: user overview returns at most ten recent orders; order details and fulfillment diagnostics DTOs; canonical refund preview/execute; no manual-fulfillment mutation operation; and Aura/wallet adjustment request schemas use `userLookupSelectorSchema`.
 
-### Candidate implementation
+### Implementation
 
 - `/cm user email:<email>` ephemeral Components V2 admin console;
-- exact guild/admin-channel/explicit-user-ID-whitelist checks on command/buttons/modals;
+- configured guild/admin-channel/explicit-user-ID-whitelist checks on command/buttons/modals under the then-current ADR-0004 policy;
 - operator-bound expiring component sessions;
 - user overview, latest-ten order paging, order detail and fulfillment diagnostics;
 - order-to-user navigation;
 - refund reason -> canonical preview -> explicit confirmation -> fresh re-preview -> idempotent execute -> backend/Discord audit;
 - blocked Aura/wallet/manual-fulfillment controls rather than unsafe shortcuts;
-- typed API client restricted to the required read/refund operations;
+- typed API client restricted to required read/refund operations;
 - focused tests and Node 22 CI workflow.
 
-Static review further hardened refund replay by freezing stable Discord provider/user-ID audit context in the proposal so a later username/display-name change cannot change the request body under the same idempotency key.
+Refund replay was hardened by freezing stable Discord provider/user-ID audit context so a later username/display-name change cannot change request body under the same idempotency key.
 
-### Verification result
+### Verification and merge completion
 
-GitHub Actions did not start a runner because the account reported recent payment failure or spending-limit status; zero workflow steps executed. Local TypeScript syntax transpilation reported zero syntax diagnostics and focused scans found no real secrets, direct DB path or Aura/wallet/purchase-processing execute path. These checks do not replace dependency-aware test/typecheck/build evidence.
+GitHub Actions could not start because of account billing/spending-limit state, so the branch was verified in a local Node environment. A small test-only typing fix was committed at `47a28323fdc2c2d18d1edc3f9952f0d817f481f1`.
+
+Final local gates before merge:
+
+- `npm ci` passed;
+- `npm test` passed 104/104;
+- `npm run typecheck` passed;
+- `npm run build` passed;
+- `git diff --check` passed;
+- focused security scans passed.
+
+The feature branch was pushed, `master` fast-forwarded to `47a28323fdc2c2d18d1edc3f9952f0d817f481f1`, and `origin/master` matched. No deployment, command registration, bot startup, environment modification, website change, production API call or refund occurred.
 
 ### Verdict
 
-`PARTIAL` pending executable `npm test`, `npm run typecheck`, `npm run build` and diff-check evidence plus subsequent review. No merge, API-scope provisioning, registration, deployment or live refund is authorized by this verdict.
+`COMPLETE` for repository implementation/merge. Operational provisioning, registration, deployment and controlled live testing remain separate gates.
+
+---
+
+## 2026-08-17 — TASK-CM-ADMIN-002 — Guild-wide `/cm` channel policy
+
+### Decision
+
+Product owner chose to allow explicitly whitelisted `/cm` administrators to use the private admin console from any channel in the configured Cheater's Market guild.
+
+This conflicts with ADR-0004's original mandatory admin-command-channel requirement, so ADR-0006 was added rather than rewriting historical ADR-0004. ADR-0006 supersedes only that channel requirement and keeps the configured-guild restriction, explicit user-ID whitelist, per-interaction reauthorization, confirmation/idempotency, backend authorization and audit controls.
+
+### Feature-branch implementation
+
+Branch:
+
+```text
+task/cm-admin-guild-scope
+```
+
+Changes drafted through the GitHub connector:
+
+- remove `BOT_ADMIN_COMMAND_CHANNEL_ID` from config and `.env.example`;
+- remove channel matching from shared `/cm` admin authorization;
+- keep exact guild + mandatory explicit user whitelist;
+- explicitly test successful `/cm` authorization/backend lookup from another guild channel;
+- keep wrong-guild/DM/non-whitelisted/missing-whitelist failures;
+- prevent active-source/environment reintroduction of the removed admin-channel variable;
+- preserve `/refresh-leaderboard` channel checks;
+- preserve refund audit-channel requirement;
+- update current governance/security/context documentation.
+
+### Verification state
+
+Executable Node test/typecheck/build/diff checks have not yet been run for TASK-CM-ADMIN-002 in this connector environment.
+
+### Verdict
+
+`PARTIAL` pending clean local/CI verification and merge. No deployment, command registration, environment modification, website change or production API mutation is part of this implementation step.
