@@ -13,7 +13,6 @@ function environment(): NodeJS.ProcessEnv {
     DISCORD_COMMAND_CHANNEL_ID: "123456789012345674",
     DISCORD_AURA_COMMAND_BLOCKED_CHANNEL_ID: "123456789012345675",
     BOT_ADMIN_USER_IDS: "123456789012345681, 123456789012345682",
-    BOT_ADMIN_COMMAND_CHANNEL_ID: "123456789012345680",
     BOT_AUDIT_LOG_CHANNEL_ID: "123456789012345683",
     CM_INTERNAL_INTEGRATIONS_API_ORIGIN: "https://cheaters.market",
     CM_INTERNAL_INTEGRATIONS_API_CLIENT_ID: "cm-discord-bot",
@@ -22,25 +21,29 @@ function environment(): NodeJS.ProcessEnv {
   };
 }
 
-test("parses optional admin whitelist and channels", () => {
+test("parses optional admin whitelist and audit channel", () => {
   const config = loadConfig(environment());
   assert.deepEqual(config.botAdminUserIds, [
     "123456789012345681",
     "123456789012345682"
   ]);
-  assert.equal(config.botAdminCommandChannelId, "123456789012345680");
   assert.equal(config.botAuditLogChannelId, "123456789012345683");
 });
 
 test("missing admin configuration keeps normal bot startup possible but admin controls fail closed", () => {
   const env = environment();
   delete env.BOT_ADMIN_USER_IDS;
-  delete env.BOT_ADMIN_COMMAND_CHANNEL_ID;
   delete env.BOT_AUDIT_LOG_CHANNEL_ID;
   const config = loadConfig(env);
   assert.deepEqual(config.botAdminUserIds, []);
-  assert.equal(config.botAdminCommandChannelId, undefined);
   assert.equal(config.botAuditLogChannelId, undefined);
+});
+
+test("legacy BOT_ADMIN_COMMAND_CHANNEL_ID does not affect parsed admin authorization config", () => {
+  const env = environment();
+  env.BOT_ADMIN_COMMAND_CHANNEL_ID = "123456789012345699";
+  const config = loadConfig(env);
+  assert.equal(Object.hasOwn(config, "botAdminCommandChannelId"), false);
 });
 
 test("rejects duplicate or malformed admin IDs", () => {
