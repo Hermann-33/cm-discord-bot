@@ -2,34 +2,60 @@
 
 Updated: 2026-08-17
 
-## Production state
+## Mainline repository state
 
-Production remains the v2 Internal Integrations API rebuild on `master`. The archived pre-rebuild bot remains frozen under `legacy/`.
+`master` contains the v2 Internal Integrations API bot plus `TASK-CM-ADMIN-001` at commit `47a28323fdc2c2d18d1edc3f9952f0d817f481f1`.
 
-Production still provides:
+Current tracked implementation includes:
 
 - customer message command `cm aura`;
 - staff/admin slash command `/refresh-leaderboard`;
 - persistent Components V2 Aura leaderboard;
 - startup/bootstrap plus five-minute refresh scheduling;
-- only the two Aura read operations in deployed bot source/credential documentation.
+- `/cm user email:<email>` private admin console;
+- user overview and latest-ten order navigation;
+- order detail and fulfillment diagnostics;
+- canonical refund preview/confirm/execute flow with backend + Discord audit handling.
 
-The production bot has no direct Supabase/Postgres client, credential, RPC fallback, or database mutation path.
+`TASK-CM-ADMIN-001` was locally verified before merge with `npm test` (104/104), typecheck, build and `git diff --check`, then fast-forwarded to `master`. It was **not** deployed, Discord commands were not registered, production environment values were not changed and no live API mutation/refund was performed as part of that task.
 
-## TASK-CM-ADMIN-001 feature branch
+The bot still has no direct Supabase/Postgres client, credential, RPC fallback or database mutation path.
 
-Branch `task/cm-admin-console` contains an implementation candidate for a private staff/admin console. It has **not** been merged, registered in Discord, deployed, or exercised against production.
+## TASK-CM-ADMIN-002 — guild-wide `/cm` authorization
 
-### `/cm user email:<email>`
+Branch:
 
-The command is a configured-guild slash command whose response is deferred as ephemeral and then rendered as a Components V2 panel. The panel is visible only through the invoking interaction and every command/button/modal interaction re-runs:
+```text
+task/cm-admin-guild-scope
+```
+
+implements the product decision captured by ADR-0006:
+
+- `/cm` remains limited to the configured `DISCORD_GUILD_ID`;
+- DMs and wrong guilds fail closed;
+- explicit invoking Discord user ID in `BOT_ADMIN_USER_IDS` remains mandatory;
+- roles do not replace the explicit user-ID whitelist;
+- `/cm` may be used from **any channel inside the configured guild**;
+- `BOT_ADMIN_COMMAND_CHANNEL_ID` is removed from the supported configuration surface;
+- all `/cm` command/button/modal responses remain ephemeral/private where designed;
+- `BOT_AUDIT_LOG_CHANNEL_ID` remains separate and is still required before refund execution.
+
+Ephemeral visibility is not treated as authorization. Guild + explicit user whitelist are the authorization boundary; operation-specific confirmation, idempotency, backend permissions and audit requirements remain unchanged.
+
+`/refresh-leaderboard` is not part of this change and retains its existing configured command-channel/permission checks.
+
+## `/cm user email:<email>`
+
+The command is a configured-guild slash command whose response is deferred as ephemeral and then rendered as a Components V2 panel.
+
+On `TASK-CM-ADMIN-002`, every command/button/modal interaction re-runs:
 
 1. in-guild requirement;
 2. exact `DISCORD_GUILD_ID`;
-3. exact `BOT_ADMIN_COMMAND_CHANNEL_ID`;
-4. explicit invoking Discord user ID in `BOT_ADMIN_USER_IDS`.
+3. non-empty explicit `BOT_ADMIN_USER_IDS`;
+4. invoking Discord user ID membership in that whitelist.
 
-Missing admin configuration fails closed. Roles are not used as a replacement for the explicit user-ID whitelist.
+Missing whitelist configuration fails closed.
 
 The private user panel shows account state, wallet, Aura, counts and the most recent order. Controls include:
 
@@ -38,31 +64,26 @@ The private user panel shows account state, wallet, Aura, counts and the most re
 - `Open Recent Order`;
 - `Order History`.
 
-### Order navigation
+## Order navigation
 
-The implementation calls `users.overview.read` with `recentOrdersLimit: 10`. Website source verifies that the API accepts only 1–10 recent orders, so the bot paginates the returned set locally at five orders per page. If the user's total order count is greater than 10, the UI states that only the latest 10 are available. No bot or backend operation was invented to retrieve older history.
+The bot calls `users.overview.read` with `recentOrdersLimit: 10`. Website source verifies that the API accepts only 1–10 recent orders, so the bot paginates the returned set locally at five orders per page. If total order count exceeds ten, the UI states that only the latest ten are available. No unsupported older-history operation is invented.
 
-Opening an order re-fetches authoritative `orders.details.read` data and checks that the returned `userId` still matches the user session. The order panel exposes safe order/payment/fulfillment summary details and navigation to:
+Opening an order re-fetches authoritative `orders.details.read` data and checks that the returned `userId` still matches the user session.
 
-- fulfillment diagnostics;
-- refund flow;
-- refresh order;
-- user operations;
-- order history.
+`orders.fulfillment.read` is diagnostics-only. The current Internal Integrations API has no manual-fulfillment mutation operation, so the visible Manual Fulfillment control remains blocked/informational.
 
-`orders.fulfillment.read` is diagnostics-only. The current Internal Integrations API has no manual-fulfillment mutation operation, so the `Manual Fulfillment` control is informational/blocked and performs no backend mutation.
+## Refund mutation
 
-### Refund mutation candidate
-
-Refund is the only mutation path present in this feature branch because the backend has a canonical read-preview/execute pair:
+Refund remains the only mutation path in `/cm` because the backend exposes a canonical pair:
 
 - `orders.refund.preview`;
 - `orders.refund.execute`.
 
-The implemented flow is:
+Flow:
 
 ```text
-whitelisted admin -> order -> Refund
+whitelisted admin in configured guild
+  -> order -> Refund
   -> reason modal
   -> backend refund preview
   -> private consequence preview
@@ -75,13 +96,13 @@ whitelisted admin -> order -> Refund
   -> sanitized Discord audit channel record
 ```
 
-Transport retries reuse the same serialized mutation body/idempotency key while generating fresh HMAC timestamp/nonce/signature for each HTTP attempt. Operator audit context is deliberately reduced to stable Discord provider + user ID so a username/display-name change cannot alter an idempotent replay body.
+Transport retries reuse the same serialized mutation body/idempotency key while generating fresh HMAC timestamp/nonce/signature for each HTTP attempt. Operator audit context remains stable Discord provider + user ID.
 
-A configured `BOT_AUDIT_LOG_CHANNEL_ID` is required before refund execution. Discord audit posting is mention-safe; the backend audit remains authoritative if the Discord audit post subsequently fails.
+A configured `BOT_AUDIT_LOG_CHANNEL_ID` is required before refund execution. Discord audit posting is mention-safe; backend audit remains authoritative if Discord audit posting fails after successful execution.
 
-## Typed API surface on the feature branch
+## Typed API surface
 
-The candidate API client contains only these paths:
+Current API client contains only these approved paths:
 
 - `aura.leaderboards.read`;
 - `aura.lookup.read`;
@@ -91,9 +112,9 @@ The candidate API client contains only these paths:
 - `orders.refund.preview`;
 - `orders.refund.execute`.
 
-It deliberately contains no `users.aura.adjust`, `users.wallet.adjust`, purchase-processing, direct database or invented manual-fulfillment execute path.
+It contains no Aura-adjust, wallet-adjust, purchase-processing, direct-database or invented manual-fulfillment execute path.
 
-Required backend allowlist additions before this feature can function are therefore:
+The `/cm` flow requires backend client permission for:
 
 ```text
 users.overview.read
@@ -103,19 +124,19 @@ orders.refund.preview
 orders.refund.execute
 ```
 
-Actual bot-client `allowedOperations` have not been changed or verified in this task. A 403 remains the correct behavior if the backend credential is not provisioned for one of these operations.
+Endpoint existence is not client authorization. Actual deployed bot-client scope must be provisioned separately before use.
 
-## Backend source verification correction
+## Aura/wallet status
 
-Read-only inspection of website source at commit `20f6cb52344bade858099febcec2d1c59312f2e5` verified exact DTOs used by this feature.
+Website source verification established that Aura/wallet adjustment schemas accept `userLookupSelectorSchema`, including `user_id`, email and external identity.
 
-It also resolves the earlier documentation-only Aura/wallet selector discrepancy: website `auraAdjustmentRequestSchema` and `walletAdjustmentRequestSchema` both use `userLookupSelectorSchema`, which includes `user_id`, `email`, and `external_identity`. Source therefore overrides the older statement that external identity is lookup-only.
+Aura/wallet execution remains blocked in the bot because the accepted confirmation/state-binding requirements are not yet satisfied by the direct execute-only adjustment contract. Aura remains first; wallet remains later/stricter.
 
-This does **not** authorize Aura/wallet implementation. ADR-0004 still requires an accepted backend-authoritative preview/confirm or equivalent confirmation model, which is not present for those direct adjustment execute operations. Aura remains first; wallet remains later/stricter.
+## Current verification gate for TASK-CM-ADMIN-002
 
-## Verification state
+The branch has source/tests/docs changes but has not yet been dependency-aware verified or merged by this task.
 
-A repository CI workflow now exists and attempts:
+Required before completion/merge:
 
 ```text
 npm ci
@@ -125,36 +146,25 @@ npm run build
 git diff --check
 ```
 
-The first feature-branch GitHub Actions run did not start any step because the GitHub account reported failed recent payments or a spending-limit problem. This is an infrastructure/billing failure, not passing or failing application evidence.
-
-Additional local static checks completed:
-
-- TypeScript syntax transpilation of the drafted changed `.ts` files: no syntax diagnostics;
-- no secret-like values found in the drafted feature files;
-- no direct Supabase/Postgres client or database mutation path added;
-- no Aura/wallet/purchase-processing execute path added.
-
-Fresh dependency-aware `npm test`, typecheck and build remain **unverified** until an executable runner is available.
+Also verify no direct DB path, forbidden adjustment/purchase-processing path, secret leakage, legacy modification or unsafe mention regression.
 
 ## Do-not-touch boundaries
 
-- production `master` until verification/review gates pass;
-- website source except read-only contract verification;
+- website source except separately authorized read-only contract verification;
 - direct Supabase/Postgres access;
-- customer `cm aura` command behavior/intents;
+- customer `cm aura` behavior/intents;
+- `/refresh-leaderboard` channel policy in this task;
 - `legacy/`;
 - real secret values;
-- Aura/wallet mutations before ADR-0004 is satisfied;
+- Aura/wallet mutations before their independent security gate;
 - manual fulfillment until a dedicated backend operation exists;
 - Discord command registration/deployment/live mutation without explicit authorization.
 
 ## Exact next engineering gate
 
-1. restore an executable CI/local dependency-aware runner and run test + typecheck + build + diff check;
-2. fix any resulting code/type failures;
-3. review the feature diff and documentation together;
-4. only after approval, provision least-privilege bot API operations and admin channel/user/audit configuration;
-5. register/deploy `/cm` only with explicit authorization;
-6. perform read-only controlled verification first;
-7. perform a refund test only with an explicitly authorized controlled order/account;
-8. keep Aura/wallet/manual fulfillment blocked until their independent gates are satisfied.
+1. run dependency-aware tests/typecheck/build/diff check on `task/cm-admin-guild-scope`;
+2. review the authorization/config diff;
+3. merge only if all gates pass;
+4. remove stale `BOT_ADMIN_COMMAND_CHANNEL_ID` from deployment environment when operational configuration is next touched;
+5. keep `BOT_ADMIN_USER_IDS` mandatory and configure `BOT_AUDIT_LOG_CHANNEL_ID` before refund execution;
+6. registration/deployment and controlled live testing remain separate explicit actions.
