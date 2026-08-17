@@ -20,11 +20,8 @@ export function authorizeAdminInteraction(
   if (interaction.guildId !== config.discordGuildId) {
     return { ok: false, message: "CM admin controls are not available in this server." };
   }
-  if (!config.botAdminCommandChannelId || config.botAdminUserIds.length === 0) {
+  if (config.botAdminUserIds.length === 0) {
     return { ok: false, message: "CM admin controls are not configured." };
-  }
-  if (interaction.channelId !== config.botAdminCommandChannelId) {
-    return { ok: false, message: "Use CM admin controls in the configured admin channel." };
   }
   if (!config.botAdminUserIds.includes(interaction.user.id)) {
     return { ok: false, message: "You are not authorized to use CM admin controls." };
