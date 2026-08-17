@@ -8,11 +8,11 @@ import type { AppConfig } from "../../src/config/env";
 
 const GUILD_ID = "123456789012345672";
 const ADMIN_CHANNEL_ID = "123456789012345680";
+const OTHER_CHANNEL_ID = "999999999999999999";
 const ADMIN_ID = "123456789012345681";
 
 const config = {
   discordGuildId: GUILD_ID,
-  botAdminCommandChannelId: ADMIN_CHANNEL_ID,
   botAdminUserIds: [ADMIN_ID]
 } as unknown as AppConfig;
 
@@ -47,7 +47,7 @@ const overview = {
   recentOrders: []
 } satisfies UserOverviewData;
 
-function fakeCommand(userId = ADMIN_ID) {
+function fakeCommand(userId = ADMIN_ID, channelId = ADMIN_CHANNEL_ID) {
   const replies: unknown[] = [];
   const defers: unknown[] = [];
   const edits: unknown[] = [];
@@ -57,7 +57,7 @@ function fakeCommand(userId = ADMIN_ID) {
     isModalSubmit: () => false,
     commandName: "cm",
     guildId: GUILD_ID,
-    channelId: ADMIN_CHANNEL_ID,
+    channelId,
     user: { id: userId, username: "admin", globalName: "Admin" },
     options: {
       getSubcommand: () => "user",
@@ -87,7 +87,7 @@ test("unauthorized /cm user is rejected before backend lookup", async () => {
     fetchUserOverview: async () => { calls += 1; return overview; }
   } as unknown as InternalApiClient;
   const controller = new CmAdminController(config, api);
-  const context = fakeCommand("999999999999999999");
+  const context = fakeCommand("999999999999999997");
   assert.equal(await controller.handle(context.interaction), true);
   assert.equal(calls, 0);
   assert.equal((context.replies[0] as { flags: number }).flags, MessageFlags.Ephemeral);
@@ -104,4 +104,16 @@ test("authorized /cm user returns an ephemeral Components V2 private panel", asy
   assert.deepEqual(selector, { kind: "email", value: "user@example.com" });
   assert.deepEqual(context.defers, [{ flags: MessageFlags.Ephemeral }]);
   assert.equal((context.edits[0] as { flags: number }).flags, MessageFlags.IsComponentsV2);
+});
+
+test("authorized /cm user works from another channel in the configured guild", async () => {
+  let calls = 0;
+  const api = {
+    fetchUserOverview: async () => { calls += 1; return overview; }
+  } as unknown as InternalApiClient;
+  const controller = new CmAdminController(config, api);
+  const context = fakeCommand(ADMIN_ID, OTHER_CHANNEL_ID);
+  assert.equal(await controller.handle(context.interaction), true);
+  assert.equal(calls, 1);
+  assert.deepEqual(context.defers, [{ flags: MessageFlags.Ephemeral }]);
 });
