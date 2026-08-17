@@ -54,9 +54,11 @@ test("API client exposes only explicitly approved bot operations", () => {
   }
 });
 
-test("admin mutations cannot rely on Discord roles alone", () => {
+test("admin authorization is guild-wide and cannot rely on Discord roles alone", () => {
   assert.equal(sourceText.includes("BOT_ADMIN_USER_IDS"), true);
   assert.equal(sourceText.includes("botAdminUserIds.includes"), true);
+  assert.equal(sourceText.includes("BOT_ADMIN_COMMAND_CHANNEL_ID"), false);
+  assert.equal(sourceText.includes("botAdminCommandChannelId"), false);
 });
 
 test("environment example contains only the approved root variable surface", () => {
@@ -73,7 +75,6 @@ test("environment example contains only the approved root variable surface", () 
     "DISCORD_AURA_COMMAND_BLOCKED_CHANNEL_ID",
     "DISCORD_LEADERBOARD_MESSAGE_ID",
     "BOT_ADMIN_USER_IDS",
-    "BOT_ADMIN_COMMAND_CHANNEL_ID",
     "BOT_AUDIT_LOG_CHANNEL_ID",
     "CM_INTERNAL_INTEGRATIONS_API_ORIGIN",
     "CM_INTERNAL_INTEGRATIONS_API_CLIENT_ID",
