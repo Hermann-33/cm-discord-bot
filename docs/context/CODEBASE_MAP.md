@@ -30,31 +30,41 @@ Full audit coverage: every active source file listed below was read in `TASK-AUD
 
 ### `src/index.ts`
 
-Composition root. Owns config/startup, Discord/API/service construction, shutdown hooks, ready schedule, current customer `MessageCreate` Aura dispatch and current admin `InteractionCreate` refresh dispatch.
+Composition root.
 
-Audit note: future admin slash growth needs a cleaner command registry/dispatcher; current hardwired handlers are safe but not scalable.
+Owns:
+
+- config load/fail-closed startup;
+- Discord client/API client/service construction;
+- SIGINT/SIGTERM hooks;
+- ready/startup schedule;
+- current MessageCreate Aura dispatch;
+- current InteractionCreate refresh dispatch;
+- login failure shutdown.
+
+Audit note: future admin slash growth needs a cleaner command registry; current hardwired handlers are safe but not scalable.
 
 ### `src/api/client.ts`
 
-Owns current Internal Integrations API transport:
+Owns Internal Integrations API transport:
 
-- exactly two current read paths;
+- only two current read paths;
 - strict outbound request validation;
 - signed requests;
 - timeout;
 - 64 KiB response cap;
-- current read retry policy;
+- retry policy;
 - JSON/status/error/response validation.
 
-Security boundary. New operations require explicit typed schemas/client methods. Mutations need stable logical idempotency across retries and must not be added as ad-hoc fetch calls.
+Security boundary. Authoritative backend documentation now exposes additional read/mutation operations, but current source still implements only two reads. New operations require exact typed schemas/client methods. Future mutations need a distinct idempotency-aware extension, not ad-hoc fetch calls.
 
 ### `src/api/signing.ts`
 
-Owns canonical `cm-integrations-v1` request construction and HMAC-SHA256 headers. The supplied backend quickstart matches this canonicalization model. Fragile protocol boundary.
+Owns canonical `cm-integrations-v1` request construction and HMAC-SHA256 headers. The supplied backend quickstart matches this canonical signing model. Fragile protocol boundary.
 
 ### `src/api/schemas.ts`
 
-Owns strict current read request/response/error DTO validation. New operation DTOs belong here or in clearly separated typed schema modules after exact backend DTO verification.
+Owns strict read request/response/error DTO validation. New read/mutation DTOs belong here or a clearly separated schema module after exact backend contract verification.
 
 ### `src/api/errors.ts`
 
@@ -64,30 +74,40 @@ Owns stable safe client error abstraction. Never surface backend raw error messa
 
 Owns current Discord/API environment validation. Current full loader is also used by command registration, creating avoidable coupling to HMAC secrets.
 
-Future admin config must fail closed and parse explicit user-ID allowlists/channels/caps safely.
+Future admin config must fail closed and parse explicit user-ID allowlists/caps/channels safely.
 
 ### `src/commands/aura.ts`
 
-Current exact `cm aura` customer message command.
+Current exact `cm aura` message command.
 
 Current status under ADR-0005:
 
 - correct pre-backend guild/blocked-channel guards;
 - safe mentions and display sanitization;
-- intentional message command;
+- intentional customer message command;
 - **not** a slash-migration target under current product policy.
 
 ### `src/commands/refreshLeaderboard.ts`
 
-Current `/refresh-leaderboard` staff/admin slash command with explicit runtime guild guard, exact command channel, ManageGuild/Administrator runtime permission, ephemeral safe responses and read-only operation.
+Current `/refresh-leaderboard` slash command.
+
+Audit status:
+
+- explicit runtime guild guard already exists;
+- exact command channel;
+- ManageGuild/Administrator runtime permission;
+- ephemeral safe responses;
+- read-only operational command.
 
 ### `src/discord/client.ts`
 
-Owns intents. `GuildMessages` and privileged `MessageContent` are intentionally required by the customer message-command surface while `cm aura` exists.
+Owns intents. `GuildMessages` and privileged `MessageContent` are intentional requirements while customer message commands such as `cm aura` exist.
 
 ### `src/discord/registerCommands.ts`
 
-Owns explicit manual guild bulk-overwrite registration. Refactor into an injectable/testable registry/dispatcher foundation before expanding the admin command catalog.
+Owns explicit manual guild bulk-overwrite registration.
+
+Audit note: currently loads complete runtime config. Refactor into an injectable/testable function before expanding command catalog.
 
 ### `src/discord/safeMessages.ts`
 
@@ -99,15 +119,19 @@ Owns Components V2 rendering, names/ranks/Aura formatting, custom emoji and rela
 
 ### `src/leaderboard/service.ts`
 
-Owns fetch -> create/edit and shared overlap lock. Message ID precondition is currently an `as string` invariant enforced by callers rather than the class type.
+Owns fetch -> create/edit and shared overlap lock.
+
+Audit note: message ID precondition is currently an `as string` invariant enforced by callers rather than the class type.
 
 ### `src/leaderboard/types.ts`
 
-Owns the small current read-client/domain contracts used by commands/leaderboard.
+Owns the small read-client/domain contracts used by commands/leaderboard.
 
 ### `src/scheduler/leaderboardSchedule.ts`
 
-Owns bootstrap, immediate refresh, five-minute timer and scheduled failure behavior. `start()` is not internally idempotent; current `.once(ClientReady)` wiring prevents normal duplicate starts.
+Owns bootstrap, immediate refresh, five-minute timer and scheduled failure behavior.
+
+Audit note: `start()` is not internally idempotent; current `.once(ClientReady)` wiring prevents normal duplicate starts.
 
 ### `src/scheduler/shutdown.ts`
 
@@ -115,20 +139,56 @@ Owns idempotent timer stop/Discord destroy/exit. Does not drain an in-flight ope
 
 ### `src/logger/index.ts`
 
-Owns structured JSON logs and current error normalization. Current API errors are secret-safe; generic sanitizer is not universal pattern redaction and should be hardened before broader admin/user data flows.
+Owns structured JSON logs and current error normalization.
+
+Audit note: current API errors are secret-safe; generic sanitizer is not universal pattern redaction and must be hardened before broader admin/user data flows.
 
 ## Test inventory
 
-The root test script covers API signing/client, config, Aura command, refresh command, leaderboard formatting/service, scheduler/shutdown, command registration, logger redaction and architecture boundaries. See `package.json` and the full audit for exact files and coverage gaps.
+The root test script explicitly runs:
+
+- `tests/api/signing.test.ts`
+- `tests/api/client.test.ts`
+- `tests/config/env.test.ts`
+- `tests/commands/aura.test.ts`
+- `tests/commands/refreshLeaderboard.test.ts`
+- `tests/leaderboard/format.test.ts`
+- `tests/leaderboard/service.test.ts`
+- `tests/scheduler/leaderboardSchedule.test.ts`
+- `tests/scheduler/shutdown.test.ts`
+- `tests/discord/registerCommands.test.ts`
+- `tests/logger/redaction.test.ts`
+- `tests/architecture.test.ts`
+
+Fixtures:
+
+- `tests/fixtures/aura-success.json`
+- `tests/fixtures/leaderboard-empty.json`
+- `tests/fixtures/leaderboard-populated.json`
+- `tests/fixtures/refresh-command.json`
+
+See full audit for coverage strengths/gaps.
 
 ## Generated/local-only paths
 
-Never commit `.env`, `dist/`, `node_modules/`, logs or deployment/local ZIP archives such as prior `CM DC Bot.zip`.
+Never commit:
 
-ZIPs are policy-forbidden but not currently protected by a `.gitignore` pattern.
+- `.env`;
+- `dist/`;
+- `node_modules/`;
+- logs;
+- deployment/local ZIP archives such as prior `CM DC Bot.zip`.
+
+Note: ZIPs are policy-forbidden but not currently protected by a `.gitignore` pattern.
 
 ## External ownership
 
-This repo does not own website API route implementation, Supabase migrations, DB grants/RLS, wallet/order/payment/delivery logic or OAuth/Support-role systems.
+This repo does not own:
 
-`DATA_STATUS.md` records dependency facts and contract evidence. Cross-repo fixes must happen in their owning project.
+- website API route implementation;
+- Supabase migrations;
+- DB grants/RLS;
+- wallet/order/payment/delivery logic;
+- OAuth/Support-role systems.
+
+`DATA_STATUS.md` records verified dependency facts and authoritative contract evidence. Cross-repo fixes must happen in their owning project.

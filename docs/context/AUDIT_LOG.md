@@ -30,18 +30,40 @@ Verdict: `COMPLETE` for documentation/governance scope.
 
 ## 2026-08-17 — TASK-AUDIT-001 — Full codebase and dependency re-baseline
 
-Exhaustive audit of active bot source, tests/config/GitHub state, legacy isolation and relevant live Supabase dependency metadata.
+### Scope
 
-Material results:
+Exhaustive audit of active bot source, all root tests/fixtures, package/build/env configuration, GitHub branch/PR/CI state, legacy isolation, documentation drift and read-only live Supabase dependency metadata relevant to future bot work.
+
+### Positive findings
 
 - no direct Supabase/Postgres dependency in active bot;
-- current HMAC signing/validation/mention-safety/guild guards are real controls;
-- no CI/current-head executable verification evidence;
-- command registration requires full runtime/HMAC config;
-- generic logger redaction and several lifecycle/test gaps remain;
-- live DB contains service-role-only `users.aura.adjust` and `users.wallet.adjust` execute primitives with persistent idempotency/audit foundations.
+- HMAC request signing and strict API DTO validation are real controls;
+- API response size/timeout/error/retry handling is bounded;
+- mention suppression/display-name sanitization are centralized/tested;
+- `cm aura` performs guild/channel checks before API lookup;
+- `/refresh-leaderboard` has explicit runtime guild/channel/permission guards;
+- Components V2 leaderboard and overlap lock match implementation;
+- legacy is excluded and regression-tested;
+- architecture tests enforce the two-read-operation API boundary.
 
-The audit's original all-slash conclusion for `cm aura` was later superseded by ADR-0005.
+### Material findings
+
+- no GitHub CI/status exists at current head, and fresh local test/typecheck/build/npm-audit execution was unavailable;
+- command registration currently requires complete runtime config including Internal API HMAC material;
+- logger sanitization is not universal secret/PII redaction;
+- Node type definitions are newer than the minimum runtime;
+- `.gitignore` does not ignore ZIP archives;
+- smaller defensive/test gaps remain.
+
+### Backend drift discovered
+
+Live DB now contains service-role-only internal integration adjustment functions for `users.aura.adjust` and `users.wallet.adjust` with persistent idempotency/request-hash protection and audit integration. This did not, by itself, prove bot-facing HTTP mutation endpoints/permission existed.
+
+### Historical audit conclusion later superseded
+
+At audit time, ADR-0003 classified `cm aura` as slash-migration debt. The audit therefore recommended conversion to `/aura` and eventual Message Content removal.
+
+That product conclusion is **superseded by ADR-0005**. Current policy intentionally keeps `cm aura` as a customer message command and reserves slash commands for staff/admin operations. This correction does not alter the audit's source/security findings about how `cm aura` is currently guarded.
 
 Verdict: `COMPLETE` for source/static/live-metadata audit; `PARTIAL` for production-hardening readiness because execution gates remain.
 
@@ -49,16 +71,25 @@ Verdict: `COMPLETE` for source/static/live-metadata audit; `PARTIAL` for product
 
 ## 2026-08-17 — TASK-POLICY-001 — Customer vs admin command-surface correction
 
-Product owner clarified that `cm aura` is customer-facing while slash commands are intended for admins/staff.
+### Decision
 
-Governance action:
+Product owner clarified that `cm aura` is a customer-facing command, while slash commands are intended for admins/staff.
+
+### Governance action
 
 - added ADR-0005, superseding conflicting parts of ADR-0003;
 - retained `cm aura` as intentional message command;
-- retained Message Content/GuildMessages while required;
-- kept admin/staff operational and mutation commands slash-only/guild-only.
+- retained Message Content/GuildMessages as intentional requirements while that customer command exists;
+- kept admin/staff operational and mutation commands slash-only/guild-only;
+- corrected active context, architecture, command catalog, roadmap and handoff.
 
-Verdict: `COMPLETE` for policy/documentation correction. No runtime code, Discord state or database state changed.
+### Data boundary
+
+No architecture change: both customer and admin commands continue to use approved Internal Integrations API operations; direct Supabase/Postgres access remains forbidden.
+
+### Verdict
+
+`COMPLETE` for policy/documentation correction. No runtime code, Discord state or database state changed.
 
 ---
 
@@ -88,4 +119,6 @@ Authoritative backend Internal Integrations API and bot-quickstart documentation
 
 No production bot code, Discord state, website source, API credential, Supabase state or mutation was changed.
 
-Verdict: `COMPLETE` for repository documentation re-baseline; implementation readiness remains gated by the unresolved items above.
+### Verdict
+
+`COMPLETE` for repository documentation re-baseline; implementation readiness remains gated by the unresolved items above.
