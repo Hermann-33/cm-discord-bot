@@ -6,7 +6,7 @@ This workflow adapts the repository-resident governance model supplied for this 
 
 ## Authority order
 
-1. accepted ADRs;
+1. accepted ADRs, with later superseding ADRs taking precedence;
 2. `ACTIVE_CONTEXT.md`;
 3. `ARCHITECTURE.md`;
 4. verified `DATA_STATUS.md`;
@@ -75,7 +75,7 @@ Compare implementation against:
 - task acceptance criteria;
 - current ADRs;
 - API/data boundary;
-- guild/channel/user authorization ordering;
+- guild/user authorization ordering and any command-specific location checks;
 - secret/logging policy;
 - tests and failure behavior;
 - protected areas.
@@ -131,18 +131,21 @@ Do not rewrite an accepted ADR to conceal history. Create a superseding ADR.
 
 ## Mutation-specific gate
 
-No Aura/wallet admin command may execute a mutation until:
+ADR-0006 supersedes ADR-0004's mandatory admin-command-channel requirement. No Aura/wallet admin command may execute a mutation until:
 
-- slash-only/guild-only command policy is implemented;
-- explicit admin Discord user-ID whitelist exists;
-- admin channel and audit channel exist;
+- slash-only/guild-only admin command policy is implemented;
+- explicit `BOT_ADMIN_USER_IDS` whitelist exists and is checked on every relevant interaction;
+- DMs/wrong guilds fail closed;
+- dedicated audit channel exists for sanitized Discord mutation records;
 - dedicated mutation backend operation exists;
-- preview/confirm contract exists;
+- accepted preview/confirm or equivalent confirmation-state contract exists;
 - idempotency and caps exist;
 - immutable backend audit exists;
 - tests cover unauthorized/stale/duplicate/failure cases.
 
-See ADR-0004 and `../security/ADMIN_MUTATION_MODEL.md`.
+A shared `/cm` admin command may be invoked from any channel in the configured guild by a whitelisted operator. Command-specific operational surfaces such as `/refresh-leaderboard` may still retain their own configured channel checks.
+
+See ADR-0004, ADR-0006 and `../security/ADMIN_MUTATION_MODEL.md`.
 
 ## Completion report format
 
