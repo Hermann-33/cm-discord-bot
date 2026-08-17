@@ -27,7 +27,7 @@ Full current audit: `../audits/2026-08-17-full-codebase-audit.md`.
 - entry: `src/index.ts` -> `dist/index.js`;
 - root `index.js` host shim requires `./dist/index.js`.
 
-Audit note: dev `@types/node` is 25.x while the declared runtime minimum is Node 22. No current incompatible API use was found, but the type/runtime major should be aligned.
+Audit note: dev `@types/node` is 25.x while the declared runtime minimum is Node 22.
 
 ## Startup and lifecycle
 
@@ -42,7 +42,7 @@ Audit note: dev `@types/node` is 25.x while the declared runtime minimum is Node
 7. logs in;
 8. on first ClientReady, bootstraps or immediately refreshes leaderboard and starts schedule.
 
-Current shutdown stops the timer and destroys Discord but does not drain a concurrent operation. Current work is read-only; revisit before mutation commands.
+Current shutdown stops the timer and destroys Discord but does not drain a concurrent operation. Revisit before mutation commands.
 
 ## Internal Integrations API boundary
 
@@ -54,18 +54,36 @@ Current bot source exposes only:
 Current transport security properties:
 
 - dedicated client/key/HMAC secret;
-- HMAC-SHA256 canonical signing;
-- fresh signed material per read retry;
+- HMAC-SHA256 eight-line canonical signing;
+- exact raw UTF-8 JSON body bytes signed;
+- fresh timestamp/nonce/signature per HTTP attempt;
 - strict request and response schemas;
 - origin-only HTTPS config;
 - 1–15 second timeout;
-- 64 KiB response cap;
-- one transient transport/503 retry;
+- 64 KiB bot-side response cap;
+- one transient transport/503 retry for current reads;
 - stable error/status mapping;
 - no trust of backend error text;
 - no request body/credential logging in normal client behavior.
 
-The bot must continue to use this boundary for future admin mutations. Direct bot-to-Supabase access is forbidden.
+Authoritative backend documentation confirms additional production operations, including:
+
+- `users.lookup.read`;
+- `users.overview.read`;
+- `orders.lookup.read`;
+- `orders.details.read`;
+- `orders.fulfillment.read`;
+- `purchase-intents.lookup.read`;
+- `purchase-intents.process`;
+- `purchase-intents.process.status.read`;
+- `orders.refund.preview`;
+- `orders.refund.execute`;
+- `users.wallet.adjust`;
+- `users.aura.adjust`.
+
+Each integration client is authorized by an exact non-wildcard operation allowlist. The existence of a production operation is not permission for this bot to call it.
+
+For mutation retries, transport nonce/timestamp/signature must be fresh per HTTP attempt while the logical mutation `idempotencyKey` and exact request body remain stable.
 
 ## Command architecture — current and accepted
 
@@ -73,75 +91,58 @@ ADR-0005 supersedes ADR-0003 where they conflict.
 
 ### Customer surface
 
-`cm aura` is an intentional customer-facing message command.
-
-Runtime guards:
-
-- bot authors ignored;
-- exact command trigger;
-- exact configured guild;
-- configured blocked channel rejected before backend lookup;
-- sanitized output and safe allowed mentions.
-
-It is not a `/aura` migration target under the current product policy.
+`cm aura` is an intentional customer-facing message command with bot-author, exact-guild, blocked-channel, sanitization and safe-mention guards. It is not a `/aura` migration target under the current policy.
 
 ### Admin/staff surface
 
-`/refresh-leaderboard` is the current operational slash command:
+`/refresh-leaderboard` is the current operational slash command with manual guild registration, explicit runtime guild guard, exact command channel, `ManageGuild`/`Administrator` runtime permission and ephemeral results.
 
-- manually registered to configured guild;
-- explicit runtime guild guard;
-- exact command channel;
-- `ManageGuild`/`Administrator` runtime check;
-- ephemeral result.
-
-Future admin mutation commands also remain slash commands and must satisfy ADR-0004.
+Future admin mutation commands remain slash commands and must satisfy ADR-0004.
 
 ### Discord intents
 
-Current intents:
-
-- `Guilds`;
-- `GuildMessages`;
-- `MessageContent`.
-
-`GuildMessages` and privileged `MessageContent` are intentionally required while customer message commands such as `cm aura` exist. They are an accepted product/runtime tradeoff, not migration debt.
+Current intents are `Guilds`, `GuildMessages`, and `MessageContent`. The latter two are intentional while customer message commands exist.
 
 ## Leaderboard architecture
 
-One Components V2 message contains the lifetime and available top-10 Aura boards using API-provided ranks/privacy-aware display names, bot-side sanitization, fixed-width labels, medal suffixes, relative update timestamp and mention suppression.
+One Components V2 message contains lifetime and available top-10 Aura boards using API-provided ranks/privacy-aware display names, bot-side sanitization, fixed-width labels, medal suffixes, relative update timestamp and mention suppression.
 
 Bootstrap creates one message then exits so the operator can persist its ID. Normal startup edits the configured message immediately, then schedules five-minute refreshes.
 
-`LeaderboardService` owns a shared in-memory refresh lock. The schedule itself is not double-start guarded, but current `.once(ClientReady)` wiring prevents normal repeated start.
+`LeaderboardService` owns a shared in-memory refresh lock.
 
 ## Data ownership
 
 Website/backend owns user/external identity resolution, Discord link/privacy state, Aura and wallet business state, orders/payments/deliveries/licenses, OAuth/Support-role state, authorization, integration operation allowlists and mutation idempotency/business logic.
 
-Bot owns Discord interaction/presentation, local guards, signed transport to approved backend operations and sanitized Discord audit output once implemented.
+Bot owns Discord interaction/presentation, local authorization guards, signed transport to explicitly approved backend operations and sanitized Discord audit output once implemented.
 
-## Backend mutation foundation — dependency state
+## Backend mutation dependency state
 
-Live DB contains website-owned internal integration execute primitives for:
+Live DB contains website-owned internal integration execute primitives for `users.aura.adjust` and `users.wallet.adjust` with service-role-only execution, persistent idempotency/request hash, bounded input, target validation, negative-balance protection and integration/operator audit metadata.
+
+Authoritative backend contract documentation now also confirms the production HTTP execute paths:
 
 ```text
-users.aura.adjust
-users.wallet.adjust
+POST /api/internal/integrations/v1/users/aura/adjust
+POST /api/internal/integrations/v1/users/wallet/adjust
 ```
 
-They are service-role-only among checked application roles and implement persistent idempotency/request hash, bounded input, target validation, negative-balance protection and integration/operator audit metadata.
+Documented request fundamentals:
 
-These are backend implementation facts, **not** bot API permissions.
+- user selector;
+- non-zero bounded signed delta (`deltaAura` or `deltaCents`);
+- reason 1–500 characters;
+- UUID `idempotencyKey`;
+- optional strict Discord operator audit context.
 
-Still unverified:
+Still unresolved before bot mutation integration:
 
-- HTTP mutation paths;
-- preview lifecycle;
-- bot credential operation scope;
-- mutation selector contract;
-- caps/expiry behavior;
-- production HTTP smoke test.
+- this bot client's exact operation allowlist/scope;
+- exact strict request/response DTOs from the actual route contract/source;
+- mutation selector discrepancy between the authoritative full contract and quickstart examples;
+- ADR-0004 backend-authoritative preview/confirm requirement versus the documented direct execute endpoints;
+- controlled authenticated smoke verification.
 
 ## Future admin mutation architecture
 
@@ -151,7 +152,7 @@ Discord admin slash command
   -> explicit Discord user-ID whitelist
   -> optional secondary domain role
   -> input validation
-  -> backend-authoritative preview/confirm/idempotency
+  -> ADR-0004-compatible backend confirmation/idempotency
   -> HMAC Internal Integrations API
   -> website-owned integration/business/DB transaction
   -> immutable backend audit
@@ -167,18 +168,19 @@ Customer `cm aura` remains separate and read-only.
 - deployment host config is external to repo;
 - branch-protection state unverified through current integration;
 - generic logger is not universal credential/PII redaction;
-- several low-severity lifecycle/test invariants are tracked in the full audit.
+- several low-severity lifecycle/test invariants remain.
 
 ## Fragile boundaries
 
 - HMAC canonicalization/signing;
 - API retry/idempotency semantics;
 - API credential scopes;
+- strict endpoint DTOs/selectors;
 - customer/admin command-surface separation;
 - guild/user/channel authorization ordering;
 - mention suppression;
 - Components V2 edit semantics;
 - refresh overlap lock;
-- future mutation preview/confirm state;
+- mutation confirmation state;
 - wallet ledger/funding invariants;
 - legacy/current separation.

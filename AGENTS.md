@@ -55,7 +55,7 @@ Before modifying files, summarize:
 - Production code lives under `src/`. `legacy/` is a frozen archive and must never be imported into production code.
 - The bot does not directly access Supabase or Postgres and must not gain database credentials or a direct database fallback.
 - Website-owned business/data access goes through the HMAC-authenticated Internal Integrations API.
-- Current production API permissions are read-only Aura operations. Mutation work requires an explicitly approved backend contract first.
+- Current bot source and the currently documented bot credential remain limited to the two Aura read operations. Authoritative backend contract documentation now exposes additional read and mutation operations, including `users.aura.adjust` and `users.wallet.adjust`; bot use still requires explicit operation scope, exact DTO/selector verification, and all applicable ADR-0004 controls.
 - Command-surface policy is governed by ADR-0005, which supersedes ADR-0003: customer-facing/self-service commands may use message commands; admin/staff operational and mutation commands use guild-only slash commands.
 - `cm aura` is an intentional customer-facing message command and is not a slash-migration target unless a later product decision explicitly changes that policy.
 - Major admin/mutation commands require the whitelist and confirmation model in ADR-0004. Discord roles alone are insufficient.

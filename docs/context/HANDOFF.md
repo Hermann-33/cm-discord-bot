@@ -2,20 +2,16 @@
 
 Updated: 2026-08-17
 
-## Latest product clarification
+## Command policy
 
-ADR-0005 is now authoritative and supersedes ADR-0003 where they conflict.
+ADR-0005 is authoritative and supersedes ADR-0003 where they conflict.
 
-Command UX is audience-specific:
+- customer/self-service commands may use message/text commands;
+- `cm aura` remains message-based;
+- staff/admin operations use configured-guild slash commands;
+- high-impact mutations additionally follow ADR-0004.
 
-- customer/self-service commands use message/text commands;
-- staff/admin operations use slash commands.
-
-`cm aura` is specifically a customer command and should remain message-based. It is not a `/aura` migration target under the current product policy.
-
-## Main current architecture
-
-The principal difference from the legacy bot is the data boundary:
+## Main architecture
 
 ```text
 OLD
@@ -29,46 +25,52 @@ The active bot must not regain direct Supabase/Postgres access.
 
 ## Current bot truth
 
-- production bot has no direct DB access;
 - API client exposes only leaderboard and Aura lookup reads;
+- current bot credential is still documented for those two Aura read operations;
 - `cm aura` is the customer message command;
-- `/refresh-leaderboard` is a staff/admin guild slash command with explicit runtime guild/channel/permission checks;
-- `MessageContent`/`GuildMessages` are intentionally required by the customer message command;
+- `/refresh-leaderboard` is the current staff/admin slash command;
 - safe allowed mentions are centralized;
 - leaderboard is Components V2;
 - scheduled/manual refreshes share one overlap lock;
 - legacy is isolated.
 
-## Backend truth discovered in full audit
+## Backend API contract re-baseline
 
-Live DB has purpose-built integration execute functions for Aura and wallet balance adjustments with service-role-only execution, idempotency/request-hash protection, validation, negative-balance protection and audit integration.
+Authoritative backend documentation supplied on 2026-08-17 confirms a broader production Internal Integrations API operation catalog.
 
-This does not prove the bot has an HTTP mutation contract or permission.
+Relevant mutation paths now documented:
 
-Still requires separate website/API verification:
+```text
+users.aura.adjust   -> POST /api/internal/integrations/v1/users/aura/adjust
+users.wallet.adjust -> POST /api/internal/integrations/v1/users/wallet/adjust
+```
 
-- exact HTTP mutation paths;
-- preview/confirm contract;
-- operation allowlist/scopes;
-- bot credential mutation permission;
-- selector/target resolution;
-- cap/expiry/state-binding rules;
-- authenticated HTTP smoke test.
+For mutations, one logical action keeps the same UUID `idempotencyKey` and exact body across retries; each HTTP attempt gets a fresh timestamp, UUIDv4 nonce and HMAC signature.
+
+The backend client model uses exact `allowedOperations` per integration with no wildcard/master bypass.
+
+### Remaining blockers
+
+- bot credential scope for each new operation is not verified;
+- exact DTOs must be verified before adding strict schemas;
+- full API contract says external identity is lookup-only, but quickstart mutation examples use Discord `external_identity`; actual mutation route schema must resolve this conflict;
+- ADR-0004 requires backend-authoritative preview/confirm or equivalent state, while the supplied Aura/wallet contract documents direct execute endpoints and no adjustment preview endpoint;
+- no bot-credential production mutation smoke test has been performed from this repo context.
 
 ## Verification limitation
 
-The full static/live-metadata audit is complete, but fresh `npm test`, `npm run typecheck`, `npm run build` and `npm audit` still need executable evidence/CI.
+Fresh `npm test`, `npm run typecheck`, `npm run build` and dependency scan still need current-head executable evidence/CI. No bot/runtime code changed in the API-contract documentation re-baseline.
 
 ## Exact next engineering action
 
 1. add CI or otherwise execute/record test + typecheck + build on current head;
-2. preserve `cm aura` as customer message command and protect its current guard/API behavior;
-3. establish a clean dispatcher for admin slash commands;
-4. implement reusable admin authorization requiring explicit Discord user-ID whitelist + guild + admin channel, with tests and no mutation yet;
-5. separately verify the website Internal Integrations API contract/scope for `users.aura.adjust`;
-6. implement Aura admin preview/confirm slash flow using stable idempotency;
-7. prove Aura on a controlled test account;
-8. only then proceed to wallet admin slash integration.
+2. preserve `cm aura` and its current guards;
+3. establish a clean dispatcher/registry for admin slash commands;
+4. implement reusable explicit admin user-ID whitelist + exact guild + admin channel authorization, with tests and no mutation;
+5. select the next command and verify its dedicated bot operation scope plus exact request/response DTO;
+6. before Aura execute integration, resolve selector semantics and ADR-0004 confirmation compatibility;
+7. implement/prove Aura on a controlled test account;
+8. only then proceed to wallet mutation integration.
 
 ## Do-not-touch boundaries
 

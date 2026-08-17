@@ -11,21 +11,19 @@ Cheater's Market deliberately separates command UX by audience:
 - **customers/self-service:** message/text commands;
 - **staff/admin:** Discord slash commands.
 
-Therefore `cm aura` should remain a message command under the current product policy. Slash commands are not the intended customer interface.
+`cm aura` remains a message command. Slash commands are the admin/staff interface.
 
-The interaction style does not change the backend boundary: both command types must use approved website Internal Integrations API operations and must never directly connect to Supabase/Postgres.
+Both surfaces must use approved website Internal Integrations API operations and must never directly connect to Supabase/Postgres.
 
 ## Current customer command
 
 ### `cm aura`
 
-Current source behavior:
-
 - exact normalized trigger `cm aura`;
 - ignores bot authors;
-- requires exact configured guild;
+- exact configured guild required;
 - silently ignored in DMs/wrong guild;
-- allowed in guild channels except `DISCORD_AURA_COMMAND_BLOCKED_CHANNEL_ID`;
+- blocked in `DISCORD_AURA_COMMAND_BLOCKED_CHANNEL_ID`;
 - all guards occur before API lookup;
 - resolves caller by Discord user ID through the read-only Internal API;
 - returns available and lifetime Aura;
@@ -33,16 +31,13 @@ Current source behavior:
 - uses safe allowed mentions;
 - maps not-found/service failures to safe user messages.
 
-Tests prove there is no backend lookup for bot messages, DMs, wrong guild or blocked channel.
-
-Because this customer command is intentionally message-based, `GuildMessages` and privileged `MessageContent` intents remain intentional runtime requirements.
+Because this command is intentionally message-based, `GuildMessages` and privileged `MessageContent` remain intentional runtime requirements.
 
 ## Current admin/staff command
 
 ### `/refresh-leaderboard`
 
 - manually registered as a guild slash command;
-- registration uses `Routes.applicationGuildCommands(clientId, guildId)`;
 - explicit runtime guild check;
 - exact configured command channel;
 - runtime `ManageGuild` or `Administrator` permission;
@@ -50,7 +45,19 @@ Because this customer command is intentionally message-based, `GuildMessages` an
 - ephemeral result;
 - invokes the shared overlap-locked refresh service.
 
-## Future admin slash commands
+## Backend operations available for future command work
+
+Authoritative backend documentation now lists production operations for user lookup/overview, order lookup/details/fulfillment, purchase-intent lookup/process/status, refund preview/execute, wallet adjustment and Aura adjustment in addition to the existing Aura reads.
+
+This does **not** mean commands for all of those operations are accepted or implemented. For each future command:
+
+1. define the Discord audience/authorization model;
+2. verify the bot client's exact operation allowlist;
+3. verify exact request/response DTOs and selector support;
+4. add the smallest typed API client method and tests;
+5. preserve safe allowed mentions and staff-data handling.
+
+## Future admin mutation slash commands
 
 Aura administration first:
 
@@ -62,7 +69,7 @@ Wallet administration later:
 - `/wallet-adjust preview`;
 - `/wallet-adjust confirm`.
 
-These are admin/staff surfaces only. None is implemented today.
+None is implemented today.
 
 ## Authorization matrix
 
@@ -77,23 +84,33 @@ These are admin/staff surfaces only. None is implemented today.
 
 Before any mutation-capable backend request:
 
-1. interaction is in a guild;
-2. exact configured guild ID;
-3. exact configured admin command channel;
-4. invoking Discord user ID is in explicit allowlist;
-5. optional domain role/permission gate;
-6. input validation/caps suitable for UX;
-7. backend-authoritative preview/confirmation/idempotency requirements.
+1. chat-input interaction;
+2. in a guild;
+3. exact configured guild ID;
+4. exact configured admin command channel;
+5. invoking Discord user ID in explicit allowlist;
+6. optional domain role/permission gate;
+7. local bounded input validation;
+8. backend-authoritative confirmation/idempotency/business rules.
 
 Roles alone are never sufficient for high-impact mutations.
 
 ## Backend mutation status
 
-Live DB contains service-role-only integration execute primitives:
+Production HTTP execute paths are now contract-documented:
 
-- `users.aura.adjust`;
-- `users.wallet.adjust`.
+- `users.aura.adjust` -> `/api/internal/integrations/v1/users/aura/adjust`;
+- `users.wallet.adjust` -> `/api/internal/integrations/v1/users/wallet/adjust`.
 
-This does not authorize direct DB calls from the bot. Before admin command integration, verify website Internal Integrations API HTTP endpoints, operation permission scope and bot credential authorization.
+The contract requires a stable UUID business idempotency key for one logical mutation and fresh transport timestamp/nonce/signature per HTTP retry.
+
+Still blocking bot mutation commands:
+
+- the bot client's actual operation permission;
+- exact route selector/DTO verification, including the current external-identity selector contradiction;
+- ADR-0004-compatible backend-authoritative preview/confirm or equivalent state;
+- admin whitelist/channel/audit implementation and tests.
+
+Direct DB calls remain forbidden.
 
 See `DATA_STATUS.md`, ADR-0004, ADR-0005 and `../security/ADMIN_MUTATION_MODEL.md`.

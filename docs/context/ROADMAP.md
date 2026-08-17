@@ -24,24 +24,28 @@ Completed in `TASK-WF-001`.
 
 ## Phase 1.5 — Full codebase/dependency re-baseline — COMPLETE WITH EXECUTION GAP
 
-`TASK-AUDIT-001` audited every active source file, root tests/fixtures, config/GitHub state and relevant live backend metadata.
+`TASK-AUDIT-001` audited active source/tests/config/GitHub state and relevant live backend metadata. Its `/aura` migration recommendation was superseded by ADR-0005.
 
-The audit's recommendation to migrate `cm aura` to `/aura` was based on ADR-0003 and is superseded by ADR-0005 after product clarification.
+Fresh `npm test`, typecheck, build and dependency-scan evidence/CI still needs to exist for current head.
 
-Fresh `npm test`, typecheck, build and dependency scan still need executable evidence/CI.
+## Phase 1.6 — Backend API contract re-baseline — COMPLETE FOR DOCUMENTATION EVIDENCE
+
+Authoritative backend documentation supplied on 2026-08-17 now confirms the broader production Internal Integrations API operation catalog, including HTTP execute paths for `users.aura.adjust` and `users.wallet.adjust`, HMAC/retry semantics and mutation idempotency requirements.
+
+This phase does **not** prove bot credential authorization, exact disputed selector behavior, ADR-0004 confirmation compatibility or bot-authenticated production smoke behavior.
 
 ## Phase 2 — Command-surface stabilization and admin dispatch foundation — NEXT
 
 Goal:
 
-- **preserve** `cm aura` as the customer message command;
-- preserve its guild/blocked-channel/API-read/privacy/mention-safety behavior;
-- retain `MessageContent`/`GuildMessages` because they are intentionally required by the customer surface;
+- preserve `cm aura` as the customer message command;
+- preserve its current guild/blocked-channel/API-read/privacy/mention-safety behavior;
+- retain `MessageContent`/`GuildMessages` while required;
 - keep admin/staff commands guild-only slash commands;
 - introduce a clean slash-command registry/dispatcher before multiple admin commands are added;
-- keep customer and admin command authorization paths clearly separated.
+- keep customer and admin authorization paths clearly separated.
 
-No customer `/aura` migration is planned.
+Read-only staff command expansion may follow this dispatcher work, but each command requires explicit bot operation scope and exact DTO verification. No command is accepted merely because a backend endpoint exists.
 
 ## Phase 3 — Admin authorization foundation — PLANNED
 
@@ -57,37 +61,43 @@ Goal:
 
 No mutation execution in this phase.
 
-## Phase 4 — Aura backend HTTP contract verification/integration — PARTIAL UPSTREAM FOUNDATION EXISTS
+## Phase 4 — Aura HTTP mutation contract integration — PARTIAL
 
-Live DB contains `internal_integration_adjust_aura_balance(...)`, operation `users.aura.adjust`, with service-role-only execute, persistent idempotency/request hash, bounded input, target validation, operator audit metadata and negative-balance protection.
+Now contract-documented:
 
-Still required at the website API layer:
+- operation `users.aura.adjust`;
+- path `/api/internal/integrations/v1/users/aura/adjust`;
+- non-zero bounded `deltaAura`;
+- reason 1–500;
+- UUID logical idempotency key;
+- optional operator audit context;
+- same-key/same-body replay and changed-body conflict semantics.
 
-- exact Aura adjustment HTTP operation/path;
-- operation permission/scope for bot client;
-- target selector contract;
-- preview behavior/state/expiry;
-- before/after response contract;
-- single/daily cap policy;
-- stable error mapping;
-- authenticated smoke verification.
+Still required before implementation can complete:
+
+- verify bot client operation permission;
+- resolve exact mutation selector contract—the full contract says external identity is lookup-only while the quickstart uses it in mutation examples;
+- inspect exact strict request/response DTOs;
+- reconcile ADR-0004 backend-authoritative preview/confirm requirement with the documented direct execute endpoint/no documented adjustment preview endpoint;
+- define/verify bot-side cap policy;
+- controlled authenticated smoke verification.
 
 Direct DB access remains forbidden.
 
 ## Phase 5 — Aura admin slash commands — AFTER PHASES 2–4
 
-Target:
+Target remains:
 
 - `/aura-adjust preview`;
 - `/aura-adjust confirm`.
 
-Requirements include explicit admin whitelist/guild/channel gates, stable idempotency across retries, backend-authoritative preview/confirm, sanitized audit output and controlled test-account validation.
+Requirements include explicit admin whitelist/guild/channel gates, stable idempotency across retries, ADR-0004-compatible confirmation, sanitized audit output and controlled test-account validation.
 
 ## Phase 6 — Wallet admin slash commands — LATER / HIGH RISK
 
-Live DB contains `internal_integration_adjust_wallet_balance(...)`, operation `users.wallet.adjust`, and wallet funding-state trigger machinery.
+The wallet HTTP execute path is also contract-documented at `/api/internal/integrations/v1/users/wallet/adjust`, and the live DB foundation includes wallet transaction/funding-state machinery.
 
-Before exposing `/wallet-adjust`, prove the Aura admin path first and verify the website HTTP wallet contract/scope, ledger/funding-state behavior, stricter caps and confirmation policy.
+Before exposing `/wallet-adjust`, prove the Aura admin path first and separately verify wallet bot scope, selectors/DTOs, confirmation policy, stricter caps and ledger/funding-state behavior.
 
 ## Phase 7 — Production hardening and operations
 
@@ -104,8 +114,6 @@ Priority work:
 - centralized logs/monitoring;
 - authenticated API smoke verification.
 
-External backend owner also needs to address Supabase advisor warnings unrelated to the bot.
-
 ## Current position
 
-The customer `cm aura` message command is intended current behavior. The next bot-code work is admin-command infrastructure and verification—not converting the customer command to slash.
+The backend API catalog is no longer the major unknown. The immediate bot-code work remains current-head verification plus clean admin command dispatch/authorization. For each new command, verify its exact bot credential scope and DTO before implementation. Aura mutation additionally requires selector and ADR-0004 confirmation resolution before any execute call.

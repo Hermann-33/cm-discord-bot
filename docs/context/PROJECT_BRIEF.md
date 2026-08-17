@@ -9,8 +9,8 @@ The Cheater's Market Discord bot is the Discord-facing companion to Cheater's Ma
 ## Target users
 
 - Cheater's Market Discord community members who need read-only Aura information.
-- Trusted staff who need operational controls such as manual leaderboard refresh.
-- In a future phase, explicitly whitelisted administrators who may request audited Aura or wallet adjustments through a narrow backend contract.
+- Trusted staff who need operational/read controls.
+- In a future phase, explicitly whitelisted administrators who may request audited Aura or wallet adjustments through narrow website-owned Internal Integrations API operations.
 
 ## Current production scope
 
@@ -27,21 +27,24 @@ The rebuilt bot currently provides:
 
 ## Current data boundary
 
-The bot is not a database client. It has no Supabase/Postgres credential and no direct database fallback. Its website integration credential is intended to be dedicated to this deployment and currently limited to:
+The bot is not a database client. It has no Supabase/Postgres credential and no direct database fallback. Its currently documented website integration credential remains limited to:
 
 - `aura.leaderboards.read`
 - `aura.lookup.read`
 
+The backend Internal Integrations API itself now has authoritative production contract documentation for additional read and mutation operations. That API capability is not automatically bot permission; every integration client has an exact `allowedOperations` list.
+
 ## Accepted direction
 
-The desired command end state is:
+ADR-0005 is the command-surface authority and supersedes ADR-0003 where they conflict:
 
-- the bot is usable only in the configured Cheater's Market guild;
-- all user-invoked commands are slash commands;
-- admin/mutation commands are restricted to explicit whitelisted Discord user IDs, with optional role checks as an additional gate;
+- customer/self-service commands may remain message/text commands;
+- `cm aura` remains the canonical customer Aura command;
+- staff/admin operational and mutation commands use configured-guild slash commands;
+- high-impact admin/mutation commands require explicit whitelisted Discord user IDs, with roles only as optional additional gates;
 - Aura adjustment is the first mutation feature;
-- wallet adjustment is a later, higher-risk feature;
-- mutation execution happens behind a narrow signed backend API, never through direct bot database access.
+- wallet adjustment is later and higher risk;
+- mutation execution occurs through narrow signed backend API operations, never through direct bot database access.
 
 ## Explicit non-goals
 
@@ -55,7 +58,7 @@ The bot must not become:
 
 ## Current maturity
 
-Production-adjacent and security-sensitive. The read-only rebuild is substantially hardened and tested. The future admin mutation feature is a design target only; it is not authorized for live implementation until the backend mutation contract, authorization, idempotency, caps, confirmation, and audit model exist.
+Production-adjacent and security-sensitive. The read-only rebuild is substantially hardened. Backend documentation now confirms production Aura/wallet adjustment execute operations and other support/read operations, but bot mutation implementation remains blocked until exact bot credential scope, mutation selector semantics, strict DTOs, ADR-0004-compatible confirmation/idempotency behavior and authorization controls are verified and implemented.
 
 ## Success criteria
 
