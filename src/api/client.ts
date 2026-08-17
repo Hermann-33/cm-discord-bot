@@ -8,16 +8,38 @@ import {
   internalApiErrorEnvelopeSchema,
   leaderboardRequestSchema,
   leaderboardResponseSchema,
+  orderDetailsRequestSchema,
+  orderDetailsResponseSchema,
+  orderFulfillmentRequestSchema,
+  orderFulfillmentResponseSchema,
+  orderRefundExecuteRequestSchema,
+  orderRefundExecuteResponseSchema,
+  orderRefundPreviewRequestSchema,
+  orderRefundPreviewResponseSchema,
   successEnvelopeSchema,
+  userOverviewRequestSchema,
+  userOverviewResponseSchema,
   type AuraLookupData,
   type InternalApiErrorCode,
-  type LeaderboardEntry
+  type InternalIntegrationOperator,
+  type LeaderboardEntry,
+  type OrderDetailsData,
+  type OrderFulfillmentData,
+  type OrderRefundExecuteData,
+  type OrderRefundPreviewData,
+  type UserLookupSelector,
+  type UserOverviewData
 } from "./schemas";
 import { createSignedHeaders } from "./signing";
 
 export const INTERNAL_API_PATHS = {
   leaderboards: "/api/internal/integrations/v1/aura/leaderboards",
-  auraLookup: "/api/internal/integrations/v1/aura/lookup"
+  auraLookup: "/api/internal/integrations/v1/aura/lookup",
+  userOverview: "/api/internal/integrations/v1/users/overview",
+  orderDetails: "/api/internal/integrations/v1/orders/details",
+  orderFulfillment: "/api/internal/integrations/v1/orders/fulfillment",
+  orderRefundPreview: "/api/internal/integrations/v1/orders/refund/preview",
+  orderRefundExecute: "/api/internal/integrations/v1/orders/refund/execute"
 } as const;
 
 const METHOD = "POST";
@@ -33,6 +55,10 @@ const expectedStatuses: Record<InternalApiErrorCode, readonly number[]> = {
   OPERATION_FORBIDDEN: [403],
   IDENTITY_PROVIDER_UNSUPPORTED: [400],
   NOT_FOUND: [404],
+  REFUND_NOT_ELIGIBLE: [409],
+  ALREADY_REFUNDED: [409],
+  REFUND_STATE_INVALID: [409],
+  IDEMPOTENCY_CONFLICT: [409],
   RATE_LIMITED: [429],
   DEPENDENCY_UNAVAILABLE: [503],
   INTERNAL_FAILURE: [500]
@@ -118,6 +144,68 @@ export class InternalApiClient {
     return data.aura;
   }
 
+  async fetchUserOverview(
+    selector: UserLookupSelector,
+    recentOrdersLimit = 10
+  ): Promise<UserOverviewData> {
+    const data = await this.request(
+      INTERNAL_API_PATHS.userOverview,
+      userOverviewRequestSchema,
+      { selector, recentOrdersLimit },
+      userOverviewResponseSchema
+    );
+    return data.overview;
+  }
+
+  async fetchOrderDetails(orderId: string): Promise<OrderDetailsData> {
+    const data = await this.request(
+      INTERNAL_API_PATHS.orderDetails,
+      orderDetailsRequestSchema,
+      { selector: { kind: "order_id", value: orderId } },
+      orderDetailsResponseSchema
+    );
+    return data.order;
+  }
+
+  async fetchOrderFulfillment(orderId: string): Promise<OrderFulfillmentData> {
+    return this.request(
+      INTERNAL_API_PATHS.orderFulfillment,
+      orderFulfillmentRequestSchema,
+      { selector: { kind: "order_id", value: orderId } },
+      orderFulfillmentResponseSchema
+    );
+  }
+
+  async previewOrderRefund(orderId: string): Promise<OrderRefundPreviewData> {
+    const data = await this.request(
+      INTERNAL_API_PATHS.orderRefundPreview,
+      orderRefundPreviewRequestSchema,
+      { selector: { kind: "order_id", value: orderId } },
+      orderRefundPreviewResponseSchema
+    );
+    return data.refundPreview;
+  }
+
+  async executeOrderRefund(input: {
+    orderId: string;
+    reason: string;
+    idempotencyKey: string;
+    operator?: InternalIntegrationOperator;
+  }): Promise<OrderRefundExecuteData> {
+    const data = await this.request(
+      INTERNAL_API_PATHS.orderRefundExecute,
+      orderRefundExecuteRequestSchema,
+      {
+        selector: { kind: "order_id", value: input.orderId },
+        reason: input.reason,
+        idempotencyKey: input.idempotencyKey,
+        operator: input.operator
+      },
+      orderRefundExecuteResponseSchema
+    );
+    return data.refund;
+  }
+
   private async request<
     TRequestSchema extends z.ZodType,
     TResponseSchema extends z.ZodType
@@ -132,9 +220,10 @@ export class InternalApiClient {
       throw new InternalApiClientError("INVALID_REQUEST");
     }
 
+    const rawBody = JSON.stringify(parsedRequest.data);
+    const rawBodyBytes = Buffer.from(rawBody, "utf8");
+
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      const rawBody = JSON.stringify(parsedRequest.data);
-      const rawBodyBytes = Buffer.from(rawBody, "utf8");
       const timestamp = String(this.dependencies.nowMs());
       const nonce = this.dependencies.nonce();
       const headers = createSignedHeaders(this.config.hmacSecret, {

@@ -32,11 +32,31 @@ test("root production code never imports or executes the legacy archive", () => 
   assert.equal(/(?:from|require\()\s*["'][^"']*legacy[\\/]/.test(sourceText), false);
 });
 
-test("API client exposes only the two least-privilege Aura operations", () => {
-  assert.equal(sourceText.includes("/api/internal/integrations/v1/aura/leaderboards"), true);
-  assert.equal(sourceText.includes("/api/internal/integrations/v1/aura/lookup"), true);
-  assert.equal(sourceText.includes("/api/internal/integrations/v1/users/lookup"), false);
-  assert.equal(sourceText.includes("/api/internal/integrations/v1/orders/lookup"), false);
+test("API client exposes only explicitly approved bot operations", () => {
+  for (const path of [
+    "/api/internal/integrations/v1/aura/leaderboards",
+    "/api/internal/integrations/v1/aura/lookup",
+    "/api/internal/integrations/v1/users/overview",
+    "/api/internal/integrations/v1/orders/details",
+    "/api/internal/integrations/v1/orders/fulfillment",
+    "/api/internal/integrations/v1/orders/refund/preview",
+    "/api/internal/integrations/v1/orders/refund/execute"
+  ]) {
+    assert.equal(sourceText.includes(path), true, `missing approved path ${path}`);
+  }
+
+  for (const forbidden of [
+    "/api/internal/integrations/v1/users/aura/adjust",
+    "/api/internal/integrations/v1/users/wallet/adjust",
+    "/api/internal/integrations/v1/purchase-intents/process"
+  ]) {
+    assert.equal(sourceText.includes(forbidden), false, `unexpected high-risk path ${forbidden}`);
+  }
+});
+
+test("admin mutations cannot rely on Discord roles alone", () => {
+  assert.equal(sourceText.includes("BOT_ADMIN_USER_IDS"), true);
+  assert.equal(sourceText.includes("botAdminUserIds.includes"), true);
 });
 
 test("environment example contains only the approved root variable surface", () => {
@@ -52,6 +72,9 @@ test("environment example contains only the approved root variable surface", () 
     "DISCORD_COMMAND_CHANNEL_ID",
     "DISCORD_AURA_COMMAND_BLOCKED_CHANNEL_ID",
     "DISCORD_LEADERBOARD_MESSAGE_ID",
+    "BOT_ADMIN_USER_IDS",
+    "BOT_ADMIN_COMMAND_CHANNEL_ID",
+    "BOT_AUDIT_LOG_CHANNEL_ID",
     "CM_INTERNAL_INTEGRATIONS_API_ORIGIN",
     "CM_INTERNAL_INTEGRATIONS_API_CLIENT_ID",
     "CM_INTERNAL_INTEGRATIONS_API_KEY_ID",

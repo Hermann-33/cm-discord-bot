@@ -2,6 +2,7 @@ import "dotenv/config";
 import { Events } from "discord.js";
 import { InternalApiClient } from "./api/client";
 import { handleAuraCommand } from "./commands/aura";
+import { CmAdminController } from "./commands/cm";
 import { handleRefreshLeaderboardCommand } from "./commands/refreshLeaderboard";
 import { loadConfig, type AppConfig } from "./config/env";
 import { createDiscordClient } from "./discord/client";
@@ -22,6 +23,7 @@ try {
 
 const discordClient = createDiscordClient();
 const internalApiClient = new InternalApiClient(config.internalApi);
+const cmAdminController = new CmAdminController(config, internalApiClient);
 const leaderboardService = new LeaderboardService(config, discordClient, internalApiClient);
 const leaderboardSchedule = new LeaderboardSchedule(
   leaderboardService,
@@ -63,12 +65,13 @@ discordClient.on(Events.MessageCreate, (message) => {
 });
 
 discordClient.on(Events.InteractionCreate, (interaction) => {
-  if (!interaction.isChatInputCommand()) return;
-  void handleRefreshLeaderboardCommand(interaction, config, leaderboardService).catch(
-    (error: unknown) => {
-      logger.error("sanitized interaction failure", sanitizeError(error));
-    }
-  );
+  void (async () => {
+    if (await cmAdminController.handle(interaction)) return;
+    if (!interaction.isChatInputCommand()) return;
+    await handleRefreshLeaderboardCommand(interaction, config, leaderboardService);
+  })().catch((error: unknown) => {
+    logger.error("sanitized interaction failure", sanitizeError(error));
+  });
 });
 
 discordClient.login(config.discordBotToken).catch(async (error: unknown) => {

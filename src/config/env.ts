@@ -14,6 +14,14 @@ const optionalSnowflake = z.preprocess((value) => {
   return trimmed.length === 0 ? undefined : trimmed;
 }, z.string().regex(snowflakePattern).optional());
 
+const optionalSnowflakeList = z.preprocess((value) => {
+  if (typeof value !== "string") return undefined;
+  const ids = value.split(",").map((item) => item.trim()).filter(Boolean);
+  return ids.length === 0 ? undefined : ids;
+}, z.array(z.string().regex(snowflakePattern)).min(1).max(100)
+  .refine((ids) => new Set(ids).size === ids.length, "Duplicate IDs are not allowed")
+  .optional());
+
 function isOriginOnlyHttps(value: string): boolean {
   try {
     const url = new URL(value);
@@ -49,6 +57,9 @@ const envSchema = z.object({
   DISCORD_COMMAND_CHANNEL_ID: snowflake,
   DISCORD_AURA_COMMAND_BLOCKED_CHANNEL_ID: snowflake,
   DISCORD_LEADERBOARD_MESSAGE_ID: optionalSnowflake,
+  BOT_ADMIN_USER_IDS: optionalSnowflakeList,
+  BOT_ADMIN_COMMAND_CHANNEL_ID: optionalSnowflake,
+  BOT_AUDIT_LOG_CHANNEL_ID: optionalSnowflake,
   CM_INTERNAL_INTEGRATIONS_API_ORIGIN: trimmedRequiredString.refine(isOriginOnlyHttps),
   CM_INTERNAL_INTEGRATIONS_API_CLIENT_ID: integrationId,
   CM_INTERNAL_INTEGRATIONS_API_KEY_ID: integrationId,
@@ -72,6 +83,9 @@ export type AppConfig = {
   discordCommandChannelId: string;
   discordAuraCommandBlockedChannelId: string;
   discordLeaderboardMessageId?: string;
+  botAdminUserIds: readonly string[];
+  botAdminCommandChannelId?: string;
+  botAuditLogChannelId?: string;
   internalApi: InternalApiConfig;
 };
 
@@ -93,6 +107,9 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     discordCommandChannelId: parsed.data.DISCORD_COMMAND_CHANNEL_ID,
     discordAuraCommandBlockedChannelId: parsed.data.DISCORD_AURA_COMMAND_BLOCKED_CHANNEL_ID,
     discordLeaderboardMessageId: parsed.data.DISCORD_LEADERBOARD_MESSAGE_ID,
+    botAdminUserIds: parsed.data.BOT_ADMIN_USER_IDS ?? [],
+    botAdminCommandChannelId: parsed.data.BOT_ADMIN_COMMAND_CHANNEL_ID,
+    botAuditLogChannelId: parsed.data.BOT_AUDIT_LOG_CHANNEL_ID,
     internalApi: {
       origin: new URL(parsed.data.CM_INTERNAL_INTEGRATIONS_API_ORIGIN).origin,
       clientId: parsed.data.CM_INTERNAL_INTEGRATIONS_API_CLIENT_ID,
