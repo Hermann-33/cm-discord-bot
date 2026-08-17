@@ -14,7 +14,7 @@ const config = {
   discordGuildId: GUILD_ID,
   botAdminCommandChannelId: ADMIN_CHANNEL_ID,
   botAdminUserIds: [ADMIN_ID]
-} as AppConfig;
+} as unknown as AppConfig;
 
 const overview = {
   identity: {
