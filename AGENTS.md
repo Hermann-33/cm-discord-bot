@@ -25,7 +25,7 @@ If repository context conflicts with the requested task, stop and report the con
 
 When sources conflict, use this order:
 
-1. Accepted ADRs
+1. Accepted ADRs, with later superseding ADRs taking precedence
 2. `ACTIVE_CONTEXT.md`
 3. `ARCHITECTURE.md`
 4. verified `DATA_STATUS.md`
@@ -56,7 +56,8 @@ Before modifying files, summarize:
 - The bot does not directly access Supabase or Postgres and must not gain database credentials or a direct database fallback.
 - Website-owned business/data access goes through the HMAC-authenticated Internal Integrations API.
 - Current production API permissions are read-only Aura operations. Mutation work requires an explicitly approved backend contract first.
-- All future bot commands are governed by ADR-0003: guild-only slash commands. The current `cm aura` message command is a migration target, not the desired end state.
+- Command-surface policy is governed by ADR-0005, which supersedes ADR-0003: customer-facing/self-service commands may use message commands; admin/staff operational and mutation commands use guild-only slash commands.
+- `cm aura` is an intentional customer-facing message command and is not a slash-migration target unless a later product decision explicitly changes that policy.
 - Major admin/mutation commands require the whitelist and confirmation model in ADR-0004. Discord roles alone are insufficient.
 - Never expose, log, commit, echo, or document real secret values.
 
@@ -67,6 +68,7 @@ Do not casually modify:
 - API signing/canonicalization in `src/api/signing.ts`;
 - API client validation, response bounds, retry semantics, or credential handling;
 - command authorization or mention-safety helpers;
+- customer/admin command-surface separation;
 - leaderboard bootstrap/edit semantics;
 - scheduler overlap/shutdown behavior;
 - `legacy/` or `docs/legacy-parity.md` history;
@@ -107,7 +109,7 @@ Do not run the bot, register Discord commands, or perform live production calls 
 - Inspect status and diff before editing and before completion.
 - Never stage `.env`, `dist/`, `node_modules/`, logs, ZIP archives, or unrelated local artifacts.
 - Stage only task-relevant files.
-- Use a task-scoped commit message when committing, for example `TASK-WF-001: ...`.
+- Use a task-scoped commit message when committing.
 - Update context/handoff/audit documents in the same task that changes the truth they describe.
 - Do not rewrite ADR history. Supersede old decisions with new ADRs.
 

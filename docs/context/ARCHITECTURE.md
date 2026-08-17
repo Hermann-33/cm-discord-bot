@@ -13,7 +13,7 @@ Discord
   -> Supabase/Postgres and other website dependencies
 ```
 
-The bot has no direct Supabase/Postgres access.
+The bot has no direct Supabase/Postgres access. This API boundary is the main architectural difference from the archived legacy bot.
 
 Full current audit: `../audits/2026-08-17-full-codebase-audit.md`.
 
@@ -38,11 +38,9 @@ Audit note: dev `@types/node` is 25.x while the declared runtime minimum is Node
 3. creates `InternalApiClient`;
 4. creates leaderboard service/schedule;
 5. installs SIGINT/SIGTERM one-shot handlers;
-6. installs MessageCreate and InteractionCreate handlers;
+6. installs customer `MessageCreate` and admin `InteractionCreate` handlers;
 7. logs in;
 8. on first ClientReady, bootstraps or immediately refreshes leaderboard and starts schedule.
-
-Config/login/startup failures are sanitized and fail closed.
 
 Current shutdown stops the timer and destroys Discord but does not drain a concurrent operation. Current work is read-only; revisit before mutation commands.
 
@@ -56,7 +54,7 @@ Current bot source exposes only:
 Current transport security properties:
 
 - dedicated client/key/HMAC secret;
-- HMAC-SHA256 over version/client/key/timestamp/nonce/method/path/body hash;
+- HMAC-SHA256 canonical signing;
 - fresh signed material per read retry;
 - strict request and response schemas;
 - origin-only HTTPS config;
@@ -67,60 +65,51 @@ Current transport security properties:
 - no trust of backend error text;
 - no request body/credential logging in normal client behavior.
 
-Future mutation calls must carry stable logical idempotency across retries; do not simply copy the read-call retry abstraction without mutation semantics.
+The bot must continue to use this boundary for future admin mutations. Direct bot-to-Supabase access is forbidden.
 
-## Discord command architecture — current
+## Command architecture — current and accepted
 
-### Message surface
+ADR-0005 supersedes ADR-0003 where they conflict.
 
-`cm aura` remains an exact normalized message command.
+### Customer surface
+
+`cm aura` is an intentional customer-facing message command.
 
 Runtime guards:
 
-- bot author ignored;
+- bot authors ignored;
+- exact command trigger;
 - exact configured guild;
-- configured blocked channel rejected before backend lookup.
+- configured blocked channel rejected before backend lookup;
+- sanitized output and safe allowed mentions.
 
-It is safe under current behavior but conflicts with ADR-0003's accepted slash-only destination and keeps privileged Message Content intent required.
+It is not a `/aura` migration target under the current product policy.
 
-### Slash surface
+### Admin/staff surface
 
-`/refresh-leaderboard`:
+`/refresh-leaderboard` is the current operational slash command:
 
-- manual guild registration only;
-- registration is a guild bulk overwrite;
-- explicit runtime guild guard already present;
+- manually registered to configured guild;
+- explicit runtime guild guard;
 - exact command channel;
-- ManageGuild/Administrator runtime check;
+- `ManageGuild`/`Administrator` runtime check;
 - ephemeral result.
 
-`InteractionCreate` is currently hardwired to that handler. Add a clean registry/dispatch model before multiple admin slash commands make this composition unwieldy.
+Future admin mutation commands also remain slash commands and must satisfy ADR-0004.
 
-## Discord intents and messages
+### Discord intents
 
 Current intents:
 
-- Guilds;
-- GuildMessages;
-- MessageContent.
+- `Guilds`;
+- `GuildMessages`;
+- `MessageContent`.
 
-After `/aura` migration, remove message intents if no feature still requires them.
-
-Mention suppression is centralized in `src/discord/safeMessages.ts` and is also used by Aura output.
+`GuildMessages` and privileged `MessageContent` are intentionally required while customer message commands such as `cm aura` exist. They are an accepted product/runtime tradeoff, not migration debt.
 
 ## Leaderboard architecture
 
-One Components V2 message contains:
-
-- global Aura heading;
-- lifetime top 10;
-- available top 10;
-- API-provided ranks;
-- fixed-width rank/Aura labels;
-- privacy-aware API display name, then bot sanitization;
-- top-three medal suffixes;
-- relative update timestamp;
-- mention suppression.
+One Components V2 message contains the lifetime and available top-10 Aura boards using API-provided ranks/privacy-aware display names, bot-side sanitization, fixed-width labels, medal suffixes, relative update timestamp and mention suppression.
 
 Bootstrap creates one message then exits so the operator can persist its ID. Normal startup edits the configured message immediately, then schedules five-minute refreshes.
 
@@ -128,29 +117,13 @@ Bootstrap creates one message then exits so the operator can persist its ID. Nor
 
 ## Data ownership
 
-Website/backend owns:
+Website/backend owns user/external identity resolution, Discord link/privacy state, Aura and wallet business state, orders/payments/deliveries/licenses, OAuth/Support-role state, authorization, integration operation allowlists and mutation idempotency/business logic.
 
-- user and external-identity resolution;
-- Discord link/privacy state;
-- Aura calculation/ledger/balance;
-- wallet ledger/balance/funding state;
-- orders/payments/deliveries/licenses;
-- OAuth and Support-role state;
-- data authorization;
-- integration operation allowlists;
-- mutation idempotency/business logic.
+Bot owns Discord interaction/presentation, local guards, signed transport to approved backend operations and sanitized Discord audit output once implemented.
 
-Bot owns:
+## Backend mutation foundation — dependency state
 
-- Discord interaction;
-- presentation;
-- local guard/validation;
-- signed transport to explicitly approved backend operations;
-- sanitized Discord audit output once implemented.
-
-## Backend mutation foundation — current dependency state
-
-Live DB now contains website-owned internal integration execute primitives:
+Live DB contains website-owned internal integration execute primitives for:
 
 ```text
 users.aura.adjust
@@ -159,11 +132,9 @@ users.wallet.adjust
 
 They are service-role-only among checked application roles and implement persistent idempotency/request hash, bounded input, target validation, negative-balance protection and integration/operator audit metadata.
 
-Wallet adjustment writes a wallet transaction, and the website wallet transaction trigger synchronizes funding lot/consumption state.
-
 These are backend implementation facts, **not** bot API permissions.
 
-Still unverified at this architecture layer:
+Still unverified:
 
 - HTTP mutation paths;
 - preview lifecycle;
@@ -174,10 +145,8 @@ Still unverified at this architecture layer:
 
 ## Future admin mutation architecture
 
-Accepted direction remains:
-
 ```text
-Discord guild slash command
+Discord admin slash command
   -> exact guild/admin channel
   -> explicit Discord user-ID whitelist
   -> optional secondary domain role
@@ -189,11 +158,7 @@ Discord guild slash command
   -> sanitized Discord audit/result
 ```
 
-Direct bot calls to database mutation functions remain forbidden.
-
-## Legacy archive
-
-`legacy/` is frozen pre-rebuild evidence. Production build/typecheck excludes it and architecture tests prohibit active imports.
+Customer `cm aura` remains separate and read-only.
 
 ## Current engineering/governance gaps
 
@@ -208,8 +173,8 @@ Direct bot calls to database mutation functions remain forbidden.
 
 - HMAC canonicalization/signing;
 - API retry/idempotency semantics;
-- API error/status contract;
 - API credential scopes;
+- customer/admin command-surface separation;
 - guild/user/channel authorization ordering;
 - mention suppression;
 - Components V2 edit semantics;

@@ -2,115 +2,98 @@
 
 Updated: 2026-08-17
 
-## Current implemented commands
+## Product command-surface rule
 
-### `cm aura` — message command
+ADR-0005 supersedes ADR-0003 where they conflict.
 
-Current source behavior, re-verified in `TASK-AUDIT-001`:
+Cheater's Market deliberately separates command UX by audience:
+
+- **customers/self-service:** message/text commands;
+- **staff/admin:** Discord slash commands.
+
+Therefore `cm aura` should remain a message command under the current product policy. Slash commands are not the intended customer interface.
+
+The interaction style does not change the backend boundary: both command types must use approved website Internal Integrations API operations and must never directly connect to Supabase/Postgres.
+
+## Current customer command
+
+### `cm aura`
+
+Current source behavior:
 
 - exact normalized trigger `cm aura`;
 - ignores bot authors;
 - requires exact configured guild;
 - silently ignored in DMs/wrong guild;
 - allowed in guild channels except `DISCORD_AURA_COMMAND_BLOCKED_CHANNEL_ID`;
-- all those guards occur before the API lookup;
+- all guards occur before API lookup;
 - resolves caller by Discord user ID through the read-only Internal API;
-- returns available and lifetime Aura in a green embed;
-- sanitizes API display name and neutralizes mentions/Discord markdown;
+- returns available and lifetime Aura;
+- sanitizes display name/markdown/mentions;
 - uses safe allowed mentions;
 - maps not-found/service failures to safe user messages.
 
 Tests prove there is no backend lookup for bot messages, DMs, wrong guild or blocked channel.
 
-This is current behavior, **not the accepted end-state command policy**.
+Because this customer command is intentionally message-based, `GuildMessages` and privileged `MessageContent` intents remain intentional runtime requirements.
 
-Because it is a message command, it is the reason the current Discord client still requires `GuildMessages` and privileged `MessageContent` intent.
+## Current admin/staff command
 
-### `/refresh-leaderboard` — slash command
+### `/refresh-leaderboard`
 
-Current source behavior, re-verified:
-
-- built and manually registered as a guild command;
-- registration uses `Routes.applicationGuildCommands(clientId, guildId)` with bulk overwrite;
-- no options;
-- default member permission `ManageGuild`;
-- handler **already explicitly checks** `interaction.guildId === config.discordGuildId`;
-- exact configured command channel required;
-- runtime requires `ManageGuild` or `Administrator`;
+- manually registered as a guild slash command;
+- registration uses `Routes.applicationGuildCommands(clientId, guildId)`;
+- explicit runtime guild check;
+- exact configured command channel;
+- runtime `ManageGuild` or `Administrator` permission;
 - requires configured leaderboard message ID;
-- replies/defer are ephemeral;
-- safe allowed mentions are used for direct reply helper;
-- invokes the same overlap-locked refresh service used by scheduler.
+- ephemeral result;
+- invokes the shared overlap-locked refresh service.
 
-Earlier documentation wording that suggested the runtime guild guard still needed to be added was stale.
+## Future admin slash commands
 
-## Accepted future command policy
+Aura administration first:
 
-ADR-0003 remains authoritative:
+- `/aura-adjust preview`;
+- `/aura-adjust confirm`.
 
-- all bot commands should be slash commands;
-- all commands must be registered to and runtime-restricted to the configured Cheater's Market guild;
-- DMs fail closed;
-- guild registration remains explicit/manual;
-- public/read-only commands and admin/mutation commands use different authorization levels.
+Wallet administration later:
 
-Target read-only catalog:
+- `/wallet-adjust preview`;
+- `/wallet-adjust confirm`.
 
-- `/aura` — replaces `cm aura`;
-- `/refresh-leaderboard` — staff operational command.
+These are admin/staff surfaces only. None is implemented today.
 
-After `/aura` migration, remove `MessageContent`/`GuildMessages` intents if no other feature requires them.
+## Authorization matrix
 
-## Target high-impact admin catalog
-
-Aura first:
-
-- `/aura-adjust preview`
-- `/aura-adjust confirm`
-
-Wallet later:
-
-- `/wallet-adjust preview`
-- `/wallet-adjust confirm`
-
-None of those commands is implemented today.
-
-## Authorization matrix — target
-
-| Surface | Guild | Channel | User whitelist | Secondary role/permission | Mutation |
-| --- | --- | --- | --- | --- | --- |
-| `/aura` | configured guild only | approved public surface | no | none | no |
-| `/refresh-leaderboard` | configured guild only | command/admin channel | optional product decision | current ManageGuild/Administrator | no |
-| `/aura-adjust *` | configured guild only | `BOT_ADMIN_COMMAND_CHANNEL_ID` | **mandatory** | optional Aura-manager role | yes through backend only |
-| `/wallet-adjust *` | configured guild only | `BOT_ADMIN_COMMAND_CHANNEL_ID` | **mandatory** | optional wallet-manager role | yes through backend only |
+| Surface | Audience | Interface | Guild | Channel | Explicit user whitelist | Permission/role | Mutation |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `cm aura` | customer | message command | configured guild only | all approved channels except blocked channel | no | none | no |
+| `/refresh-leaderboard` | staff/admin | slash command | configured guild only | configured command channel | no current whitelist | ManageGuild/Administrator | no |
+| `/aura-adjust *` | admin | slash command | configured guild only | `BOT_ADMIN_COMMAND_CHANNEL_ID` | **mandatory** | optional secondary Aura role | yes, backend only |
+| `/wallet-adjust *` | admin | slash command | configured guild only | `BOT_ADMIN_COMMAND_CHANNEL_ID` | **mandatory** | optional secondary wallet role | yes, backend only |
 
 ## Required mutation authorization ordering
 
 Before any mutation-capable backend request:
 
-1. `interaction.inGuild()` / non-null guild;
+1. interaction is in a guild;
 2. exact configured guild ID;
 3. exact configured admin command channel;
-4. invoking Discord user ID in explicit allowlist;
-5. optional domain role/permission check;
-6. input validation and caps check suitable for UX;
+4. invoking Discord user ID is in explicit allowlist;
+5. optional domain role/permission gate;
+6. input validation/caps suitable for UX;
 7. backend-authoritative preview/confirmation/idempotency requirements.
 
 Roles alone are never sufficient for high-impact mutations.
 
-## Backend mutation status discovered by audit
+## Backend mutation status
 
-The live DB now contains service-role-only internal integration execute primitives with operation IDs:
+Live DB contains service-role-only integration execute primitives:
 
 - `users.aura.adjust`;
 - `users.wallet.adjust`.
 
-They already provide persistent idempotency/request-hash behavior and audit metadata at the DB integration layer.
+This does not authorize direct DB calls from the bot. Before admin command integration, verify website Internal Integrations API HTTP endpoints, operation permission scope and bot credential authorization.
 
-This does **not** mean these slash commands can be implemented by directly calling DB functions. Before command integration, verify the website Internal Integrations API HTTP endpoints, operation permission scope and bot credential authorization.
-
-See:
-
-- `DATA_STATUS.md`;
-- `../security/ADMIN_MUTATION_MODEL.md`;
-- `../audits/2026-08-17-full-codebase-audit.md`.
+See `DATA_STATUS.md`, ADR-0004, ADR-0005 and `../security/ADMIN_MUTATION_MODEL.md`.

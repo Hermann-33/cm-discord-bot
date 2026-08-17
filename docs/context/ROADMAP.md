@@ -4,21 +4,13 @@ Updated: 2026-08-17
 
 ## Completion rule
 
-A phase is complete only when all applicable tracks pass:
-
-1. Discord/user-facing behavior;
-2. API/service contract;
-3. data/business correctness;
-4. security/authorization/secret handling;
-5. automated tests/typecheck/build;
-6. documentation/ADRs/handoff;
-7. deployment/live verification when explicitly required.
+A phase is complete only when all applicable Discord behavior, API contract, data/business correctness, security, automated verification, documentation and deployment gates pass.
 
 ## Phase 0 — Read-only bot foundation — COMPLETE
 
 Completed:
 
-- standalone Aura bot;
+- customer `cm aura` message command;
 - Components V2 leaderboard;
 - persistent bootstrap/scheduling/manual refresh;
 - host compatibility shim;
@@ -28,40 +20,34 @@ Completed:
 
 ## Phase 1 — Repository governance and durable memory — COMPLETE
 
-Completed in `TASK-WF-001`:
-
-- root agent rules;
-- current context/architecture/data/code/command/roadmap/workflow/handoff docs;
-- audit/history documents;
-- ADRs;
-- admin mutation specialist model.
+Completed in `TASK-WF-001`.
 
 ## Phase 1.5 — Full codebase/dependency re-baseline — COMPLETE WITH EXECUTION GAP
 
-`TASK-AUDIT-001` read every active source file and all root tests/fixtures, audited root config/GitHub state and re-verified live backend dependency metadata.
+`TASK-AUDIT-001` audited every active source file, root tests/fixtures, config/GitHub state and relevant live backend metadata.
 
-Full report: `../audits/2026-08-17-full-codebase-audit.md`.
+The audit's recommendation to migrate `cm aura` to `/aura` was based on ADR-0003 and is superseded by ADR-0005 after product clarification.
 
-Static/metadata audit is complete. Fresh `npm test`, typecheck, build and dependency scan were not executable in the audit environment and no CI result exists on the audited head.
+Fresh `npm test`, typecheck, build and dependency scan still need executable evidence/CI.
 
-## Phase 2 — Guild-only slash-command convergence — NEXT
+## Phase 2 — Command-surface stabilization and admin dispatch foundation — NEXT
 
 Goal:
 
-- replace `cm aura` with `/aura`;
-- keep all commands guild-registered and explicitly guild-guarded at runtime;
-- preserve Aura output/privacy/error behavior;
-- preserve mention safety;
-- remove `MessageContent` and `GuildMessages` intents after the message command is gone, if no other feature requires them;
-- move interaction dispatch toward a clean slash-command registry suitable for later admin commands.
+- **preserve** `cm aura` as the customer message command;
+- preserve its guild/blocked-channel/API-read/privacy/mention-safety behavior;
+- retain `MessageContent`/`GuildMessages` because they are intentionally required by the customer surface;
+- keep admin/staff commands guild-only slash commands;
+- introduce a clean slash-command registry/dispatcher before multiple admin commands are added;
+- keep customer and admin command authorization paths clearly separated.
 
-Completion requires tests for DM/wrong guild/blocked or allowed command surface and no regressions in API read behavior.
+No customer `/aura` migration is planned.
 
 ## Phase 3 — Admin authorization foundation — PLANNED
 
 Goal:
 
-- reusable high-impact command guard;
+- reusable high-impact slash-command guard;
 - mandatory `BOT_ADMIN_USER_IDS` whitelist;
 - configured admin command channel;
 - configured audit-log channel;
@@ -73,96 +59,53 @@ No mutation execution in this phase.
 
 ## Phase 4 — Aura backend HTTP contract verification/integration — PARTIAL UPSTREAM FOUNDATION EXISTS
 
-### Now verified upstream
+Live DB contains `internal_integration_adjust_aura_balance(...)`, operation `users.aura.adjust`, with service-role-only execute, persistent idempotency/request hash, bounded input, target validation, operator audit metadata and negative-balance protection.
 
-Live DB contains `internal_integration_adjust_aura_balance(...)` with operation ID `users.aura.adjust`.
-
-Verified foundation includes:
-
-- service-role-only execute among checked roles;
-- persistent idempotency/request hash;
-- bounded delta/reason;
-- target validation;
-- external operator audit metadata;
-- negative-balance protection;
-- Aura ledger/admin audit output.
-
-### Still required
-
-The bot must not infer an HTTP contract from a DB function. Separately verify/implement in the website-owned Internal Integrations API:
+Still required at the website API layer:
 
 - exact Aura adjustment HTTP operation/path;
-- dedicated operation permission/scope for the bot client;
+- operation permission/scope for bot client;
 - target selector contract;
 - preview behavior/state/expiry;
 - before/after response contract;
 - single/daily cap policy;
 - stable error mapping;
-- production authenticated smoke verification.
+- authenticated smoke verification.
 
 Direct DB access remains forbidden.
 
-## Phase 5 — Aura admin commands — AFTER PHASES 2–4
+## Phase 5 — Aura admin slash commands — AFTER PHASES 2–4
 
-Target commands:
+Target:
 
-- `/aura-adjust preview`
-- `/aura-adjust confirm`
+- `/aura-adjust preview`;
+- `/aura-adjust confirm`.
 
-Requirements:
+Requirements include explicit admin whitelist/guild/channel gates, stable idempotency across retries, backend-authoritative preview/confirm, sanitized audit output and controlled test-account validation.
 
-- whitelist + guild + admin-channel gates before any backend request;
-- preview bound to operator/target/delta/reason/expiry;
-- confirm uses a stable idempotency key across retries;
-- sanitized Discord audit-channel evidence;
-- counter-entry reversal model;
-- controlled test-account validation;
-- source/security audit before production enablement.
+## Phase 6 — Wallet admin slash commands — LATER / HIGH RISK
 
-## Phase 6 — Wallet adjustment — BACKEND PRIMITIVE EXISTS, BOT WORK STILL LATER/HIGH RISK
+Live DB contains `internal_integration_adjust_wallet_balance(...)`, operation `users.wallet.adjust`, and wallet funding-state trigger machinery.
 
-Live DB now contains `internal_integration_adjust_wallet_balance(...)`, operation `users.wallet.adjust`, with idempotency/audit/negative-balance controls.
-
-The admin wallet primitive writes a `wallet_transactions` `admin_adjustment` row. The wallet transaction trigger routes positive entries to funding-lot synchronization and negative entries to funding-consumption synchronization.
-
-This is useful upstream foundation, but wallet remains later because it is stored-value/payment-adjacent.
-
-Before bot wallet commands:
-
-- complete and prove Aura path first;
-- verify website HTTP wallet adjustment operation/scope;
-- require confirmation for every wallet mutation;
-- enforce stricter caps;
-- verify wallet ledger/funding-state behavior end-to-end;
-- preserve immutable audit/counter-entry reversal;
-- never fabricate external payment-provider provenance.
-
-Target commands only after those gates:
-
-- `/wallet-adjust preview`
-- `/wallet-adjust confirm`.
+Before exposing `/wallet-adjust`, prove the Aura admin path first and verify the website HTTP wallet contract/scope, ledger/funding-state behavior, stricter caps and confirmation policy.
 
 ## Phase 7 — Production hardening and operations
 
-Priority work discovered by full audit:
+Priority work:
 
 - repository CI for test/typecheck/build;
 - dependency scan/update policy;
 - branch protection/rules verification;
 - command-registration config split so registration does not require Internal API secrets;
-- stronger defense-in-depth log redaction before mutation/user-admin expansion;
+- stronger defense-in-depth log redaction before admin mutation expansion;
 - Node runtime/type-definition alignment;
-- direct tests for registration route/body and Discord channel helpers;
-- scheduler lifecycle hardening;
-- credential rotation/runbook;
-- host/deployment/rollback runbook;
+- registration/helper/scheduler lifecycle tests;
+- credential rotation/deployment/rollback runbooks;
 - centralized logs/monitoring;
 - authenticated API smoke verification.
 
-External backend owner also needs to address the Supabase advisor's exposed `SECURITY DEFINER` warnings.
+External backend owner also needs to address Supabase advisor warnings unrelated to the bot.
 
 ## Current position
 
-Phases 0 and 1 are complete. The full audit is complete as a static/live-metadata re-baseline but has a fresh-execution gap. Phase 2 is the next bot-code change.
-
-Backend database execute primitives for Aura and wallet now exist, so future planning should focus on HTTP/API contract verification and bot authorization—not rebuilding those primitives and not bypassing the website.
+The customer `cm aura` message command is intended current behavior. The next bot-code work is admin-command infrastructure and verification—not converting the customer command to slash.

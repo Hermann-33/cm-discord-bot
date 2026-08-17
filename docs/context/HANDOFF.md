@@ -2,72 +2,48 @@
 
 Updated: 2026-08-17
 
-## Current task
+## Latest product clarification
 
-`TASK-AUDIT-001` — exhaustive re-baseline of the standalone Discord bot and the backend dependency facts that materially affect its next work.
+ADR-0005 is now authoritative and supersedes ADR-0003 where they conflict.
 
-Full report:
+Command UX is audience-specific:
 
-`../audits/2026-08-17-full-codebase-audit.md`
+- customer/self-service commands use message/text commands;
+- staff/admin operations use slash commands.
 
-## Audited starting state
+`cm aura` is specifically a customer command and should remain message-based. It is not a `/aura` migration target under the current product policy.
 
-- GitHub repo: `Hermann-33/cm-discord-bot`
-- branch: `master`
-- audited starting head: `b86acf5a6e27ec69b187a2bacf94773faef81500`
-- active source: root `src/`
-- archived source: `legacy/`
-- no open PRs;
-- no GitHub workflow run/status on the audited head;
-- only `master` returned by branch search.
+## Main current architecture
 
-## Audit coverage
+The principal difference from the legacy bot is the data boundary:
 
-Read in full:
+```text
+OLD
+Discord bot -> Supabase/Postgres directly
 
-- every active production TypeScript file;
-- every test file listed by `npm test`;
-- every tracked fixture;
-- root package/env/build/ignore configuration;
-- current governance/current-state docs needed for drift analysis.
+CURRENT
+Discord bot -> HMAC Internal Integrations API -> website business/data layer -> Supabase/Postgres
+```
 
-Read-only live verification also covered relevant Supabase project health, current migrations, Aura/wallet internal integration adjustment functions, grants, wallet funding trigger path, RLS state and advisor output.
-
-No bot runtime, Discord registration, website source or database mutation was executed.
+The active bot must not regain direct Supabase/Postgres access.
 
 ## Current bot truth
 
 - production bot has no direct DB access;
 - API client exposes only leaderboard and Aura lookup reads;
-- `cm aura` is still a message command and keeps Message Content intent required;
-- `/refresh-leaderboard` is a guild slash command and **already has** an explicit runtime guild guard;
+- `cm aura` is the customer message command;
+- `/refresh-leaderboard` is a staff/admin guild slash command with explicit runtime guild/channel/permission checks;
+- `MessageContent`/`GuildMessages` are intentionally required by the customer message command;
 - safe allowed mentions are centralized;
 - leaderboard is Components V2;
 - scheduled/manual refreshes share one overlap lock;
-- legacy is isolated by build/typecheck and architecture tests.
+- legacy is isolated.
 
-## Backend truth that changed since earlier planning
+## Backend truth discovered in full audit
 
-Live DB now has purpose-built internal-integration execute functions for both Aura and wallet balance adjustments.
+Live DB has purpose-built integration execute functions for Aura and wallet balance adjustments with service-role-only execution, idempotency/request-hash protection, validation, negative-balance protection and audit integration.
 
-They include:
-
-- service-role-only execute among checked roles;
-- operation-specific idempotency;
-- request hash conflict detection;
-- bounded deltas/reasons;
-- target validation;
-- external operator audit metadata;
-- negative-balance protection;
-- ledger/admin audit creation.
-
-Wallet adjustment also participates in the wallet funding-state trigger machinery.
-
-Therefore the old roadmap statement “backend balance-adjustment work does not exist” is stale.
-
-## What is still NOT proven
-
-Do not treat the DB functions as bot authorization.
+This does not prove the bot has an HTTP mutation contract or permission.
 
 Still requires separate website/API verification:
 
@@ -75,69 +51,32 @@ Still requires separate website/API verification:
 - preview/confirm contract;
 - operation allowlist/scopes;
 - bot credential mutation permission;
-- selector/target resolution exposed by API;
+- selector/target resolution;
 - cap/expiry/state-binding rules;
-- authenticated production HTTP smoke test.
+- authenticated HTTP smoke test.
 
-Still absent from bot source:
+## Verification limitation
 
-- `/aura` slash replacement;
-- `BOT_ADMIN_USER_IDS` authorization;
-- admin/audit channels;
-- Aura/wallet mutation client DTOs;
-- preview/confirm commands;
-- Discord mutation audit output.
-
-## Major findings
-
-### Bot/process
-
-1. slash-only policy not yet complete;
-2. no current-head CI/fresh execution evidence;
-3. command registration is coupled to full secret-bearing runtime config;
-4. generic logger is not universal secret/PII redaction;
-5. Node types/runtime floor are not aligned;
-6. local ZIP accidental-stage defense is weak;
-7. several low-severity defensive/test gaps are documented in the full audit.
-
-### Upstream
-
-Supabase security advisor still reports unrelated public/signed-in `SECURITY DEFINER` functions. This belongs to website/database hardening and remains visible because the bot depends on that backend.
-
-## Verification gate status
-
-Static/source audit: complete.
-
-Live DB metadata audit: complete for documented facts.
-
-Fresh execution in this audit: unavailable.
-
-Do **not** claim the following currently pass until executed in a real checkout/CI:
-
-```text
-npm test
-npm run typecheck
-npm run build
-npm audit
-```
+The full static/live-metadata audit is complete, but fresh `npm test`, `npm run typecheck`, `npm run build` and `npm audit` still need executable evidence/CI.
 
 ## Exact next engineering action
 
-Recommended order:
-
 1. add CI or otherwise execute/record test + typecheck + build on current head;
-2. migrate `cm aura` to guild-only `/aura` and remove unnecessary message intents;
-3. implement reusable admin authorization requiring explicit Discord user-ID whitelist + guild + admin channel, with tests and no mutation yet;
-4. separately verify the website Internal Integrations API HTTP contract/scope for `users.aura.adjust`;
-5. implement Aura preview/confirm client/command flow using stable idempotency;
-6. live-test Aura on a controlled test account;
-7. only then proceed to wallet command integration.
+2. preserve `cm aura` as customer message command and protect its current guard/API behavior;
+3. establish a clean dispatcher for admin slash commands;
+4. implement reusable admin authorization requiring explicit Discord user-ID whitelist + guild + admin channel, with tests and no mutation yet;
+5. separately verify the website Internal Integrations API contract/scope for `users.aura.adjust`;
+6. implement Aura admin preview/confirm slash flow using stable idempotency;
+7. prove Aura on a controlled test account;
+8. only then proceed to wallet admin slash integration.
 
 ## Do-not-touch boundaries
 
 - no direct Supabase/Postgres client in bot;
 - no direct calls from bot to DB admin/internal functions;
-- no wallet command before Aura path is proven;
+- no customer `cm aura` slash migration without a new explicit product decision;
+- no admin message/prefix mutations;
+- no wallet admin command before Aura admin path is proven;
 - no role-only mutation authorization;
 - no global or DM mutation commands;
 - no `legacy/` edits during active feature work;
