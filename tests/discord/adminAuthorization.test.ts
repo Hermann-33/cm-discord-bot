@@ -5,11 +5,11 @@ import { authorizeAdminInteraction } from "../../src/discord/adminAuthorization"
 
 const GUILD_ID = "123456789012345672";
 const ADMIN_CHANNEL_ID = "123456789012345680";
+const OTHER_CHANNEL_ID = "999999999999999999";
 const ADMIN_ID = "123456789012345681";
 
 const config = {
   discordGuildId: GUILD_ID,
-  botAdminCommandChannelId: ADMIN_CHANNEL_ID,
   botAdminUserIds: [ADMIN_ID]
 } as unknown as AppConfig;
 
@@ -21,8 +21,15 @@ function identity(overrides: Partial<{ guildId: string | null; channelId: string
   };
 }
 
-test("admin authorization permits exact guild, channel, and user whitelist", () => {
+test("admin authorization permits whitelisted user in configured guild", () => {
   assert.deepEqual(authorizeAdminInteraction(identity(), config), { ok: true });
+});
+
+test("admin authorization permits whitelisted user from any channel in configured guild", () => {
+  assert.deepEqual(
+    authorizeAdminInteraction(identity({ channelId: OTHER_CHANNEL_ID }), config),
+    { ok: true }
+  );
 });
 
 test("admin authorization fails closed in DMs", () => {
@@ -31,24 +38,18 @@ test("admin authorization fails closed in DMs", () => {
 });
 
 test("admin authorization fails closed in wrong guild", () => {
-  const result = authorizeAdminInteraction(identity({ guildId: "999999999999999999" }), config);
-  assert.equal(result.ok, false);
-});
-
-test("admin authorization fails closed in wrong channel", () => {
-  const result = authorizeAdminInteraction(identity({ channelId: "999999999999999999" }), config);
+  const result = authorizeAdminInteraction(identity({ guildId: "999999999999999998" }), config);
   assert.equal(result.ok, false);
 });
 
 test("admin authorization requires explicit user ID whitelist", () => {
-  const result = authorizeAdminInteraction(identity({ userId: "999999999999999999" }), config);
+  const result = authorizeAdminInteraction(identity({ userId: "999999999999999997" }), config);
   assert.equal(result.ok, false);
 });
 
-test("admin authorization fails closed when admin config is missing", () => {
+test("admin authorization fails closed when admin whitelist is missing", () => {
   const result = authorizeAdminInteraction(identity(), {
     ...config,
-    botAdminCommandChannelId: undefined,
     botAdminUserIds: []
   });
   assert.equal(result.ok, false);
