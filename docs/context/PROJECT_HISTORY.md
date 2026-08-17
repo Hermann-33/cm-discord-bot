@@ -2,7 +2,7 @@
 
 Updated: 2026-08-17
 
-This file preserves the important chronology without making historical architecture authoritative over current source.
+This file preserves important chronology without making historical architecture authoritative over current source.
 
 ## 2026-05-29 — Initial standalone bot
 
@@ -47,21 +47,48 @@ Old active model: bot -> Supabase RPC
 Current model: bot -> signed Internal Integrations API -> website-owned data layer
 ```
 
-The rebuilt bot no longer carries Supabase/Postgres credentials. The dedicated API credential is read-only for Aura leaderboard and Aura lookup.
+The rebuilt bot no longer carries Supabase/Postgres credentials.
 
-## 2026-08-17 — Admin scaling decisions
+## 2026-08-17 — Admin scaling/security decisions
 
-Accepted future product/security decisions:
+Initial accepted direction established:
 
-- the bot should be restricted to the configured Cheater's Market server;
-- all command surfaces should converge on slash commands;
-- major admin/mutation commands must require explicitly whitelisted Discord user IDs;
-- role checks can be additive but cannot replace the user whitelist;
-- Aura adjustment is the first desired mutation feature;
-- wallet adjustment is desired later and carries stricter ledger/cap/confirmation requirements;
-- bot code must remain a thin Discord client and must not directly mutate database tables/functions;
-- mutation operations require a narrow signed backend preview/confirm contract with idempotency and immutable audit evidence.
+- bot restricted to configured Cheater's Market server;
+- major admin/mutation commands require explicitly whitelisted Discord user IDs;
+- roles can be additive but cannot replace user whitelist;
+- Aura adjustment desired before wallet adjustment;
+- bot remains a thin Discord client with no direct DB mutation;
+- mutation operations require narrow signed backend contracts, confirmation/idempotency and immutable audit evidence.
+
+ADR-0005 later clarified that customer `cm aura` intentionally remains a message command while admin/staff operations use guild slash commands.
 
 ## 2026-08-17 — Repository governance
 
-`TASK-WF-001` installs durable project memory, workflow, ADRs, audit, codebase/data maps, roadmap, and handoff inside the repo so future work no longer depends on conversation transcripts.
+`TASK-WF-001` installed durable project memory, workflow, ADRs, audit, codebase/data maps, roadmap and handoff inside the repository.
+
+## 2026-08-17 — Private admin console merged
+
+`TASK-CM-ADMIN-001` implemented `/cm user email:<email>` with private Components V2 user/order navigation and canonical refund preview/confirm/execute safety.
+
+After local Node verification (104/104 tests, typecheck, build and diff check), the feature fast-forwarded into `master` at:
+
+```text
+47a28323fdc2c2d18d1edc3f9952f0d817f481f1
+```
+
+No deployment, Discord registration or live production mutation was performed as part of the merge task.
+
+## 2026-08-17 — `/cm` becomes guild-wide for whitelisted admins
+
+The product owner removed the shared admin-console command-channel restriction while retaining the configured guild and explicit Discord user-ID whitelist.
+
+ADR-0006 supersedes only the old admin-command-channel requirement from ADR-0004/ADR-0005:
+
+- `/cm` may be invoked from any channel in configured guild by a whitelisted admin;
+- DMs/wrong guild/non-whitelisted users remain blocked;
+- ephemeral output remains private but is not treated as authorization;
+- `BOT_ADMIN_COMMAND_CHANNEL_ID` is removed;
+- `BOT_AUDIT_LOG_CHANNEL_ID` remains separate for mutation audit;
+- `/refresh-leaderboard` keeps its independent configured channel policy.
+
+Implementation work is isolated on `task/cm-admin-guild-scope` pending executable verification/merge.
