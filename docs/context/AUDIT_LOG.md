@@ -8,14 +8,12 @@ Initial standalone bot implementation followed by leaderboard/channel-policy pre
 
 ### Evidence
 
-Git history:
-
 - `b3206c6` — initial Discord bot implementation.
-- `31ca167` — leaderboard rendering update; Components V2 direction and Aura command channel-policy change.
+- `31ca167` — Components V2/channel-policy update.
 
 ### Verdict
 
-Historical baseline. See `../legacy-parity.md` for exact parity evidence.
+Historical baseline. See `../legacy-parity.md`.
 
 ---
 
@@ -29,8 +27,7 @@ Remove direct bot/database coupling from the active production architecture and 
 
 - `6dfe75f` — archive legacy Discord bot.
 - `d7a7f4e` — rebuild Discord bot on Internal Integrations API.
-- root README documents no direct Supabase/Postgres access and dedicated read-only API permissions.
-- production source uses `src/api/*` HMAC client.
+- production source uses HMAC API client and no direct Supabase dependency.
 
 ### Verdict
 
@@ -38,7 +35,7 @@ Remove direct bot/database coupling from the active production architecture and 
 
 ---
 
-## 2026-08-17 — DATA-AUDIT — Underlying Aura DB context
+## 2026-08-17 — DATA-AUDIT — Initial underlying Aura DB context
 
 ### Scope
 
@@ -46,17 +43,12 @@ Read-only verification of DB facts needed for future admin-command design.
 
 ### Findings
 
-- Aura leaderboard/user read functions remain `SECURITY INVOKER`, `search_path=public`, and service-role-only among checked application roles.
-- `admin_adjust_aura_balance(uuid, uuid, bigint, text)` exists as a service-role-only `SECURITY DEFINER` function.
-- That function updates available Aura and writes Aura/admin audit records, but it does not supply the full Discord mutation control plane.
-
-### Risk
-
-Direct bot invocation of DB admin functions would reintroduce a broad trust boundary and bypass the desired backend/API authorization, idempotency, caps, confirmation, and audit design.
+- Aura read functions remained service-role-only read functions.
+- `admin_adjust_aura_balance` existed but lacked the full external integration control plane known at that time.
 
 ### Verdict
 
-`COMPLETE` as read-only context verification. No DB mutation performed.
+`COMPLETE` for the snapshot at that point. No DB mutation performed.
 
 ---
 
@@ -64,19 +56,81 @@ Direct bot invocation of DB admin functions would reintroduce a broad trust boun
 
 ### Scope
 
-Install the repository-resident memory/governance workflow adapted from the supplied IntelliMaint model.
+Install repository-resident context, workflow, decisions, audit, history, handoff and specialist admin-security documentation.
 
-### Findings
+### Outcome
 
-- Repo already has a strong README, test suite, legacy archive, and detailed parity audit.
-- No root `AGENTS.md` or full current-context/ADR/handoff system existed.
-- Old conversation context contains historical direct-Supabase assumptions that are superseded by the current Internal API rebuild.
-- Future user decisions require all commands to converge on guild-only slash commands and high-risk mutations to use explicit Discord user-ID whitelists.
-
-### Fix
-
-Added canonical context, workflow, decision, audit, history, handoff, and security-model documents. Current state, historical state, and future accepted decisions are explicitly separated.
+Repository context became authoritative over stale chat assumptions. Current, historical and planned behavior were separated.
 
 ### Verdict
 
-`COMPLETE` for documentation/governance scope once committed to the repository. No bot runtime or external state change is part of this task.
+`COMPLETE` for documentation/governance scope.
+
+---
+
+## 2026-08-17 — TASK-AUDIT-001 — Full codebase and dependency re-baseline
+
+### Scope
+
+Exhaustive audit of active bot source, all root tests/fixtures, package/build/env configuration, GitHub branch/PR/CI state, legacy isolation, documentation drift, and read-only live Supabase dependency metadata relevant to future bot work.
+
+### Source coverage
+
+Every active production TypeScript file and every test referenced by `npm test` was read in full. All checked-in fixtures were inspected. See `../audits/2026-08-17-full-codebase-audit.md` for the complete evidence matrix.
+
+### Positive findings
+
+- no direct Supabase/Postgres dependency in active bot;
+- HMAC request signing and strict API DTO validation are real source controls;
+- API response size/timeout/error/retry handling is bounded;
+- server error text is not trusted;
+- mention suppression and display-name sanitization are centralized/tested;
+- Aura command performs guild/channel checks before API lookup;
+- refresh slash command has an explicit runtime guild guard, correcting older documentation ambiguity;
+- Components V2 leaderboard and overlap lock match accepted behavior;
+- legacy is excluded and regression-tested;
+- architecture tests enforce the two-read-operation data boundary.
+
+### Material bot/process findings
+
+- accepted slash-only architecture is incomplete because `cm aura` remains a Message Content command;
+- no GitHub CI/status exists at current head, and fresh local test/typecheck/build/npm-audit execution was unavailable to this audit;
+- command registration currently requires the complete runtime config including Internal API HMAC material;
+- logger sanitization is safe for current client errors but is not a universal secret/PII redactor;
+- Node type definitions are one major ahead of the minimum supported Node runtime;
+- `.gitignore` does not ignore ZIP archives;
+- smaller defensive/test gaps exist around registration route testing, helper failures, scheduler double start, graceful drain and service invariants.
+
+### Backend drift discovered
+
+Supabase migration `20260812104228 add_internal_integration_balance_adjustments` materially changes the mutation-readiness picture.
+
+Verified service-role-only functions now exist:
+
+- `internal_integration_adjust_aura_balance(...)`, operation `users.aura.adjust`;
+- `internal_integration_adjust_wallet_balance(...)`, operation `users.wallet.adjust`.
+
+Both provide persistent idempotency/request-hash protection, bounded input, target validation and audit integration. Wallet admin adjustment also writes a wallet transaction whose trigger routes funding-lot/consumption synchronization.
+
+This does **not** prove HTTP bot mutation endpoints or bot credential permission exist.
+
+### Upstream security finding
+
+Supabase advisor still reports several unrelated privileged `SECURITY DEFINER` functions executable by anon/authenticated. The new integration adjustment functions themselves were verified not executable by anon/authenticated among checked roles.
+
+Owner: website/database project.
+
+### Verification limitation
+
+No CI workflow runs/statuses exist for the audited head. The private checkout could not be executed in the audit environment. Therefore no fresh pass claim is made for:
+
+- `npm test`;
+- `npm run typecheck`;
+- `npm run build`;
+- `npm audit`.
+
+### Verdict
+
+`PARTIAL` for production-hardening readiness because execution gates and several accepted architecture/hardening tasks remain.
+
+`COMPLETE` for the source/static/live-metadata audit itself. No runtime source, Discord state or database state was mutated.

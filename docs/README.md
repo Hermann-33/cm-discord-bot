@@ -17,6 +17,10 @@ This documentation system is the durable memory and governance layer for the Che
 - `context/AUDIT_LOG.md` — chronological material findings and verdicts
 - `context/PROJECT_HISTORY.md` — durable project chronology
 
+## Full audit reports
+
+- `audits/2026-08-17-full-codebase-audit.md` — exhaustive active-code/test/config/GitHub/dependency re-baseline (`TASK-AUDIT-001`)
+
 ## Durable decisions
 
 - `decisions/ADR-0001-standalone-bot-boundary.md`
@@ -26,9 +30,9 @@ This documentation system is the durable memory and governance layer for the Che
 
 ## Specialist references
 
-- `security/ADMIN_MUTATION_MODEL.md` — detailed future Aura/wallet admin command guardrails
+- `security/ADMIN_MUTATION_MODEL.md` — Aura/wallet admin-command security model and verified upstream mutation foundation
 - `legacy-parity.md` — frozen behavioral/history audit for the pre-rebuild bot
 
 ## Rule
 
-Current source code and verified external state override stale chat memory. Historical documents describe what happened; ADRs and current context describe what is authorized now.
+Current source code and verified external state override stale chat memory. Historical documents describe what happened; ADRs and current context describe what is authorized now. External backend facts documented here are dependency context, never permission for this bot to bypass the website Internal Integrations API.

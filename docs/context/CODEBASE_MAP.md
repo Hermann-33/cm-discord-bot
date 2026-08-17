@@ -2,108 +2,192 @@
 
 Updated: 2026-08-17
 
+Full audit coverage: every active source file listed below was read in `TASK-AUDIT-001`.
+
 ## Repository root
 
-| Path | Responsibility |
+| Path | Responsibility / audit note |
 | --- | --- |
-| `README.md` | Production setup, architecture boundary, deployment/bootstrap notes |
+| `README.md` | Production setup, active API boundary, deployment/bootstrap notes |
 | `AGENTS.md` | Mandatory agent/developer governance |
-| `.env.example` | Non-secret current runtime configuration names |
-| `.gitignore` | Secret/build/log/local artifact protection |
-| `package.json` | Node runtime, scripts, dependency contract |
-| `index.js` | Host compatibility shim requiring `dist/index.js` |
-| `tsconfig.json` | Typecheck configuration |
-| `tsconfig.build.json` | Production build configuration |
+| `.env.example` | Non-secret current read-only runtime configuration names |
+| `.gitignore` | Env/dependency/build/log/temp protection; currently does not ignore ZIP archives |
+| `package.json` | Node/runtime/scripts/dependency contract |
+| `package-lock.json` | Locked dependency graph/integrity metadata |
+| `index.js` | Host shim requiring `dist/index.js` |
+| `tsconfig.json` | Strict typecheck of active src + tests, excludes legacy |
+| `tsconfig.build.json` | Production build of `src` only |
 | `src/` | Active production source |
-| `tests/` | Active automated tests |
-| `legacy/` | Frozen pre-rebuild archive; never import into production |
-| `docs/legacy-parity.md` | Historical/parity evidence for old bot |
-| `docs/context/` | Current repository truth/workflow/handoff |
-| `docs/decisions/` | ADRs |
-| `docs/security/` | Specialist security design documents |
+| `tests/` | Active test suite |
+| `legacy/` | Frozen pre-rebuild archive; never import/execute from active code |
+| `docs/legacy-parity.md` | Historical/parity evidence |
+| `docs/audits/` | Full point-in-time audit reports |
+| `docs/context/` | Canonical current truth/workflow/handoff |
+| `docs/decisions/` | Durable ADRs |
+| `docs/security/` | Specialist security/implementation guardrails |
 
-## Active source ownership
+## Active source inventory and ownership
 
 ### `src/index.ts`
 
-Composition root. Loads config, creates API/Discord/leaderboard/scheduler services, wires current message/slash handlers, handles startup/shutdown/login errors.
+Composition root.
 
-### `src/api/`
+Owns:
 
-- `client.ts` — HMAC-authenticated Internal Integrations API transport, retry/timeout/response-bound logic.
-- `signing.ts` — canonical signing headers/signature construction.
-- `schemas.ts` — request/response/error schema validation.
-- `errors.ts` — stable local API error abstraction.
+- config load/fail-closed startup;
+- Discord client/API client/service construction;
+- SIGINT/SIGTERM hooks;
+- ready/startup schedule;
+- current MessageCreate Aura dispatch;
+- current InteractionCreate refresh dispatch;
+- login failure shutdown.
 
-This folder is a security boundary.
+Audit note: future slash growth needs a cleaner command registry; current hardwired handlers are safe but not scalable.
 
-### `src/config/`
+### `src/api/client.ts`
 
-Environment validation and typed runtime config. Current config covers Discord guild/channels/message plus dedicated Internal API credentials and timeout.
+Owns Internal Integrations API transport:
 
-### `src/commands/`
+- only two current read paths;
+- strict outbound request validation;
+- signed requests;
+- timeout;
+- 64 KiB response cap;
+- retry policy;
+- JSON/status/error/response validation.
 
-- `aura.ts` — current exact `cm aura` message command and Aura balance embed.
-- `refreshLeaderboard.ts` — current staff `/refresh-leaderboard` slash command.
+Security boundary. Future mutations need a distinct idempotency-aware extension, not ad-hoc fetch calls.
 
-Future command work must migrate to the slash-only policy in ADR-0003 rather than multiplying message commands.
+### `src/api/signing.ts`
 
-### `src/discord/`
+Owns canonical `cm-integrations-v1` request construction and HMAC-SHA256 headers. Fragile protocol boundary.
 
-- `client.ts` — Discord client/intents.
-- `registerCommands.ts` — explicit guild command registration.
-- `safeMessages.ts` — mention-suppression/safe Discord payload helpers.
+### `src/api/schemas.ts`
 
-### `src/leaderboard/`
+Owns strict read request/response/error DTO validation. Future mutation DTOs belong here or a clearly separated schema module.
 
-- `format.ts` — Components V2 layout, Aura/rank/display-name formatting and sanitization.
-- `service.ts` — read data through the API and create/edit the persistent leaderboard message.
-- `types.ts` — read-client/data contracts.
+### `src/api/errors.ts`
 
-### `src/scheduler/`
+Owns stable safe client error abstraction. Never surface backend raw error messages.
 
-- `leaderboardSchedule.ts` — startup, five-minute schedule, shared overlap guard.
-- `shutdown.ts` — idempotent schedule/client shutdown.
+### `src/config/env.ts`
 
-### `src/logger/`
+Owns current Discord/API environment validation. Current full loader is also used by command registration, creating avoidable coupling to HMAC secrets.
 
-Structured logging and error sanitization/redaction boundary.
+Future admin config must fail closed and parse explicit user-ID allowlists/caps/channels safely.
 
-## Test ownership
+### `src/commands/aura.ts`
 
-`package.json` currently runs tests covering:
+Current exact `cm aura` message command.
 
-- API signing;
-- API client behavior;
-- environment validation;
-- Aura command behavior;
-- refresh command behavior;
-- leaderboard formatting/service;
-- scheduler and shutdown;
-- command registration;
-- logger redaction;
-- architecture boundaries.
+Audit status:
+
+- correct pre-backend guild/blocked-channel guards;
+- safe mentions and display sanitization;
+- must be replaced by slash `/aura` under ADR-0003.
+
+### `src/commands/refreshLeaderboard.ts`
+
+Current `/refresh-leaderboard` slash command.
+
+Audit status:
+
+- explicit runtime guild guard already exists;
+- exact command channel;
+- ManageGuild/Administrator runtime permission;
+- ephemeral safe responses;
+- read-only operational command.
+
+### `src/discord/client.ts`
+
+Owns intents. `GuildMessages` and privileged `MessageContent` are currently required only by message-command Aura behavior and should be removed after slash migration if unused.
+
+### `src/discord/registerCommands.ts`
+
+Owns explicit manual guild bulk-overwrite registration.
+
+Audit note: currently loads complete runtime config. Refactor into an injectable/testable function before expanding command catalog.
+
+### `src/discord/safeMessages.ts`
+
+Owns `safeAllowedMentions` and leaderboard channel/create/edit wrappers. Security boundary for mention suppression.
+
+### `src/leaderboard/format.ts`
+
+Owns Components V2 rendering, names/ranks/Aura formatting, custom emoji and relative timestamp.
+
+### `src/leaderboard/service.ts`
+
+Owns fetch -> create/edit and shared overlap lock.
+
+Audit note: message ID precondition is currently an `as string` invariant enforced by callers rather than the class type.
+
+### `src/leaderboard/types.ts`
+
+Owns the small read-client/domain contracts used by commands/leaderboard.
+
+### `src/scheduler/leaderboardSchedule.ts`
+
+Owns bootstrap, immediate refresh, five-minute timer and scheduled failure behavior.
+
+Audit note: `start()` is not internally idempotent; current `.once(ClientReady)` wiring prevents normal duplicate starts.
+
+### `src/scheduler/shutdown.ts`
+
+Owns idempotent timer stop/Discord destroy/exit. Does not drain an in-flight operation.
+
+### `src/logger/index.ts`
+
+Owns structured JSON logs and current error normalization.
+
+Audit note: current API errors are secret-safe; generic sanitizer is not universal pattern redaction and must be hardened before broader admin/user data flows.
+
+## Test inventory
+
+The root test script explicitly runs:
+
+- `tests/api/signing.test.ts`
+- `tests/api/client.test.ts`
+- `tests/config/env.test.ts`
+- `tests/commands/aura.test.ts`
+- `tests/commands/refreshLeaderboard.test.ts`
+- `tests/leaderboard/format.test.ts`
+- `tests/leaderboard/service.test.ts`
+- `tests/scheduler/leaderboardSchedule.test.ts`
+- `tests/scheduler/shutdown.test.ts`
+- `tests/discord/registerCommands.test.ts`
+- `tests/logger/redaction.test.ts`
+- `tests/architecture.test.ts`
+
+Fixtures:
+
+- `tests/fixtures/aura-success.json`
+- `tests/fixtures/leaderboard-empty.json`
+- `tests/fixtures/leaderboard-populated.json`
+- `tests/fixtures/refresh-command.json`
+
+See full audit for coverage strengths/gaps.
 
 ## Generated/local-only paths
 
-Do not commit:
+Never commit:
 
-- `.env`
-- `dist/`
-- `node_modules/`
-- `*.log`
-- ZIP/archive files such as local `CM DC Bot.zip`
+- `.env`;
+- `dist/`;
+- `node_modules/`;
+- logs;
+- deployment/local ZIP archives such as prior `CM DC Bot.zip`.
 
-## Fragile/protected boundaries
+Note: ZIPs are policy-forbidden but not currently protected by a `.gitignore` pattern.
 
-- `src/api/signing.ts`
-- `src/api/client.ts`
-- `src/config/env.ts`
-- `src/discord/safeMessages.ts`
-- `src/leaderboard/service.ts`
-- scheduler overlap/shutdown logic
-- `legacy/` and `docs/legacy-parity.md`
+## External ownership
 
-## Repository split
+This repo does not own:
 
-This repo does not own the Cheater's Market website, its migrations, payment/wallet/order logic, OAuth linking, Support-role sync, or database. Cross-repo changes require an explicitly scoped backend task.
+- website API route implementation;
+- Supabase migrations;
+- DB grants/RLS;
+- wallet/order/payment/delivery logic;
+- OAuth/Support-role systems.
+
+`DATA_STATUS.md` records verified dependency facts only. Cross-repo fixes must happen in their owning project.
