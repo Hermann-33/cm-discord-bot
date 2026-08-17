@@ -2,69 +2,86 @@
 
 Updated: 2026-08-17
 
-## Authoritative command policy
+## Authoritative command/security policy
 
-ADR-0005 remains authoritative over ADR-0003 where they conflict:
+- ADR-0005 keeps `cm aura` as the customer message command and admin/staff operations as configured-guild slash commands.
+- ADR-0006 supersedes the admin-command-channel requirement from ADR-0004/ADR-0005 for the shared `/cm` admin console.
+- `/cm` authorization is configured guild + explicit `BOT_ADMIN_USER_IDS`; DMs/wrong guild/non-whitelisted users fail closed.
+- A whitelisted admin may invoke `/cm` from any channel in the configured guild.
+- Ephemeral output is privacy, not authorization.
+- `BOT_AUDIT_LOG_CHANNEL_ID` remains required before refund execute.
+- No direct Supabase/Postgres access is permitted.
 
-- `cm aura` stays a customer message command;
-- staff/admin operations use configured-guild slash commands;
-- high-impact mutations additionally require ADR-0004-style authorization/confirmation safety.
+`/refresh-leaderboard` remains a separate operational command and keeps its existing configured command-channel/permission checks.
 
-No direct Supabase/Postgres access is permitted.
+## Mainline state
 
-## Production vs feature branch
-
-Production `master` is unchanged by `TASK-CM-ADMIN-001` and remains the read-only Aura bot plus `/refresh-leaderboard`.
-
-Feature branch:
+`TASK-CM-ADMIN-001` is merged into `master` at:
 
 ```text
-task/cm-admin-console
+47a28323fdc2c2d18d1edc3f9952f0d817f481f1
 ```
 
-contains a candidate private admin console. It has not been merged, registered, deployed or used for a live API mutation.
+Before merge it passed local dependency-aware verification:
 
-## Implemented candidate
+- `npm test` — 104/104;
+- `npm run typecheck`;
+- `npm run build`;
+- `git diff --check`.
 
-### `/cm user email:<email>`
+It was not registered/deployed and did not perform a live API mutation/refund as part of that task.
 
-- ephemeral/private Components V2 response;
-- exact guild + admin channel + explicit Discord user-ID whitelist on every command/button/modal interaction;
-- short-lived operator-bound sessions with random IDs only in component custom IDs;
-- `users.overview.read` user panel;
-- latest 10 recent orders paginated five per page;
-- `orders.details.read` order panel;
+## Current task branch
+
+```text
+task/cm-admin-guild-scope
+```
+
+TASK-CM-ADMIN-002 changes only the shared `/cm` location/config policy plus required tests/docs.
+
+### Runtime/config change
+
+- removes `BOT_ADMIN_COMMAND_CHANNEL_ID` from `src/config/env.ts` and `.env.example`;
+- removes exact channel matching from `src/discord/adminAuthorization.ts`;
+- preserves configured-guild restriction;
+- preserves mandatory explicit `BOT_ADMIN_USER_IDS`;
+- preserves per-interaction authorization for command/buttons/modals;
+- preserves refund audit-channel requirement;
+- does not change `/refresh-leaderboard`.
+
+A stale external `BOT_ADMIN_COMMAND_CHANNEL_ID` variable is ignored by the config loader and should be removed from deployment environment later to avoid confusion.
+
+### Tests changed
+
+- admin authorization accepts the same whitelisted user from another channel in configured guild;
+- wrong guild/DM/non-whitelisted/missing whitelist still fail closed;
+- `/cm user` performs backend lookup from another configured-guild channel for a whitelisted admin;
+- config no longer exposes `botAdminCommandChannelId`;
+- architecture test prevents reintroduction of `BOT_ADMIN_COMMAND_CHANNEL_ID` into active source/environment example.
+
+## `/cm` capability state
+
+Tracked console remains:
+
+- ephemeral/private Components V2 user operations panel;
+- `users.overview.read`;
+- latest ten orders paginated five per page;
+- `orders.details.read`;
 - `orders.fulfillment.read` diagnostics;
-- navigation from orders back to User Operations.
+- order-to-user navigation;
+- canonical refund preview/re-preview/confirm/execute;
+- stable refund idempotency/retry behavior;
+- backend immutable audit + sanitized Discord audit.
 
-### Refund
-
-Only implemented mutation:
-
-```text
-reason modal
--> orders.refund.preview
--> explicit private confirmation
--> fresh identical re-preview
--> orders.refund.execute
--> backend audit + sanitized Discord audit
-```
-
-The idempotency key and exact execute body remain stable across logical retries; transport signing material is fresh per HTTP attempt.
-
-`BOT_AUDIT_LOG_CHANNEL_ID` is required before execution.
-
-### Deliberately blocked
+Deliberately blocked:
 
 - Aura adjustment;
 - wallet adjustment;
 - manual fulfillment.
 
-Aura/wallet are blocked by ADR-0004 confirmation requirements even though website source now confirms their request schemas accept `userLookupSelectorSchema`. Manual fulfillment is blocked because no dedicated Internal Integrations mutation operation exists.
-
 ## Backend/API dependencies
 
-Candidate bot credential needs least-privilege permission for:
+Console deployment needs least-privilege bot-client permission for:
 
 ```text
 users.overview.read
@@ -74,41 +91,41 @@ orders.refund.preview
 orders.refund.execute
 ```
 
-The task did not change the website/client allowlist or credentials. Until those operations are provisioned, the correct bot behavior is an operation-forbidden error.
+Endpoint existence is not client authorization. Deployment credentials/allowlists were not modified in this task.
 
-Website source was inspected read-only at commit `20f6cb52344bade858099febcec2d1c59312f2e5` for exact user/order/refund DTOs and selectors.
+## Verification state for TASK-CM-ADMIN-002
 
-## Verification state
+Connector-side source edits are implemented on the feature branch, but executable Node verification has not been run by this task.
 
-Repository CI workflow now exists, but GitHub Actions run for the feature commit was rejected before runner startup because the account reported failed payments or insufficient spending limit. Zero job steps executed.
+Before merge run in a clean Node 22 checkout:
 
-Therefore these are still missing as real current-head evidence:
+```text
+npm ci
+npm test
+npm run typecheck
+npm run build
+git diff --check
+git status --short --untracked-files=all
+```
 
-- `npm test`;
-- `npm run typecheck`;
-- `npm run build`;
-- CI `git diff --check`.
-
-Local static/syntax scans found no secret values, no direct DB paths, no Aura/wallet/purchase-process execute path and no TypeScript syntax diagnostics in the drafted changed files. These do not replace dependency-aware CI.
+Also perform focused scans for direct DB access, forbidden Aura/wallet/purchase-processing execute paths, secrets, legacy changes and mention-safety regressions.
 
 ## Exact next action
 
-1. restore GitHub Actions billing/spending capacity or another Node 22 runner;
-2. run `npm ci`, tests, typecheck, build and diff check on feature head;
-3. fix every code/type failure before merge;
-4. review final diff/security behavior;
-5. only with explicit authorization, provision required backend operation scope and admin config;
-6. register `/cm` and deploy only after those gates;
-7. validate reads first;
-8. use a controlled explicitly authorized order for the first refund test.
+1. fetch/switch to `task/cm-admin-guild-scope` in the local Codex checkout;
+2. run the full verification gate above;
+3. fix only task-related failures;
+4. merge/push only if all checks pass and working tree is clean;
+5. do not register/deploy/start the bot or call production APIs unless separately authorized;
+6. when deployment config is later updated, remove `BOT_ADMIN_COMMAND_CHANNEL_ID`, retain `BOT_ADMIN_USER_IDS`, and configure `BOT_AUDIT_LOG_CHANNEL_ID` before refund use.
 
 ## Do-not-touch
 
-- do not merge/deploy merely because static review passed;
 - no direct DB client/RPC;
-- no `cm aura` migration;
+- no customer `cm aura` migration;
+- no `/refresh-leaderboard` channel-policy change in this task;
 - no role-only admin authorization;
-- no Aura/wallet execute path until ADR-0004 is satisfied;
+- no Aura/wallet execute path until its independent confirmation gate is satisfied;
 - no manual fulfillment without a website-owned operation;
 - no real secrets in repo/docs/logs;
 - no live refund without explicit controlled-test authorization.
