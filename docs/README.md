@@ -26,12 +26,14 @@ This documentation system is the durable memory and governance layer for the Che
 - `decisions/ADR-0001-standalone-bot-boundary.md`
 - `decisions/ADR-0002-internal-api-data-boundary.md`
 - `decisions/ADR-0003-guild-only-slash-command-policy.md` — historical decision, superseded by ADR-0005
-- `decisions/ADR-0004-admin-mutation-security-model.md`
-- `decisions/ADR-0005-customer-message-admin-slash-command-policy.md` — current command-surface policy
+- `decisions/ADR-0004-admin-mutation-security-model.md` — historical high-impact mutation model; its admin-command-channel requirement is superseded by ADR-0006
+- `decisions/ADR-0005-customer-message-admin-slash-command-policy.md` — current customer/admin command-surface split; its inherited admin-channel requirement is superseded by ADR-0006
+- `decisions/ADR-0006-admin-console-guild-wide-channel-policy.md` — current `/cm` guild-wide channel/explicit-user authorization policy
 
 ## Specialist references
 
 - `security/ADMIN_MUTATION_MODEL.md` — Aura/wallet admin-command security model and verified upstream mutation foundation
+- `security/CM_ADMIN_CONSOLE_SECURITY.md` — current `/cm` user/order/refund security model
 - `legacy-parity.md` — frozen behavioral/history audit for the pre-rebuild bot
 
 ## Rule
