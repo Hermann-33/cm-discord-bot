@@ -17,7 +17,7 @@ Before implementation, audit, refactor, cleanup, deployment work, or workflow de
 9. `docs/context/WORKFLOW.md`
 10. `docs/context/HANDOFF.md`
 11. relevant `docs/decisions/ADR-*.md`
-12. relevant specialist documents such as `docs/security/ADMIN_MUTATION_MODEL.md`
+12. relevant specialist documents such as `docs/security/ADMIN_MUTATION_MODEL.md` and `docs/security/CM_ADMIN_CONSOLE_SECURITY.md`
 
 If repository context conflicts with the requested task, stop and report the conflict before changing files.
 
@@ -44,9 +44,9 @@ Before modifying files, summarize:
 1. current project state;
 2. relevant workflow rules;
 3. relevant ADRs;
-4. the exact task;
+4. exact task;
 5. protected and do-not-touch boundaries;
-6. current Git status and unrelated dirty/untracked files.
+6. current Git status and unrelated dirty/untracked files when a local checkout is available.
 
 ## Hard architecture boundaries
 
@@ -55,10 +55,11 @@ Before modifying files, summarize:
 - Production code lives under `src/`. `legacy/` is a frozen archive and must never be imported into production code.
 - The bot does not directly access Supabase or Postgres and must not gain database credentials or a direct database fallback.
 - Website-owned business/data access goes through the HMAC-authenticated Internal Integrations API.
-- Current bot source and the currently documented bot credential remain limited to the two Aura read operations. Authoritative backend contract documentation now exposes additional read and mutation operations, including `users.aura.adjust` and `users.wallet.adjust`; bot use still requires explicit operation scope, exact DTO/selector verification, and all applicable ADR-0004 controls.
+- Current tracked bot source implements Aura leaderboard/lookup reads plus the approved user overview, order details, fulfillment diagnostics and canonical order refund preview/execute operations used by `/cm`. Endpoint existence/source support is not proof that a deployed bot credential has those operations; deployment must use an explicit least-privilege `allowedOperations` list.
 - Command-surface policy is governed by ADR-0005, which supersedes ADR-0003: customer-facing/self-service commands may use message commands; admin/staff operational and mutation commands use guild-only slash commands.
 - `cm aura` is an intentional customer-facing message command and is not a slash-migration target unless a later product decision explicitly changes that policy.
-- Major admin/mutation commands require the whitelist and confirmation model in ADR-0004. Discord roles alone are insufficient.
+- Shared `/cm` admin authorization is governed by ADR-0006: exact configured guild + explicit `BOT_ADMIN_USER_IDS`, with no admin command-channel restriction. DMs/wrong guilds fail closed. `/refresh-leaderboard` retains its independent command-channel/permission policy.
+- Major admin/mutation commands require the explicit whitelist plus operation-specific confirmation/idempotency/audit controls. Discord roles alone are insufficient.
 - Never expose, log, commit, echo, or document real secret values.
 
 ## Protected areas
@@ -69,6 +70,7 @@ Do not casually modify:
 - API client validation, response bounds, retry semantics, or credential handling;
 - command authorization or mention-safety helpers;
 - customer/admin command-surface separation;
+- refund preview/re-preview/idempotency/audit behavior;
 - leaderboard bootstrap/edit semantics;
 - scheduler overlap/shutdown behavior;
 - `legacy/` or `docs/legacy-parity.md` history;
@@ -91,7 +93,7 @@ Use `PARTIAL` when implementation is valid but a required gate remains. Use `FAI
 
 ## Validation baseline
 
-Run the applicable checks before completion:
+Run applicable checks before completion:
 
 ```powershell
 npm test
@@ -106,7 +108,7 @@ Do not run the bot, register Discord commands, or perform live production calls 
 
 ## Git discipline
 
-- Inspect status and diff before editing and before completion.
+- Inspect status and diff before editing and before completion when a local checkout is available.
 - Never stage `.env`, `dist/`, `node_modules/`, logs, ZIP archives, or unrelated local artifacts.
 - Stage only task-relevant files.
 - Use a task-scoped commit message when committing.
