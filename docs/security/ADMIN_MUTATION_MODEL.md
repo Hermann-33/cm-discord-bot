@@ -1,159 +1,306 @@
-# Admin Mutation Model — Current Candidate and Future Aura/Wallet
+# Admin Mutation Model — Aura and Wallet
 
 Updated: 2026-08-17
 
-ADR-0004 remains the governing security decision for high-impact Discord mutation surfaces. ADR-0005 keeps customer `cm aura` separate as a message command.
+This document is the security/design reference for future high-impact admin commands. It is **not** evidence that bot mutation commands or bot HTTP mutation permissions are implemented.
 
-## Global admin authorization rule
+## Goals
 
-Before any candidate admin-console backend request:
+Allow a very small set of explicitly trusted Discord users to request audited Aura adjustments and, later, wallet adjustments while preserving website-owned business/data correctness.
 
-1. interaction is in a guild;
-2. guild equals configured `DISCORD_GUILD_ID`;
-3. exact `BOT_ADMIN_COMMAND_CHANNEL_ID`;
-4. invoking Discord user ID is explicitly present in `BOT_ADMIN_USER_IDS`;
-5. optional roles may only add restrictions, never replace the whitelist;
-6. input/confirmation state is valid for the operation.
+## Global command policy
 
-DM, wrong guild, wrong channel, non-whitelisted user or missing admin config fail closed.
+- Slash commands only for admin mutation surfaces.
+- Configured Cheater's Market guild only.
+- No DMs.
+- Mutation commands only in configured admin command channel.
+- Explicit `BOT_ADMIN_USER_IDS` allowlist is mandatory.
+- Optional roles are secondary only.
+- Fail closed if required config is missing.
+- Safe allowed mentions for every response/audit message.
+- Bot never receives direct database credentials.
+- ADR-0005 leaves customer `cm aura` as a separate message command; it is not part of this mutation policy.
 
-The bot never receives database credentials and never calls Supabase/Postgres tables/functions directly.
+## Planned bot configuration
 
-## Candidate configuration now present on feature branch
+Do not add until the corresponding implementation phase requires it:
 
 ```text
 BOT_ADMIN_USER_IDS
 BOT_ADMIN_COMMAND_CHANNEL_ID
 BOT_AUDIT_LOG_CHANNEL_ID
+BOT_AURA_MANAGER_ROLE_ID
+BOT_WALLET_MANAGER_ROLE_ID
+BOT_MAX_AURA_ADJUSTMENT_SINGLE
+BOT_MAX_AURA_ADJUSTMENT_DAILY
+BOT_REQUIRE_AURA_CONFIRMATION_ABOVE
+BOT_MAX_WALLET_ADJUSTMENT_SINGLE_CENTS
+BOT_MAX_WALLET_ADJUSTMENT_DAILY_CENTS
+BOT_REQUIRE_WALLET_CONFIRMATION_ABOVE_CENTS
 ```
 
-Future Aura/wallet-specific roles/caps remain design inputs and are not added merely because adjustment endpoints exist.
+The existing HMAC integration credential model should be extended only with explicit least-privilege mutation operation permission. Never use an owner/admin/service-role credential in the bot.
 
-## Private `/cm user` session safety
+## Verified upstream foundation discovered by `TASK-AUDIT-001`
 
-`task/cm-admin-console` stores private UI/navigation state in bounded, expiring memory:
+The website database has advanced beyond the original design assumptions.
 
-- random session UUID;
-- owning operator Discord ID;
-- user overview;
-- selected order;
-- optional refund proposal.
+### Aura execute primitive exists
 
-Component IDs contain no email/balance/reason/internal target data. Every component/modal interaction re-runs authorization and then requires session ownership by the same operator.
+Live DB function:
 
-This session is not trusted as sole backend mutation authority.
+`internal_integration_adjust_aura_balance(...)`
 
-## Canonical order refund — implemented candidate
+Operation ID:
 
-Refund is different from Aura/wallet adjustment because the website already exposes a dedicated canonical read-preview plus execute contract:
+`users.aura.adjust`
 
-```text
-orders.refund.preview
-orders.refund.execute
-```
+Verified characteristics:
 
-The candidate refund flow is:
-
-1. authorized admin opens a selected order;
-2. enters an 8–1000 character reason in a modal;
-3. bot calls `orders.refund.preview`;
-4. bot shows the canonical consequences privately;
-5. operator explicitly confirms within five minutes;
-6. bot calls `orders.refund.preview` again immediately before mutation;
-7. every strict preview field must match the stored preview and target user/order;
-8. bot calls `orders.refund.execute` using one stable logical idempotency key and frozen request body;
-9. website owns refund amount, wallet/Aura effects, order state, transaction/audit IDs and immutable business transaction;
-10. bot posts a sanitized Discord audit record.
-
-### Refund replay model
-
-The stored proposal freezes:
-
-- order ID;
-- reason;
-- canonical preview;
-- audit operator `{provider: "discord", externalUserId}`;
+- service-role-only among checked application roles;
+- empty `search_path`;
 - UUID idempotency key;
-- expiry.
+- 64-hex request hash;
+- advisory lock for same client/operation/idempotency identity;
+- persisted replay/conflict result;
+- delta bounded to +/-1,000,000,000 Aura;
+- reason 1–500;
+- strict optional external operator object;
+- target existence check;
+- negative-result protection;
+- Aura transaction + admin audit event;
+- integration/client/operator metadata appended to audit event.
 
-Username/display name are deliberately not included in the execute proposal so a Discord profile rename cannot alter a retry body for the same idempotency key.
+### Wallet execute primitive exists
 
-The API client serializes the validated execute request exactly once outside its retry loop. Transport retry keeps the same body/idempotency key and regenerates timestamp/nonce/signature.
+Live DB function:
 
-Deterministic refund conflicts (`ALREADY_REFUNDED`, `REFUND_NOT_ELIGIBLE`, `REFUND_STATE_INVALID`, `IDEMPOTENCY_CONFLICT`) clear the proposal rather than blind retry. A transient/transport failure retains the same proposal so a retry can replay the exact logical action.
+`internal_integration_adjust_wallet_balance(...)`
 
-### Refund audit model
+Operation ID:
 
-`BOT_AUDIT_LOG_CHANNEL_ID` must be configured before execute. Backend immutable audit is authoritative. Discord audit is secondary and mention-safe; if the Discord audit post fails after a successful refund, the bot reports that failure without issuing a second refund or trying to rewrite backend history.
+`users.wallet.adjust`
 
-No caller supplies refund amount, wallet credit, Aura effects, transaction IDs or target user independently of the selected canonical order.
+Verified characteristics:
 
-## Manual fulfillment — blocked
+- same service-role-only/idempotency/request-hash/operator model;
+- cents delta bounded to +/-100,000,000;
+- reason 1–500;
+- negative wallet balance rejected;
+- wallet transaction + admin audit event;
+- integration/client/operator audit metadata.
 
-The verified Internal Integrations API exposes `orders.fulfillment.read` diagnostics only. It has no manual-fulfillment execute operation.
+The underlying `admin_adjust_wallet_balance` creates `wallet_transactions` with type `admin_adjustment`.
 
-Therefore the candidate UI may show diagnostics and a disabled/informational Manual Fulfillment control, but must not invent fulfillment business logic, call database functions or use another unrelated operation as a shortcut.
+A live wallet transaction `AFTER INSERT` trigger calls the funding-state handler. Positive transactions route to funding-lot synchronization and negative transactions to funding-consumption synchronization.
 
-A future manual-fulfillment feature requires a website-owned narrow mutation contract with explicit authorization, idempotency, audit and fulfillment invariants.
+The bot still must not call DB functions directly.
 
-## Aura/wallet selector status — source resolved
+## Authoritative backend HTTP contract supplied 2026-08-17
 
-Read-only website source at commit `20f6cb52344bade858099febcec2d1c59312f2e5` shows both `auraAdjustmentRequestSchema` and `walletAdjustmentRequestSchema` use `userLookupSelectorSchema`, which accepts `user_id`, `email` and `external_identity`.
-
-That source fact supersedes the earlier prose-document conflict over external identity selectors.
-
-It does **not** authorize bot execution.
-
-## Aura adjustment — still blocked by ADR-0004 confirmation requirement
-
-Backend execute operation exists:
-
-```text
-POST /api/internal/integrations/v1/users/aura/adjust
-operation: users.aura.adjust
-```
-
-But ADR-0004 requires backend-authoritative preview/confirm or equivalent bound confirmation state. Current verified adjustment contract is direct execute and does not provide that accepted confirmation state.
-
-Consequently `task/cm-admin-console` intentionally contains no Aura-adjust API path/method. The visible Adjust Aura control is informational/blocked.
-
-Before Aura execute is added, require:
-
-- exact least-privilege bot client permission;
-- accepted ADR-0004-compatible confirmation/state-binding design or a superseding security ADR;
-- product/cap rules;
-- stable idempotency/retry and audit tests;
-- controlled authenticated verification.
-
-## Wallet adjustment — later and stricter
-
-Backend execute operation exists at `users.wallet.adjust`, but wallet remains after a proven Aura path. Candidate source contains no wallet-adjust path/method.
-
-Future wallet controls require, at minimum, the Aura security model plus stricter stored-value caps, transaction/funding-state consistency, confirmation for every mutation, immutable audit and counter-entry reversal. No direct balance overwrite or fabricated payment provenance.
-
-## Required backend client permissions for current candidate
-
-The `/cm user` + order/refund candidate requires only:
+Backend contract documentation now confirms production execute operations:
 
 ```text
-users.overview.read
-orders.details.read
-orders.fulfillment.read
-orders.refund.preview
-orders.refund.execute
+POST /api/internal/integrations/v1/users/aura/adjust   -> users.aura.adjust
+POST /api/internal/integrations/v1/users/wallet/adjust -> users.wallet.adjust
 ```
 
-The bot client's actual backend allowlist was not modified or verified in TASK-CM-ADMIN-001. Endpoint existence is not permission.
+Common mutation transport/business rules:
+
+- `POST` JSON with no query string;
+- exact raw UTF-8 body signed with current `cm-integrations-v1` HMAC canonicalization;
+- fresh timestamp, lowercase UUIDv4 nonce and signature for every HTTP attempt;
+- UUID `idempotencyKey` stable across retries of the same logical action;
+- exact same body must accompany replay of the same key;
+- same key + changed body yields `IDEMPOTENCY_CONFLICT`;
+- optional Discord operator object is audit context only and never authorizes the action;
+- machine client permission comes from its exact backend `allowedOperations` list.
+
+Aura execute request fundamentals:
+
+- user selector;
+- `deltaAura`, non-zero and bounded to +/-1,000,000,000;
+- reason 1–500;
+- idempotency key;
+- optional operator.
+
+Wallet execute request fundamentals:
+
+- user selector;
+- `deltaCents`, non-zero and bounded to +/-100,000,000;
+- reason 1–500;
+- idempotency key;
+- optional operator.
+
+The backend docs state production verification covered success/replay/conflict/failure/cleanup for both adjustment operations. The Discord bot has not independently performed a bot-credential mutation smoke test.
+
+## Critical selector conflict
+
+The full API contract identifies itself as authoritative and says external identity is a lookup selector only. The bot quickstart shows Discord `external_identity` selectors in Aura/wallet adjustment examples.
+
+Do not infer the answer. Before implementing mutation targeting, inspect the actual route schema/source or an updated authoritative contract and determine the accepted selector(s). Until resolved, no mutation command should send a Discord `external_identity` selector merely because the quickstart example does.
+
+## ADR-0004 confirmation gap
+
+ADR-0004 requires a backend-authoritative preview/confirm contract or equivalent confirmation state for high-impact mutations. The supplied backend documentation exposes direct Aura/wallet adjustment execute endpoints and does not document a dedicated Aura/wallet adjustment preview endpoint.
+
+Therefore the existence of `users.aura.adjust` is **not enough** to wire a one-step Discord adjustment command today.
+
+Before mutation implementation, one of these must become true without weakening security silently:
+
+1. the backend exposes/defines an ADR-0004-compatible preview/confirm or equivalent state-binding contract; or
+2. a new superseding security ADR explicitly changes the confirmation model with adequate justification and equivalent replay/audit safety.
+
+Until then, one-step Discord Aura/wallet mutation is forbidden.
+
+## Aura command model
+
+Target commands:
+
+```text
+/aura-adjust preview target:<user> amount:<signed integer> reason:<text>
+/aura-adjust confirm preview_id:<opaque id>
+```
+
+### Preview requirements
+
+Preview must:
+
+- perform Discord authorization before any sensitive backend request;
+- resolve target through website API, not DB lookup;
+- validate non-zero bounded delta and bounded reason;
+- return current available Aura, projected value, cap/warning status, opaque preview identity and expiry;
+- not mutate data;
+- avoid leaking CM user IDs or balances to unauthorized operators.
+
+The existing DB execute primitive and documented direct HTTP execute endpoint are not themselves a preview mechanism.
+
+### Confirm requirements
+
+Confirm must:
+
+- be invoked by the same whitelisted operator;
+- remain in the configured guild/admin channel;
+- refer to a valid unexpired preview or equivalent backend-authoritative confirmation state;
+- be bound to operator/target/delta/reason/request identity;
+- send one stable logical idempotency key across retries;
+- fail safely if state/permission/caps changed;
+- return stable transaction/audit/request identifiers and before/after balances;
+- post a sanitized Discord audit record.
+
+## Idempotency and retry rule
+
+Current read client creates fresh nonce/timestamp/signature on a retry, which is correct.
+
+For mutations:
+
+- nonce/timestamp/signature should still be fresh per HTTP attempt;
+- **logical idempotency key and request content/hash must remain stable across retries**;
+- never generate a new adjustment identity merely because transport failed;
+- backend replay result is authoritative;
+- do not blindly retry deterministic 409 business conflicts.
+
+The live integration DB functions already persist idempotency by client + operation + UUID key and reject request-hash conflicts. The supplied HTTP contract matches that logical replay model.
+
+## Aura data rules
+
+- normal discretionary grant/deduction affects available Aura through website-owned transactional logic;
+- ordinary deduction does not reduce lifetime earned Aura;
+- whether an admin grant counts as lifetime earned requires explicit product decision;
+- pending Aura remains untouched unless separately designed;
+- negative resulting available Aura rejected;
+- reversal is a counter-entry, never destructive history editing.
+
+## Wallet command model — later phase
+
+Target only after Aura is proven:
+
+```text
+/wallet-adjust preview target:<user> amount_cents:<signed integer> reason:<text>
+/wallet-adjust confirm preview_id:<opaque id>
+```
+
+Wallet is payment-adjacent stored value and receives stricter controls.
+
+Required rules:
+
+- cents integers only;
+- explicit whitelist and optional wallet-manager role;
+- confirmation for every wallet mutation;
+- stricter single/daily caps;
+- website wallet transaction ledger entry;
+- funding-lot/funding-consumption consistency;
+- balance update in website transaction;
+- no direct balance overwrite from bot;
+- immutable audit event;
+- counter-entry reversal;
+- no fabricated payment-provider provenance.
+
+The verified upstream wallet primitive already writes a wallet transaction and participates in funding-state trigger logic, and the HTTP execute path is now documented. Bot scope, selectors/DTOs, confirmation and controlled end-to-end verification remain required before Discord use.
+
+## Discord authorization order
+
+For any mutation-capable command:
+
+1. ensure chat-input interaction;
+2. ensure in guild;
+3. exact configured guild;
+4. exact admin command channel;
+5. invoking Discord user ID in explicit allowlist;
+6. optional domain role;
+7. local input validation;
+8. backend preview/confirm authorization/business rules.
+
+No backend mutation request should occur before steps 1–6 pass.
+
+## Audit evidence requirements
+
+Backend evidence should capture, as applicable:
+
+- request/operation ID;
+- idempotency key;
+- preview ID;
+- integration client ID;
+- operator provider/external user ID;
+- target resolved user identity internally;
+- operation type/domain;
+- delta/reason;
+- before/after values;
+- ledger transaction ID;
+- admin audit event ID;
+- idempotent replay state;
+- stable status/error code;
+- timestamp.
+
+Discord audit output should contain only necessary sanitized operator/target Discord identifiers, domain, delta, reason, before/after, backend audit/request identity and timestamp. No emails, secrets or raw internal credentials by default. Mentions disabled.
+
+## Backend security prerequisite
+
+The live Supabase security advisor still reports unrelated public/signed-in `SECURITY DEFINER` functions in the wider website DB. The new integration adjustment functions themselves were verified service-role-only among checked roles.
+
+The wider findings remain website ownership and should be addressed by that project. They are not permission to weaken the bot's Internal API boundary.
+
+## Implementation phases — revised
+
+1. Add executable CI/current-head verification gate.
+2. Preserve `cm aura` as the customer message command and keep its required intents/guards.
+3. Establish clean admin slash-command dispatch/registration infrastructure.
+4. Implement shared explicit whitelist/guild/admin-channel authorization and tests, with no mutation.
+5. Verify bot credential scope and exact route DTO/selector for `users.aura.adjust`.
+6. Resolve the ADR-0004 confirmation gap before adding any Aura execute path.
+7. Add typed Aura confirmation/execute client flow with stable idempotency and Discord audit output.
+8. Test-account live verification and security audit.
+9. Only then verify/integrate wallet HTTP mutation and commands.
 
 ## Forbidden shortcuts
 
-- direct Supabase/Postgres credential or RPC/table call;
-- role-only admin authorization;
-- global/DM admin mutation commands;
-- sensitive target data in component custom IDs;
-- refund execute without canonical preview/re-preview/confirmation;
-- changing refund idempotency key/body on transport retry;
-- caller-supplied refund economics;
-- manual fulfillment through DB/unrelated API workarounds;
-- Aura/wallet execute path before its independent security gate;
-- destructive ledger/audit history editing.
+- direct Supabase/Postgres credential in bot;
+- direct bot RPC/function invocation;
+- direct `aura_balances`/`wallet_balances` writes;
+- one-step high-impact mutation with no accepted confirmation model;
+- role-only authorization;
+- global or DM mutation commands;
+- in-memory-only confirmation as sole authority;
+- changing idempotency key on transport retry;
+- deleting/editing ledger history to reverse an error;
+- enabling wallet command in the same first pass as Aura.
