@@ -2,193 +2,120 @@
 
 Updated: 2026-08-17
 
-Full audit coverage: every active source file listed below was read in `TASK-AUDIT-001`.
+This map distinguishes production `master` from the `TASK-CM-ADMIN-001` candidate on `task/cm-admin-console`. The candidate is not registered/deployed.
 
-## Repository root
+## Existing production areas preserved
 
-| Path | Responsibility / audit note |
-| --- | --- |
-| `README.md` | Production setup, active API boundary, deployment/bootstrap notes |
-| `AGENTS.md` | Mandatory agent/developer governance |
-| `.env.example` | Non-secret current read-only runtime configuration names |
-| `.gitignore` | Env/dependency/build/log/temp protection; currently does not ignore ZIP archives |
-| `package.json` | Node/runtime/scripts/dependency contract |
-| `package-lock.json` | Locked dependency graph/integrity metadata |
-| `index.js` | Host shim requiring `dist/index.js` |
-| `tsconfig.json` | Strict typecheck of active src + tests, excludes legacy |
-| `tsconfig.build.json` | Production build of `src` only |
-| `src/` | Active production source |
-| `tests/` | Active test suite |
-| `legacy/` | Frozen pre-rebuild archive; never import/execute from active code |
-| `docs/legacy-parity.md` | Historical/parity evidence |
-| `docs/audits/` | Full point-in-time audit reports |
-| `docs/context/` | Canonical current truth/workflow/handoff |
-| `docs/decisions/` | Durable ADRs |
-| `docs/security/` | Specialist security/implementation guardrails |
+- `src/commands/aura.ts` — intentional customer `cm aura` message command under ADR-0005; unchanged by TASK-CM-ADMIN-001.
+- `src/commands/refreshLeaderboard.ts` — existing `/refresh-leaderboard`; behavior preserved.
+- `src/discord/client.ts` — existing `Guilds`, `GuildMessages`, `MessageContent` intents remain because `cm aura` still exists.
+- leaderboard/scheduler/shutdown modules — no functional change in this task.
+- `legacy/` — frozen and untouched.
 
-## Active source inventory and ownership
+## Candidate files changed/added by TASK-CM-ADMIN-001
 
 ### `src/index.ts`
 
-Composition root.
-
-Owns:
-
-- config load/fail-closed startup;
-- Discord client/API client/service construction;
-- SIGINT/SIGTERM hooks;
-- ready/startup schedule;
-- current MessageCreate Aura dispatch;
-- current InteractionCreate refresh dispatch;
-- login failure shutdown.
-
-Audit note: future admin slash growth needs a cleaner command registry; current hardwired handlers are safe but not scalable.
+Composition root now constructs `CmAdminController`. Admin controller handles `/cm` and its buttons/modals before existing refresh dispatch. Customer message routing remains unchanged.
 
 ### `src/api/client.ts`
 
-Owns Internal Integrations API transport:
+Extends the signed transport with typed user/order/refund methods while preserving the existing HMAC boundary, timeout, response-size cap, status validation and one transport/503 retry.
 
-- only two current read paths;
-- strict outbound request validation;
-- signed requests;
-- timeout;
-- 64 KiB response cap;
-- retry policy;
-- JSON/status/error/response validation.
+Critical mutation invariant: validated raw JSON is serialized once outside the retry loop so the exact refund execute body/idempotency key remain stable while timestamp/nonce/signature are regenerated for each HTTP attempt.
 
-Security boundary. Authoritative backend documentation now exposes additional read/mutation operations, but current source still implements only two reads. New operations require exact typed schemas/client methods. Future mutations need a distinct idempotency-aware extension, not ad-hoc fetch calls.
-
-### `src/api/signing.ts`
-
-Owns canonical `cm-integrations-v1` request construction and HMAC-SHA256 headers. The supplied backend quickstart matches this canonical signing model. Fragile protocol boundary.
+Candidate endpoint list is restricted to seven approved paths: the two existing Aura reads plus user overview, order details, fulfillment diagnostics, refund preview and refund execute.
 
 ### `src/api/schemas.ts`
 
-Owns strict read request/response/error DTO validation. New read/mutation DTOs belong here or a clearly separated schema module after exact backend contract verification.
-
-### `src/api/errors.ts`
-
-Owns stable safe client error abstraction. Never surface backend raw error messages.
+Contains strict mirrored request/response DTOs for candidate user/order/refund operations. Schemas were verified against website source commit `20f6cb52344bade858099febcec2d1c59312f2e5`.
 
 ### `src/config/env.ts`
 
-Owns current Discord/API environment validation. Current full loader is also used by command registration, creating avoidable coupling to HMAC secrets.
+Adds optional parsing for:
 
-Future admin config must fail closed and parse explicit user-ID allowlists/caps/channels safely.
+- `BOT_ADMIN_USER_IDS` — comma-separated strict Snowflakes, no duplicates, max 100;
+- `BOT_ADMIN_COMMAND_CHANNEL_ID`;
+- `BOT_AUDIT_LOG_CHANNEL_ID`.
 
-### `src/commands/aura.ts`
+Admin console itself fails closed if required admin values are absent.
 
-Current exact `cm aura` message command.
+### `src/discord/adminAuthorization.ts`
 
-Current status under ADR-0005:
+Reusable `/cm` guard: guild -> exact guild -> admin config -> exact admin channel -> explicit user-ID whitelist.
 
-- correct pre-backend guild/blocked-channel guards;
-- safe mentions and display sanitization;
-- intentional customer message command;
-- **not** a slash-migration target under current product policy.
+### `src/discord/adminAudit.ts`
 
-### `src/commands/refreshLeaderboard.ts`
-
-Current `/refresh-leaderboard` slash command.
-
-Audit status:
-
-- explicit runtime guild guard already exists;
-- exact command channel;
-- ManageGuild/Administrator runtime permission;
-- ephemeral safe responses;
-- read-only operational command.
-
-### `src/discord/client.ts`
-
-Owns intents. `GuildMessages` and privileged `MessageContent` are intentional requirements while customer message commands such as `cm aura` exist.
+Posts sanitized refund audit output with mentions disabled. Does not include email, HMAC material, raw authenticated request body or fulfillment secrets.
 
 ### `src/discord/registerCommands.ts`
 
-Owns explicit manual guild bulk-overwrite registration.
+Guild registration definition now contains `/refresh-leaderboard` and `/cm`. Registration was not run in TASK-CM-ADMIN-001.
 
-Audit note: currently loads complete runtime config. Refactor into an injectable/testable function before expanding command catalog.
+### `src/commands/cm.ts`
 
-### `src/discord/safeMessages.ts`
+Defines `/cm user email:<email>` and central routing for chat-input/button/modal interactions. Re-authorizes every interaction and delegates user/order/refund work to focused modules.
 
-Owns `safeAllowedMentions` and leaderboard channel/create/edit wrappers. Security boundary for mention suppression.
+Aura/wallet/manual-fulfillment buttons are intentionally blocked and make no corresponding execute request.
 
-### `src/leaderboard/format.ts`
+### `src/commands/cmSessions.ts`
 
-Owns Components V2 rendering, names/ranks/Aura formatting, custom emoji and relative timestamp.
+Operator-bound in-memory navigation sessions with random IDs, 15-minute inactivity TTL and bounded session count. Refund proposal freezes canonical preview, reason, stable Discord operator ID context, idempotency key and expiry.
 
-### `src/leaderboard/service.ts`
+### `src/commands/cmSupport.ts`
 
-Owns fetch -> create/edit and shared overlap lock.
+Safe error presentation, session helper, preview fingerprint and bounded component-index parsing.
 
-Audit note: message ID precondition is currently an `as string` invariant enforced by callers rather than the class type.
+### `src/commands/cmUserActions.ts`
 
-### `src/leaderboard/types.ts`
+User refresh, order open/refresh and fulfillment diagnostic actions. Checks user/order target consistency before presenting returned data.
 
-Owns the small read-client/domain contracts used by commands/leaderboard.
+### `src/commands/cmRefund.ts`
 
-### `src/scheduler/leaderboardSchedule.ts`
+Refund modal/preview/confirmation/execute state machine. Requires a canonical fresh re-preview before execute and uses a stable logical mutation body/idempotency key across retry.
 
-Owns bootstrap, immediate refresh, five-minute timer and scheduled failure behavior.
+### `src/commands/cmUi.ts`
 
-Audit note: `start()` is not internally idempotent; current `.once(ClientReady)` wiring prevents normal duplicate starts.
+Builds Components V2 panels for:
 
-### `src/scheduler/shutdown.ts`
+- user operations;
+- recent orders (five/page, max ten from API);
+- order detail;
+- fulfillment diagnostics;
+- refund preview/success;
+- blocked/unavailable and error notices.
 
-Owns idempotent timer stop/Discord destroy/exit. Does not drain an in-flight operation.
+Output sanitizes markdown/mentions and uses existing safe allowed-mention policy.
 
-### `src/logger/index.ts`
+## Candidate tests
 
-Owns structured JSON logs and current error normalization.
+Added:
 
-Audit note: current API errors are secret-safe; generic sanitizer is not universal pattern redaction and must be hardened before broader admin/user data flows.
+- `tests/api/admin-client.test.ts` — exact paths/body plus refund retry body/idempotency stability;
+- `tests/config/admin-env.test.ts` — admin config parsing/fail-closed input validation;
+- `tests/discord/adminAuthorization.test.ts` — DM/guild/channel/whitelist/config failures;
+- `tests/commands/cmSessions.test.ts` — operator binding/expiry;
+- `tests/commands/cm.test.ts` — `/cm` shape, unauthorized zero-backend-call, ephemeral Components V2 behavior.
 
-## Test inventory
+Updated:
 
-The root test script explicitly runs:
+- `tests/architecture.test.ts` — only approved paths; no direct DB; no Aura/wallet/purchase-process execute path; explicit admin whitelist requirement;
+- `tests/discord/registerCommands.test.ts` — legacy refresh fixture preserved and `/cm` definition present.
 
-- `tests/api/signing.test.ts`
-- `tests/api/client.test.ts`
-- `tests/config/env.test.ts`
-- `tests/commands/aura.test.ts`
-- `tests/commands/refreshLeaderboard.test.ts`
-- `tests/leaderboard/format.test.ts`
-- `tests/leaderboard/service.test.ts`
-- `tests/scheduler/leaderboardSchedule.test.ts`
-- `tests/scheduler/shutdown.test.ts`
-- `tests/discord/registerCommands.test.ts`
-- `tests/logger/redaction.test.ts`
-- `tests/architecture.test.ts`
+`package.json` test script includes all candidate tests.
 
-Fixtures:
+## CI candidate
 
-- `tests/fixtures/aura-success.json`
-- `tests/fixtures/leaderboard-empty.json`
-- `tests/fixtures/leaderboard-populated.json`
-- `tests/fixtures/refresh-command.json`
+`.github/workflows/ci.yml` was added to execute Node 22 install/test/typecheck/build/diff-check. First run was blocked before runner startup by GitHub account billing/spending status, not by a code test result.
 
-See full audit for coverage strengths/gaps.
+## External ownership / blocked gaps
 
-## Generated/local-only paths
+This repository still does not own:
 
-Never commit:
+- website route implementation or operation allowlists;
+- Supabase migrations/RLS/grants;
+- older-user-order pagination beyond the current max-10 overview DTO;
+- a manual-fulfillment mutation API;
+- an ADR-0004-compatible Aura/wallet confirmation contract.
 
-- `.env`;
-- `dist/`;
-- `node_modules/`;
-- logs;
-- deployment/local ZIP archives such as prior `CM DC Bot.zip`.
-
-Note: ZIPs are policy-forbidden but not currently protected by a `.gitignore` pattern.
-
-## External ownership
-
-This repo does not own:
-
-- website API route implementation;
-- Supabase migrations;
-- DB grants/RLS;
-- wallet/order/payment/delivery logic;
-- OAuth/Support-role systems.
-
-`DATA_STATUS.md` records verified dependency facts and authoritative contract evidence. Cross-repo fixes must happen in their owning project.
+Do not add direct DB or ad-hoc business logic in the bot to compensate for those gaps.

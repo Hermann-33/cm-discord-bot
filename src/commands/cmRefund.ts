@@ -90,6 +90,7 @@ export async function handleRefundModal(
       orderId: preview.orderId,
       reason,
       preview,
+      operator: { provider: "discord", externalUserId: interaction.user.id },
       idempotencyKey: dependencies.idempotencyKey(),
       expiresAtMs: dependencies.nowMs() + REFUND_CONFIRM_TTL_MS
     };
@@ -163,12 +164,7 @@ export async function confirmRefund(
       orderId: proposal.orderId,
       reason: proposal.reason,
       idempotencyKey: proposal.idempotencyKey,
-      operator: {
-        provider: "discord",
-        externalUserId: interaction.user.id,
-        username: interaction.user.username,
-        displayName: interaction.user.globalName ?? null
-      }
+      operator: proposal.operator
     });
     if (refund.userId !== session.overview.identity.userId || refund.orderId !== proposal.orderId) {
       throw new Error("Refund result target mismatch");

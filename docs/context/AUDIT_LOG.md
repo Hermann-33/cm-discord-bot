@@ -30,95 +30,81 @@ Verdict: `COMPLETE` for documentation/governance scope.
 
 ## 2026-08-17 — TASK-AUDIT-001 — Full codebase and dependency re-baseline
 
-### Scope
+Exhaustive static/source/config/GitHub/dependency review. No critical/high bot source issue found. Material process gaps included no executable current-head CI evidence, registration/HMAC config coupling, generic logger-redaction limitations, Node type/runtime alignment and local ZIP-ignore gap.
 
-Exhaustive audit of active bot source, all root tests/fixtures, package/build/env configuration, GitHub branch/PR/CI state, legacy isolation, documentation drift and read-only live Supabase dependency metadata relevant to future bot work.
+Its then-current conclusion that `cm aura` should become `/aura` was superseded by ADR-0005.
 
-### Positive findings
-
-- no direct Supabase/Postgres dependency in active bot;
-- HMAC request signing and strict API DTO validation are real controls;
-- API response size/timeout/error/retry handling is bounded;
-- mention suppression/display-name sanitization are centralized/tested;
-- `cm aura` performs guild/channel checks before API lookup;
-- `/refresh-leaderboard` has explicit runtime guild/channel/permission guards;
-- Components V2 leaderboard and overlap lock match implementation;
-- legacy is excluded and regression-tested;
-- architecture tests enforce the two-read-operation API boundary.
-
-### Material findings
-
-- no GitHub CI/status exists at current head, and fresh local test/typecheck/build/npm-audit execution was unavailable;
-- command registration currently requires complete runtime config including Internal API HMAC material;
-- logger sanitization is not universal secret/PII redaction;
-- Node type definitions are newer than the minimum runtime;
-- `.gitignore` does not ignore ZIP archives;
-- smaller defensive/test gaps remain.
-
-### Backend drift discovered
-
-Live DB now contains service-role-only internal integration adjustment functions for `users.aura.adjust` and `users.wallet.adjust` with persistent idempotency/request-hash protection and audit integration. This did not, by itself, prove bot-facing HTTP mutation endpoints/permission existed.
-
-### Historical audit conclusion later superseded
-
-At audit time, ADR-0003 classified `cm aura` as slash-migration debt. The audit therefore recommended conversion to `/aura` and eventual Message Content removal.
-
-That product conclusion is **superseded by ADR-0005**. Current policy intentionally keeps `cm aura` as a customer message command and reserves slash commands for staff/admin operations. This correction does not alter the audit's source/security findings about how `cm aura` is currently guarded.
-
-Verdict: `COMPLETE` for source/static/live-metadata audit; `PARTIAL` for production-hardening readiness because execution gates remain.
+Verdict: `COMPLETE` for audit scope; executable verification gap remained.
 
 ---
 
 ## 2026-08-17 — TASK-POLICY-001 — Customer vs admin command-surface correction
 
-### Decision
+Added ADR-0005 and preserved `cm aura` as intentional customer message command while reserving admin/staff operations for slash commands. No runtime/data mutation.
 
-Product owner clarified that `cm aura` is a customer-facing command, while slash commands are intended for admins/staff.
-
-### Governance action
-
-- added ADR-0005, superseding conflicting parts of ADR-0003;
-- retained `cm aura` as intentional message command;
-- retained Message Content/GuildMessages as intentional requirements while that customer command exists;
-- kept admin/staff operational and mutation commands slash-only/guild-only;
-- corrected active context, architecture, command catalog, roadmap and handoff.
-
-### Data boundary
-
-No architecture change: both customer and admin commands continue to use approved Internal Integrations API operations; direct Supabase/Postgres access remains forbidden.
-
-### Verdict
-
-`COMPLETE` for policy/documentation correction. No runtime code, Discord state or database state changed.
+Verdict: `COMPLETE`.
 
 ---
 
 ## 2026-08-17 — TASK-API-DOC-001 — Internal Integrations API contract re-baseline
 
-### Evidence
+Recorded the broader production Internal Integrations operation catalog, HMAC/retry/idempotency semantics and documented Aura/wallet execute paths. Endpoint existence was explicitly separated from bot-client permission.
 
-Authoritative backend Internal Integrations API and bot-quickstart documentation was supplied for the project.
+No runtime code, Discord state, website source, credentials or database state changed.
 
-### Material corrections
+Verdict: `COMPLETE` for documentation re-baseline.
 
-- production operation catalog is broader than the bot currently consumes;
-- `users.aura.adjust` is contract-documented at `POST /api/internal/integrations/v1/users/aura/adjust`;
-- `users.wallet.adjust` is contract-documented at `POST /api/internal/integrations/v1/users/wallet/adjust`;
-- mutation retries require stable business idempotency key/body with fresh transport timestamp/nonce/signature;
-- exact per-client `allowedOperations` means endpoint existence is not bot authorization;
-- previous context saying Aura/wallet HTTP paths were unverified is obsolete.
+---
 
-### Unresolved contract/security issues
+## 2026-08-17 — TASK-CM-ADMIN-001 — Private user/order admin console candidate
 
-- bot credential operation scope remains unverified;
-- exact DTOs must be read before implementing new typed client methods;
-- authoritative full contract says external identity is lookup-only while quickstart mutation examples use `external_identity`; mutation selector support requires route/source verification;
-- ADR-0004 requires backend-authoritative preview/confirm or equivalent confirmation state, while supplied Aura/wallet docs expose direct execute endpoints and no dedicated adjustment preview endpoint.
+### Branch/scope
 
-### Scope and safety
+Implemented on `task/cm-admin-console`; production `master` was not changed. `/cm` was not registered or deployed and no live Internal API mutation was executed.
 
-No production bot code, Discord state, website source, API credential, Supabase state or mutation was changed.
+### Read-only website verification
+
+Website repository was inspected read-only at commit `20f6cb52344bade858099febcec2d1c59312f2e5` to verify exact request/response schemas.
+
+Findings relevant to candidate:
+
+- `users.overview.read` accepts `recentOrdersLimit` only 1–10 and returns max ten recent orders;
+- no current Internal Integrations API operation pages older orders for one user;
+- `orders.details.read` exposes the safe privileged order DTO needed by the console;
+- `orders.fulfillment.read` is diagnostics-only and no manual-fulfillment mutation operation exists;
+- canonical refund preview/execute DTOs are present;
+- Aura/wallet adjustment source schemas use `userLookupSelectorSchema`, resolving the earlier external-identity selector prose conflict.
+
+### Candidate implementation
+
+Added:
+
+- `/cm user email:<email>` slash definition;
+- ephemeral Components V2 private user panel;
+- explicit guild/admin-channel/user-ID-whitelist authorization on command/buttons/modals;
+- bounded operator-bound in-memory sessions;
+- user overview, latest-ten order paging, order detail and fulfillment diagnostics;
+- order -> user operations navigation;
+- canonical refund reason/preview/re-preview/confirm/execute flow;
+- stable refund logical body/idempotency across retry with fresh HMAC transport material;
+- sanitized Discord refund audit;
+- blocked Aura/wallet/manual-fulfillment controls rather than unsafe shortcuts;
+- exact typed API DTOs/client methods for only the required user/order/refund operations;
+- focused authorization/config/session/API/architecture tests;
+- Node 22 GitHub Actions workflow.
+
+### Security review correction
+
+Static review found that rebuilding refund operator audit context from mutable Discord username/display name on a later retry could change the request body under the same idempotency key. The candidate was hardened to freeze only stable `provider=discord` + external user ID in the refund proposal and reuse that exact operator object for execute retries.
+
+### CI result
+
+GitHub Actions run for first feature commit `9f6417374e6564d02a76d0c589320793aa2c0c62` did not start a runner. GitHub annotation states recent account payments failed or the spending limit needs increasing. Job contained zero executed steps.
+
+This is an infrastructure/billing execution failure, not application pass/fail evidence.
+
+Local static/syntax checks found no direct DB access, real secrets, forbidden Aura/wallet/purchase-process execute path, or TypeScript syntax diagnostics in drafted changed files. These checks do not replace `npm test`, typecheck or build.
 
 ### Verdict
 
-`COMPLETE` for repository documentation re-baseline; implementation readiness remains gated by the unresolved items above.
+`PARTIAL` pending executable dependency-aware test/typecheck/build/diff-check evidence and subsequent review. No production registration/deployment/live mutation is authorized by this verdict.

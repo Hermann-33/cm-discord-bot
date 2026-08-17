@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type {
   OrderDetailsData,
+  InternalIntegrationOperator,
   OrderRefundPreviewData,
   UserOverviewData
 } from "../api/schemas";
@@ -9,6 +10,7 @@ export type RefundProposal = {
   orderId: string;
   reason: string;
   preview: OrderRefundPreviewData;
+  operator: InternalIntegrationOperator;
   idempotencyKey: string;
   expiresAtMs: number;
 };

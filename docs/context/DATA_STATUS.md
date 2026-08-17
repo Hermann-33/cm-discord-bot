@@ -2,20 +2,20 @@
 
 Verified/re-baselined: 2026-08-17
 
-## Bot-side verdict
+## Production bot boundary
 
-The current production bot has **no direct Supabase or Postgres access**. It carries no database credential and has no database fallback. Cheater's Market data access is website-owned and reached through the HMAC-authenticated Internal Integrations API.
+Production `master` still has no direct Supabase/Postgres access and no database fallback. Its deployed/source API use remains the two Aura read operations:
 
-Current bot source uses only:
+```text
+aura.leaderboards.read
+aura.lookup.read
+```
 
-- `POST /api/internal/integrations/v1/aura/leaderboards`;
-- `POST /api/internal/integrations/v1/aura/lookup`.
+`TASK-CM-ADMIN-001` exists on feature branch `task/cm-admin-console` only. It has not been merged, registered, deployed or used to make a live mutation.
 
-The repository currently documents the bot integration credential as limited to the corresponding Aura read operations. No mutation operation is consumed by bot source.
+## Authoritative Internal Integrations API catalog
 
-## Authoritative Internal Integrations API contract supplied 2026-08-17
-
-Backend contract documentation supplied for this project describes the following production operations:
+Backend contract documentation supplied on 2026-08-17 lists production operations including:
 
 | Permission | Path |
 | --- | --- |
@@ -34,305 +34,213 @@ Backend contract documentation supplied for this project describes the following
 | `users.wallet.adjust` | `/api/internal/integrations/v1/users/wallet/adjust` |
 | `users.aura.adjust` | `/api/internal/integrations/v1/users/aura/adjust` |
 
-These are backend API capabilities. They are **not** proof that the Discord bot's dedicated client has those permissions. Each client has an exact non-empty `allowedOperations` list with no wildcard or master-key bypass.
+Each integration client has an exact `allowedOperations` list. There is no wildcard/master bypass. Endpoint existence is not bot permission.
 
-### HTTP/authentication contract relevant to bot implementation
+## HMAC/idempotency contract
 
-Integration routes are `POST`, JSON, no query string, with a documented maximum raw request body of 16 KiB.
+Integration routes are POST/JSON/no query string and require the current `cm-integrations-v1` HMAC headers. Exact serialized UTF-8 body bytes are signed.
 
-Every request requires the existing HMAC headers and signs exactly eight LF-separated canonical lines:
+Transport identity is per attempt:
+
+- fresh 13-digit millisecond timestamp;
+- fresh lowercase UUIDv4 nonce;
+- fresh HMAC signature.
+
+Business mutation identity is per logical action:
+
+- UUID `idempotencyKey` stable across retries;
+- exact request body stable across retries;
+- same key + changed body -> `IDEMPOTENCY_CONFLICT`.
+
+## Website source verification for TASK-CM-ADMIN-001
+
+Read-only source inspection was performed against `Thin-Tall-Dude/cheaters-market` commit:
 
 ```text
-cm-integrations-v1
-{client_id}
-{key_id}
-{timestamp_ms}
-{nonce_uuidv4}
-{uppercase_method}
-{exact_pathname}
-{sha256_exact_raw_body}
+20f6cb52344bade858099febcec2d1c59312f2e5
 ```
 
-The exact serialized UTF-8 body bytes must be sent after signing. Timestamp/nonce/signature are fresh per HTTP attempt. The transport nonce is independent from mutation idempotency.
+The website was not modified.
 
-All documented mutations require a UUID `idempotencyKey`. The same logical mutation must reuse the same idempotency key and exact body across retries while using a fresh transport nonce/timestamp/signature. Same key + changed body returns `IDEMPOTENCY_CONFLICT`.
+### User overview
 
-### Mutation contracts now documented
+Verified request:
 
-`users.aura.adjust`:
+```text
+users.overview.read
+POST /api/internal/integrations/v1/users/overview
+```
 
-- path `/api/internal/integrations/v1/users/aura/adjust`;
-- user selector;
-- `deltaAura`: non-zero integer, maximum magnitude 1,000,000,000;
-- reason 1–500 characters;
+Request contains `userLookupSelectorSchema` and `recentOrdersLimit` from 1 through 10. Response contains:
+
+- full staff email/user identity and external identities;
+- account-control/ban state;
+- wallet balance/currency;
+- available/pending/lifetime Aura fields;
+- order/license/account-delivery counts;
+- `recentOrders` with a hard max of 10.
+
+Therefore the candidate bot can show only the latest 10 orders from this operation. It pages those locally at five per page. No current Internal Integrations operation was found that pages older orders for a selected user, so the bot must not claim full historical-order coverage or invent a data path.
+
+### Order details
+
+Verified operation:
+
+```text
+orders.details.read
+POST /api/internal/integrations/v1/orders/details
+```
+
+The safe privileged DTO includes canonical order/user identity, full customer email, product/account descriptors, quantity, amount/currency, payment method/provider, status, timestamps and fulfillment summary. It does not expose secret fulfillment material.
+
+### Fulfillment diagnostics
+
+Verified operation:
+
+```text
+orders.fulfillment.read
+POST /api/internal/integrations/v1/orders/fulfillment
+```
+
+Response exposes safe product/account fulfillment diagnostics including delivery IDs, provider code, status, quantities, failure code/user message and manual-required timestamp.
+
+No dedicated Internal Integrations **manual-fulfillment mutation** operation exists in the verified operation catalog/source. The feature branch therefore performs no manual-fulfillment mutation.
+
+### Refund preview/execute
+
+Verified operations:
+
+```text
+orders.refund.preview
+orders.refund.execute
+```
+
+Preview is read-only and returns the server-derived canonical refund consequences including gross refund, final wallet credit and Aura recovery/conversion values.
+
+Execute request accepts only:
+
+- canonical order selector;
+- reason 8–1000 characters;
 - UUID idempotency key;
 - optional strict operator audit context.
 
-`users.wallet.adjust`:
+Caller cannot choose refund amount, wallet credit, Aura effects, transaction IDs or target user separately from the selected order.
 
-- path `/api/internal/integrations/v1/users/wallet/adjust`;
-- user selector;
-- `deltaCents`: non-zero integer, maximum magnitude 100,000,000;
-- reason 1–500 characters;
-- UUID idempotency key;
-- optional strict operator audit context.
+Execute response includes the server-derived refund result, wallet/Aura transaction IDs, admin audit event ID, refund timestamp and `idempotentReplay` state.
 
-Backend documentation states production verification covered success/replay/conflict/failure/cleanup for both wallet and Aura adjustment. This bot repository has not independently performed an authenticated mutation smoke test with the bot credential.
+### Aura/wallet selector discrepancy resolved
 
-### Selector contradiction requiring source verification
+Actual website source shows:
 
-The full API contract identifies itself as the authoritative V1 contract and states that `external_identity` is a lookup selector only. The bot quickstart nevertheless shows `external_identity` in Aura/wallet adjustment request examples.
+```text
+walletAdjustmentRequestSchema -> userLookupSelectorSchema
+auraAdjustmentRequestSchema   -> userLookupSelectorSchema
+```
 
-Do not silently choose one. Before implementing mutation targeting, inspect the actual website route schema/source or an updated authoritative contract and determine which selectors `users.aura.adjust` and `users.wallet.adjust` accept. Until then, do not assume direct Discord external-identity mutation targeting is valid.
+`userLookupSelectorSchema` includes:
 
-### Exact DTO requirement
+- `user_id`;
+- `email`;
+- `external_identity`.
 
-The supplied documentation describes the operation set and request fundamentals but does not provide every exact response field for every read/support operation in the pasted material. Before adding a strict Zod schema/client method, verify the exact authoritative request and response DTO for that operation rather than guessing field names.
+This source evidence supersedes the earlier prose conflict that described external identity as lookup-only while quickstart examples used it for balance mutations.
 
-## Live Supabase environment
+This resolution does **not** authorize Discord Aura/wallet adjustment. ADR-0004 confirmation/state-binding requirements remain unsatisfied by the direct execute-only adjustment contract, so candidate bot source contains no Aura/wallet execute method/path.
 
-Read-only verification on 2026-08-17:
+## Candidate bot operation requirement
 
-- project ref: `gcqbayehikvbwvvseyoc`;
-- project name: `Cheater's Market`;
-- region: `us-east-1`;
-- status: `ACTIVE_HEALTHY`;
-- Postgres: 17.6.1.063.
+For `/cm user` + order navigation + refund, the candidate needs only these additional backend permissions:
 
-The bot does not connect to this project directly. These facts describe an upstream dependency only.
+```text
+users.overview.read
+orders.details.read
+orders.fulfillment.read
+orders.refund.preview
+orders.refund.execute
+```
 
-## Current migration ledger returned by Supabase
+The actual bot client's `allowedOperations` were not modified or verified in TASK-CM-ADMIN-001. A backend 403 is the expected fail-closed result until explicitly provisioned.
 
-- `20260810024630 add_internal_discord_bot_api_nonce_guard`
-- `20260812104228 add_internal_integration_balance_adjustments`
-- `20260814044248 add_internal_integration_order_refund_execute`
-- `20260815052426 add_internal_integration_purchase_processing_outbox`
-- `20260816050802 add_daily_drop`
-- `20260816050858 tighten_daily_drop_spins_grants`
-- `20260816051116 add_daily_drop_foreign_key_indexes`
-- `20260816064702 list_active_daily_drop_coupons`
+## Aura database/admin foundation
 
-This supersedes the earlier context that knew only about the nonce/read-side Internal API foundation.
+Previously verified live Supabase primitives remain upstream website implementation facts:
 
-## Read-only Aura RPC context
+```text
+public.admin_adjust_aura_balance(...)
+public.internal_integration_adjust_aura_balance(...)
+operation users.aura.adjust
+```
 
-The historical/read-side functions remain present:
+The internal-integration Aura primitive is service-role-only among checked app roles, idempotency/request-hash protected, bounded to non-zero +/-1,000,000,000 Aura, validates target/reason/operator context, protects against negative resulting available Aura, and records Aura transaction/admin audit evidence.
 
-- `public.get_discord_aura_leaderboard(integer)`
-- `public.get_discord_aura_leaderboards(integer)`
-- `public.get_discord_user_aura(text)`
+The bot must never call the database function directly.
 
-Previously verified posture:
+## Wallet database/admin foundation
 
-- `SECURITY INVOKER`;
-- `search_path=public`;
-- `anon`: no execute;
-- `authenticated`: no execute;
-- `service_role`: execute.
+Previously verified live primitives remain:
 
-They are underlying DB context only; the rebuilt bot does not call them.
+```text
+public.admin_adjust_wallet_balance(...)
+public.internal_integration_adjust_wallet_balance(...)
+operation users.wallet.adjust
+```
 
-## Aura admin primitive
+The internal-integration wallet primitive is service-role-only among checked roles, persistent-idempotency/request-hash protected, bounded to non-zero +/-100,000,000 cents, validates target/reason/operator context, rejects negative resulting wallet balance and writes wallet transaction/admin audit evidence.
 
-`public.admin_adjust_aura_balance(uuid, uuid, bigint, text)` remains present and service-role-only among the checked application roles.
+A live wallet transaction AFTER INSERT trigger participates in funding-state synchronization: positive transactions route to funding-lot synchronization and negative transactions to funding-consumption synchronization.
 
-It:
+This is why wallet remains later/stricter than Aura and cannot be implemented as a direct balance overwrite.
 
-- validates target, non-zero delta and reason;
-- prepares/locks Aura balance;
-- rejects negative resulting available Aura;
-- changes `available_aura`;
-- inserts an `aura_transactions` `manual_adjustment` row;
-- inserts `admin_user_operation_events` audit evidence;
-- returns balance, Aura transaction ID and audit event ID.
+## Live Supabase dependency snapshot
 
-The bot must never call this directly.
+Read-only dependency facts verified 2026-08-17:
 
-## New internal-integration Aura execute primitive
+- project ref `gcqbayehikvbwvvseyoc`;
+- project name `Cheater's Market`;
+- region `us-east-1`;
+- status `ACTIVE_HEALTHY`;
+- Postgres `17.6.1.063`.
 
-Verified live function:
+The bot never connects directly to this project.
 
-`public.internal_integration_adjust_aura_balance(p_client_id text, p_idempotency_key uuid, p_request_hash text, p_target_user_id uuid, p_delta_aura bigint, p_reason text, p_operator jsonb)`
+Relevant migration ledger included:
 
-Verified security/access:
+- `20260810024630 add_internal_discord_bot_api_nonce_guard`;
+- `20260812104228 add_internal_integration_balance_adjustments`;
+- `20260814044248 add_internal_integration_order_refund_execute`;
+- `20260815052426 add_internal_integration_purchase_processing_outbox`;
+- `20260816050802 add_daily_drop`;
+- `20260816050858 tighten_daily_drop_spins_grants`;
+- `20260816051116 add_daily_drop_foreign_key_indexes`;
+- `20260816064702 list_active_daily_drop_coupons`.
 
-- `SECURITY DEFINER`;
-- `search_path=''`;
-- `anon`: no execute;
-- `authenticated`: no execute;
-- `service_role`: execute.
+## RLS/upstream security context
 
-Verified behavior:
+Relevant checked tables such as Aura/wallet balances/transactions, integration idempotency, Discord links/privacy and admin operation events have RLS enabled.
 
-- fixed operation ID `users.aura.adjust`;
-- validates integration client identifier;
-- requires UUID idempotency key;
-- requires 64-character lowercase hex request hash;
-- delta must be non-zero and within +/-1,000,000,000 Aura;
-- reason length 1–500;
-- optional external operator JSON has an exact bounded shape;
-- advisory transaction lock serializes the same client/operation/idempotency key;
-- persistent `internal_integration_idempotency` record returns safe replay or conflict semantics;
-- validates target user existence;
-- calls the admin Aura primitive;
-- maps below-zero to `insufficient_balance`;
-- validates the resulting Aura transaction/audit IDs;
-- augments the admin audit event with integration/client and optional external-operator metadata.
+The live Supabase security advisor previously reported unrelated public/signed-in executable `SECURITY DEFINER` functions and other backend findings. Those remain website/database ownership. They do not justify any bot direct-DB access or weakening of the Internal API boundary.
 
-The database execute primitive does not authorize direct bot DB use. The HTTP execute path is now contract-documented separately above.
+The verified Aura/wallet internal-integration adjustment functions themselves were not executable by anon/authenticated among the checked roles.
 
-## Wallet admin primitive
+## Verification limits for candidate bot
 
-Verified live function:
+Still unverified for TASK-CM-ADMIN-001:
 
-`public.admin_adjust_wallet_balance(uuid, uuid, integer, text)`
+- candidate bot credential's actual new `allowedOperations`;
+- dependency-aware `npm test`, typecheck and build on candidate head because GitHub Actions runner startup is blocked by account billing/spending status;
+- command registration/deployment behavior;
+- authenticated read smoke test with the candidate credential scope;
+- controlled refund smoke test.
 
-Among checked roles it is executable only by `service_role`.
+No live bot mutation was performed.
 
-Behavior:
+## Ownership and secret boundary
 
-- creates/locks the wallet balance row;
-- requires a non-zero cents delta and reason;
-- rejects a result below zero;
-- updates wallet balance/currency;
-- inserts `wallet_transactions` with type `admin_adjustment`;
-- inserts `admin_user_operation_events` with reason, delta, previous/new balance, currency and wallet transaction ID;
-- returns transaction/audit IDs.
+This bot repo does not own website routes, operation allowlists, Supabase migrations/RLS/grants or business ledgers.
 
-## New internal-integration wallet execute primitive
+Never commit/document real:
 
-Verified live function:
-
-`public.internal_integration_adjust_wallet_balance(p_client_id text, p_idempotency_key uuid, p_request_hash text, p_target_user_id uuid, p_delta_cents integer, p_reason text, p_operator jsonb)`
-
-Verified security/access:
-
-- `SECURITY DEFINER`;
-- `search_path=''`;
-- `anon`: no execute;
-- `authenticated`: no execute;
-- `service_role`: execute.
-
-Verified behavior:
-
-- operation ID `users.wallet.adjust`;
-- same persistent idempotency/request-hash conflict model;
-- delta bounded to +/-100,000,000 cents;
-- reason 1–500;
-- strict optional external operator object;
-- target existence validation;
-- negative resulting balance mapped to `insufficient_balance`;
-- validates wallet transaction and audit IDs;
-- augments integration/operator audit metadata.
-
-## Wallet funding-state behavior
-
-A live `AFTER INSERT` trigger on `public.wallet_transactions` executes `handle_wallet_transaction_funding_state()`.
-
-The funding-state function routes:
-
-- positive wallet transactions -> funding-lot synchronization;
-- negative wallet transactions -> funding-consumption synchronization;
-- zero -> ignored.
-
-Therefore the admin wallet adjustment path participates in the website's funding-state machinery rather than only changing one balance number.
-
-The HTTP execute path is contract-documented, but bot scope/selectors/confirmation and controlled end-to-end bot verification remain required before exposing a Discord wallet command.
-
-## Relevant tables and RLS
-
-Verified relevant tables include:
-
-- `admin_user_operation_events`
-- `aura_balances`
-- `aura_transactions`
-- `internal_integration_idempotency`
-- `user_discord_links`
-- `user_discord_privacy_preferences`
-- `wallet_balances`
-- `wallet_funding_lots`
-- `wallet_transactions`
-
-RLS is enabled on all of those checked tables.
-
-`internal_integration_idempotency` stores non-null:
-
-- `client_id`;
-- `operation_id`;
-- `idempotency_key` UUID;
-- `request_hash`;
-- `response_result` JSONB;
-- `created_at` timestamp.
-
-## Critical boundary: HTTP contract is documented, bot authorization is not inferred
-
-The earlier statement that the Aura/wallet HTTP paths were unverified is obsolete. The supplied authoritative backend contract documents those execute paths and request fundamentals.
-
-Still unverified for this bot:
-
-- bot-dedicated client's actual `allowedOperations` for new operations;
-- exact route DTOs/selectors where the supplied docs conflict or omit exact fields;
-- an Aura/wallet adjustment preview/confirmation endpoint or equivalent backend-authoritative confirmation state satisfying ADR-0004;
-- bot-specific single/daily operator cap policy if required beyond backend hard bounds/rate limits;
-- authenticated production smoke behavior using the bot's dedicated credentials.
-
-Database functions and backend endpoint existence are not permission for the Discord bot to bypass the website or skip Discord authorization.
-
-## Live Supabase security advisor snapshot
-
-The advisor reports several categories.
-
-### Service-only tables with RLS/no policies
-
-Many sensitive service-only tables show `rls_enabled_no_policy` informational notices. Under the existing design, no browser policies can be intentional. Treat each table according to ownership rather than blindly adding public policies.
-
-### Upstream HIGH risk — exposed SECURITY DEFINER functions
-
-Advisor warnings still report anon and/or authenticated execution on unrelated privileged functions, including examples:
-
-- `complete_product_delivery_generation(...)`;
-- `handle_aura_redemption_wallet_funding_link()`;
-- `handle_wallet_transaction_funding_state()`;
-- `purchase_product_with_wallet_delivery(...)`;
-- `sync_order_payment_provider_from_purchase_intent()`.
-
-These are website/database security findings. They do **not** justify any bot direct-DB access and should be remediated by the owning backend.
-
-The verified Aura/wallet internal-integration adjustment functions themselves are not executable by anon/authenticated among the roles checked.
-
-Supabase remediation references for the owning backend:
-
-- public SECURITY DEFINER execute: `https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable`
-- authenticated SECURITY DEFINER execute: `https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable`
-- mutable search path: `https://supabase.com/docs/guides/database/database-linter?lint=0011_function_search_path_mutable`
-
-### Other security advisor context
-
-- several unrelated utility functions report mutable `search_path`;
-- Auth leaked-password protection is reported disabled.
-
-Auth/password settings are website ownership, not bot configuration.
-
-## Performance advisor context
-
-The live advisor also reports upstream opportunities such as:
-
-- unindexed foreign keys;
-- RLS policies that repeatedly evaluate auth helpers per row;
-- indexes that have not yet been observed as used.
-
-Aura/wallet/Discord-related rows appear in some of those notices. These are performance observations, not authorization failures and should be handled in the backend project after workload review.
-
-## Migration ownership
-
-This repository does not own Supabase migrations. Any DB/API change must be implemented/audited in the website/backend project. This bot consumes only explicitly approved HTTP contracts.
-
-## Secret handling
-
-Never commit or document real:
-
-- Discord bot tokens;
-- Internal API HMAC secrets;
-- website service credentials;
-- Supabase service-role credentials;
-- database credentials.
+- Discord bot token;
+- Internal API HMAC secret/signature/nonce/raw authenticated body;
+- Supabase service-role/database credentials;
+- private fulfillment material.
