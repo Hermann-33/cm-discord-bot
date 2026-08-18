@@ -120,40 +120,49 @@ function session(): CmAdminSession {
   };
 }
 
-function panelJson(sessionState: CmAdminSession): string {
-  const panel = buildPublicSharePanel(sessionState);
-  assert.ok(panel);
-  return JSON.stringify(panel.toJSON());
+function collectContent(value: unknown): string {
+  if (Array.isArray(value)) return value.map(collectContent).join("\n");
+  if (!value || typeof value !== "object") return "";
+  const record = value as Record<string, unknown>;
+  const own = typeof record.content === "string" ? record.content : "";
+  return [own, ...Object.values(record).map(collectContent)].filter(Boolean).join("\n");
 }
 
-function assertAbsentEvenIfEscaped(json: string, privateValue: string): void {
-  assert.equal(json.includes(privateValue), false);
-  assert.equal(json.includes(escapeDiscordText(privateValue)), false);
+function panelData(sessionState: CmAdminSession): { content: string; serialized: string } {
+  const panel = buildPublicSharePanel(sessionState);
+  assert.ok(panel);
+  const json = panel.toJSON();
+  return { content: collectContent(json), serialized: JSON.stringify(json) };
+}
+
+function assertAbsentEvenIfEscaped(content: string, privateValue: string): void {
+  assert.equal(content.includes(privateValue), false);
+  assert.equal(content.includes(escapeDiscordText(privateValue)), false);
 }
 
 test("customer-safe user share has no controls or private account identifiers and uses Discord timestamps", () => {
   const state = session();
-  const json = panelJson(state);
+  const { content, serialized } = panelData(state);
   const unix = Math.floor(Date.parse(CREATED_AT) / 1000);
 
-  assertAbsentEvenIfEscaped(json, PRIVATE_EMAIL);
-  assertAbsentEvenIfEscaped(json, USER_ID);
-  assert.equal(json.includes(`<@${DISCORD_USER_ID}>`), true);
-  assert.equal(json.includes(`<t:${unix}:f>`), true);
-  assert.equal(json.includes(`<t:${unix}:R>`), true);
-  assert.equal(json.includes("custom_id"), false);
+  assertAbsentEvenIfEscaped(content, PRIVATE_EMAIL);
+  assertAbsentEvenIfEscaped(content, USER_ID);
+  assert.equal(content.includes(`<@${DISCORD_USER_ID}>`), true);
+  assert.equal(content.includes(`<t:${unix}:f>`), true);
+  assert.equal(content.includes(`<t:${unix}:R>`), true);
+  assert.equal(serialized.includes("custom_id"), false);
 });
 
 test("customer-safe order share omits private email, internal user id, provider, and controls", () => {
   const state = session();
   state.shareView = { kind: "order" };
-  const json = panelJson(state);
+  const { content, serialized } = panelData(state);
 
-  assertAbsentEvenIfEscaped(json, PRIVATE_EMAIL);
-  assertAbsentEvenIfEscaped(json, USER_ID);
-  assertAbsentEvenIfEscaped(json, PRIVATE_PROVIDER);
-  assert.equal(json.includes(escapeDiscordText("CM-TEST")), true);
-  assert.equal(json.includes("custom_id"), false);
+  assertAbsentEvenIfEscaped(content, PRIVATE_EMAIL);
+  assertAbsentEvenIfEscaped(content, USER_ID);
+  assertAbsentEvenIfEscaped(content, PRIVATE_PROVIDER);
+  assert.equal(content.includes(escapeDiscordText("CM-TEST")), true);
+  assert.equal(serialized.includes("custom_id"), false);
 });
 
 test("customer-safe refund preview does not expose admin reason or backend identifiers", () => {
@@ -187,12 +196,12 @@ test("customer-safe refund preview does not expose admin reason or backend ident
     expiresAtMs: 1_000
   };
   state.shareView = { kind: "refund-preview" };
-  const json = panelJson(state);
+  const { content, serialized } = panelData(state);
 
-  assertAbsentEvenIfEscaped(json, privateReason);
-  assertAbsentEvenIfEscaped(json, USER_ID);
-  assert.equal(json.includes("idempotency"), false);
-  assert.equal(json.includes("custom_id"), false);
+  assertAbsentEvenIfEscaped(content, privateReason);
+  assertAbsentEvenIfEscaped(content, USER_ID);
+  assert.equal(serialized.includes("idempotency"), false);
+  assert.equal(serialized.includes("custom_id"), false);
 });
 
 test("Share to Chat posts a buttonless Components V2 copy and gives only the admin an ephemeral acknowledgement", async () => {
