@@ -1,65 +1,92 @@
 # Project Brief
 
-Updated: 2026-08-17
+Updated: 2026-08-18
 
 ## Product purpose
 
-The Cheater's Market Discord bot is the Discord-facing companion to Cheater's Market. It publishes Aura leaderboard data, provides user-facing Aura lookup, and exposes tightly controlled staff operations without making Discord the owner of commerce or account state.
+The Cheater's Market Discord bot is the Discord-facing companion to Cheater's Market. It publishes customer Aura information and gives a very small set of explicitly trusted staff private operational/admin controls without making Discord the owner of account, wallet, order, payment or fulfillment state.
 
 ## Target users
 
 - Cheater's Market Discord community members who need read-only Aura information.
-- Trusted staff who need operational/read controls.
-- In a future phase, explicitly whitelisted administrators who may request audited Aura or wallet adjustments through narrow website-owned Internal Integrations API operations.
+- Trusted staff who need private user/order diagnostics.
+- Explicitly allowlisted administrators who need audited Aura, wallet and refund operations through narrow website-owned Internal Integrations API contracts.
 
-## Current production scope
+## Product scope
 
-The rebuilt bot currently provides:
+The bot provides or is implementing:
 
-- one persistent Discord Components V2 Aura leaderboard message;
+- one persistent Components V2 Aura leaderboard;
 - lifetime and available Aura top-10 boards;
-- the self-service `cm aura` message command;
-- the staff-only guild slash command `/refresh-leaderboard`;
-- five-minute scheduled leaderboard refresh;
-- startup bootstrap when a leaderboard message ID is not yet configured;
-- HMAC-authenticated read-only requests to the website Internal Integrations API;
-- structured sanitized logging, bounded responses, timeout/retry controls, mention suppression, and tests.
+- customer message command `cm aura`;
+- staff operational slash command `/refresh-leaderboard`;
+- five-minute leaderboard scheduling/bootstrap;
+- private `/cm user email:<email>` admin console;
+- private `/cm order reference:<CM-public-ref-or-order-UUID>` direct order lookup;
+- user overview and bounded recent-order navigation;
+- order detail and fulfillment diagnostics;
+- canonical refund preview/confirm/execute;
+- confirmed Aura adjustment through `users.aura.adjust`;
+- confirmed wallet adjustment through `users.wallet.adjust`;
+- structured sanitized logging, timeout/retry/response bounds and mention suppression.
 
-## Current data boundary
+`TASK-CM-ADMIN-003` is feature-branch work until verification/merge gates pass; do not describe unmerged source as production solely because it exists on the branch.
 
-The bot is not a database client. It has no Supabase/Postgres credential and no direct database fallback. Its currently documented website integration credential remains limited to:
+## Data/business boundary
 
-- `aura.leaderboards.read`
-- `aura.lookup.read`
+The bot is never a database client.
 
-The backend Internal Integrations API itself now has authoritative production contract documentation for additional read and mutation operations. That API capability is not automatically bot permission; every integration client has an exact `allowedOperations` list.
+It has no Supabase/Postgres credential, no direct table/RPC fallback and no right to reimplement website accounting/commerce logic.
 
-## Accepted direction
+The architecture is:
 
-ADR-0005 is the command-surface authority and supersedes ADR-0003 where they conflict:
+```text
+Discord
+  -> standalone bot
+  -> HMAC Internal Integrations API
+  -> website-owned business/data layer
+```
 
-- customer/self-service commands may remain message/text commands;
-- `cm aura` remains the canonical customer Aura command;
-- staff/admin operational and mutation commands use configured-guild slash commands;
-- high-impact admin/mutation commands require explicit whitelisted Discord user IDs, with roles only as optional additional gates;
-- Aura adjustment is the first mutation feature;
-- wallet adjustment is later and higher risk;
-- mutation execution occurs through narrow signed backend API operations, never through direct bot database access.
+The bot uses only explicitly implemented API operations. Website-side per-client `allowedOperations` remains an independent runtime permission boundary and secret deployment configuration is never stored here.
+
+## Accepted product/security direction
+
+- ADR-0005: customer self-service may remain message-based; admin/staff operations use slash/components/modals.
+- ADR-0006: `/cm` is exact-guild + explicit `BOT_ADMIN_USER_IDS`, usable from any channel in the configured guild; DMs/wrong guilds fail closed.
+- ADR-0007: Aura/wallet use an explicit five-minute, fresh-state-bound confirmation with stable backend idempotency and audit.
+- refund retains the canonical backend preview/re-preview confirmation flow.
+- wallet/Aura/order/refund mutations remain website-owned; Discord is only the authorized operator interface.
 
 ## Explicit non-goals
 
 The bot must not become:
 
 - a direct Supabase/Postgres admin client;
-- the source of truth for Aura, wallet, orders, payments, licenses, delivery, OAuth, or Support-role state;
-- a general website admin backend;
-- a place where business-critical mutations are implemented only in Discord code;
+- a generic website admin backend;
+- the source of truth for Aura, wallet, orders, payments, licenses, delivery, OAuth or Support-role state;
+- a purchase-processing automation surface unless separately designed/approved;
+- a manual-fulfillment engine without a dedicated website API operation;
+- a role-only admin system;
 - a secret-bearing diagnostic console.
+
+## Manual fulfillment status
+
+Out of scope for `TASK-CM-ADMIN-003` and technically blocked by backend contract: the current API exposes fulfillment diagnostics but no manual-fulfillment mutation. The bot must not invent a mutation or use purchase processing/direct DB access as a substitute.
 
 ## Current maturity
 
-Production-adjacent and security-sensitive. The read-only rebuild is substantially hardened. Backend documentation now confirms production Aura/wallet adjustment execute operations and other support/read operations, but bot mutation implementation remains blocked until exact bot credential scope, mutation selector semantics, strict DTOs, ADR-0004-compatible confirmation/idempotency behavior and authorization controls are verified and implemented.
+Production-adjacent and security-sensitive. The read-side, admin authorization and refund foundation are hardened. `TASK-CM-ADMIN-003` extends the private admin console with direct order entry plus Aura/wallet mutations using strict mirrored DTOs, fresh state checks, explicit confirmation, stable idempotency and audit. Executable verification and controlled operational rollout remain mandatory before completion.
 
 ## Success criteria
 
-A successful bot remains small, auditable, guild-scoped, least-privileged, resilient to Discord/API failures, and incapable of bypassing website-owned business/data controls.
+A successful bot remains:
+
+- small and auditable;
+- exact-guild scoped;
+- explicitly allowlisted for high-impact controls;
+- backend/API bounded;
+- idempotent for mutations;
+- fail-closed on stale confirmation state;
+- audit-producing;
+- resilient to transport failure;
+- incapable of bypassing website-owned business/data controls.
