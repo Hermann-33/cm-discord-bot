@@ -1,9 +1,13 @@
 import { randomUUID } from "node:crypto";
 import type {
-  OrderDetailsData,
+  AuraAdjustmentData,
   InternalIntegrationOperator,
+  OrderDetailsData,
+  OrderFulfillmentData,
+  OrderRefundExecuteData,
   OrderRefundPreviewData,
-  UserOverviewData
+  UserOverviewData,
+  WalletAdjustmentData
 } from "../api/schemas";
 
 export type RefundProposal = {
@@ -42,6 +46,17 @@ export type WalletAdjustmentProposal = {
 
 export type UserAdjustmentProposal = AuraAdjustmentProposal | WalletAdjustmentProposal;
 
+export type CmShareView =
+  | { kind: "user" }
+  | { kind: "orders"; page: number }
+  | { kind: "order" }
+  | { kind: "fulfillment"; data: OrderFulfillmentData }
+  | { kind: "refund-preview" }
+  | { kind: "refund-success"; data: OrderRefundExecuteData }
+  | { kind: "adjustment-preview" }
+  | { kind: "adjustment-success"; adjustmentKind: "aura"; data: AuraAdjustmentData }
+  | { kind: "adjustment-success"; adjustmentKind: "wallet"; data: WalletAdjustmentData };
+
 export type CmAdminSession = {
   id: string;
   operatorId: string;
@@ -49,6 +64,7 @@ export type CmAdminSession = {
   selectedOrder?: OrderDetailsData;
   refundProposal?: RefundProposal;
   adjustmentProposal?: UserAdjustmentProposal;
+  shareView: CmShareView;
   createdAtMs: number;
   touchedAtMs: number;
 };
@@ -85,6 +101,7 @@ export class CmSessionStore {
       id: this.dependencies.id(),
       operatorId,
       overview,
+      shareView: { kind: "user" },
       createdAtMs: now,
       touchedAtMs: now
     };

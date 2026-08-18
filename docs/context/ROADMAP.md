@@ -4,145 +4,106 @@ Updated: 2026-08-18
 
 ## Completion rule
 
-A phase/task is complete only when applicable Discord behavior, API contract, data/business correctness, authorization/security, tests/typecheck/build/diff checks, documentation and requested Git/deployment gates pass.
+A phase/task is complete only when applicable Discord behavior, API/data correctness, authorization/security, executable tests/typecheck/build/diff checks, documentation and requested Git/deployment gates pass.
 
 ## Phase 0 — Read-only foundation — COMPLETE
 
-Customer `cm aura`, Components V2 leaderboard, bootstrap/scheduling/manual refresh, HMAC Internal Integrations API client, legacy isolation and removal of active direct-database access.
+Customer `cm aura`, Components V2 leaderboard, bootstrap/scheduling/manual refresh, HMAC Internal Integrations API client, legacy isolation and removal of active direct-DB access.
 
 ## Phase 1 — Repository governance — COMPLETE
 
-Repository-resident workflow, ADRs, context, audit, history and handoff installed by `TASK-WF-001`.
+Repository-resident workflow, ADRs, context, audit, history and handoff.
 
-## Phase 1.5 — Full re-baseline — COMPLETE WITH HISTORICAL EXECUTION GAP
+## Phase 1.5 — Re-baseline / backend contracts — COMPLETE
 
-`TASK-AUDIT-001` completed source/static/live-dependency review. ADR-0005 later superseded its slash-only customer-command recommendation.
+Active code/dependency audit plus current Internal Integrations API operation/selector/idempotency contracts verified. ADR-0005 superseded the old slash-only customer recommendation.
 
-## Phase 1.6 — Backend contract re-baseline — COMPLETE
+## Phase 2 — Private admin console foundation — COMPLETE
 
-Current Internal Integrations API operation catalog, HMAC/retry/idempotency model, strict user/order/refund DTOs and Aura/wallet adjustment contracts verified read-only from website source.
+`TASK-CM-ADMIN-001`: `/cm user`, private operator-bound sessions, user/order navigation, fulfillment diagnostics and canonical refund.
 
-## Phase 2 — Admin dispatch foundation — COMPLETE
+## Phase 3 — Guild-wide `/cm` authorization — COMPLETE
 
-`TASK-CM-ADMIN-001` merged `/cm user`, private Components V2 sessions, user/order navigation and central interaction dispatch without changing customer `cm aura`.
-
-## Phase 3 — Shared `/cm` authorization — COMPLETE
-
-`TASK-CM-ADMIN-002` is represented in current `master` head `5baa260bb1f804c6c0e9878f2cb5be003564a915` and ADR-0006:
+`TASK-CM-ADMIN-002` / ADR-0006:
 
 - exact configured guild;
-- no DMs/wrong guild;
+- no DM/wrong guild;
 - mandatory explicit `BOT_ADMIN_USER_IDS`;
 - any channel in configured guild;
-- no `BOT_ADMIN_COMMAND_CHANNEL_ID`;
 - per-interaction reauthorization;
-- separate audit-channel requirement for mutations.
+- no `BOT_ADMIN_COMMAND_CHANNEL_ID`;
+- separate mutation audit channel.
 
-`/refresh-leaderboard` retains its own channel/permission policy.
+## Phase 4 — Direct order + Aura/wallet controls — COMPLETE ON MAINLINE
 
-## Phase 3.5 — Private user/order console — COMPLETE ON MAINLINE
+`TASK-CM-ADMIN-003` was verified locally (113/113 tests, typecheck, build, diff checks) and squash-merged into `master` at:
+
+```text
+4b10d74aa80d3fa5c5e5a27b82e4ccf109a880a8
+```
 
 Mainline includes:
 
-- privileged user overview;
-- wallet/Aura/account/order summary;
-- bounded latest-ten order history;
-- order detail navigation;
-- fulfillment diagnostics;
-- order -> user operations navigation;
-- canonical refund control.
-
-## Phase 3.6 — Canonical refund — COMPLETE IN SOURCE / OPERATIONAL TESTING SEPARATE
-
-Source includes:
-
-- reason modal;
-- `orders.refund.preview`;
-- explicit confirmation;
-- five-minute TTL;
-- exact fresh re-preview before execute;
-- stable UUID idempotency/body across retry;
-- `orders.refund.execute`;
-- backend + sanitized Discord audit handling.
-
-Live production refund testing remains a separately authorized operational action.
-
-## Phase 4 — Direct order entry — TASK-CM-ADMIN-003 IN VERIFICATION
-
-Feature branch:
-
-```text
-task/cm-admin-controls-order
-```
-
-Adds:
-
-```text
-/cm order reference:<CM-public-ref-or-order-UUID>
-```
-
-The command resolves canonical order details, resolves the owner overview, requires target consistency and opens the existing private order panel with Refund, Fulfillment diagnostics, Refresh, User Operations and recent Order History.
-
-## Phase 5 — Aura adjustment — TASK-CM-ADMIN-003 IN VERIFICATION
-
-ADR-0007 accepts a fresh-state-bound two-step confirmation around the verified `users.aura.adjust` endpoint.
-
-Implemented source model:
-
-- signed non-zero whole-number delta;
-- backend max ±1,000,000,000 Aura;
-- reason 1–500;
-- fresh overview before preview;
-- projected non-negative available Aura;
-- five-minute explicit confirmation;
-- fresh exact balance comparison immediately before execute;
-- stable UUID idempotency/body across retry;
-- result target/delta verification;
-- required audit channel;
+- `/cm order reference:<CM-ref-or-UUID>`;
+- confirmed Aura adjustment;
+- confirmed wallet adjustment;
+- canonical refund retained;
 - backend + Discord audit;
-- post-success overview refresh.
+- manual fulfillment still blocked.
 
-## Phase 5.5 — Wallet adjustment — TASK-CM-ADMIN-003 IN VERIFICATION
+## Phase 5 — Customer-safe sharing / Discord admin UX — TASK-CM-ADMIN-004 COMPLETE / VERIFIED FOR MERGE
 
-ADR-0007 supersedes the older Aura-first/wallet-later sequencing because the wallet backend operation/accounting primitive is verified.
-
-Implemented source model:
-
-- signed decimal input with at most two decimal places;
-- exact integer-cent conversion;
-- backend max ±100,000,000 cents;
-- projected non-negative balance;
-- same five-minute/fresh-state/idempotency/audit controls as Aura;
-- website remains authoritative for wallet transaction/funding-state accounting.
-
-## Phase 6 — Manual fulfillment — BACKEND OPERATION REQUIRED / OUT OF CURRENT SCOPE
-
-The current API exposes `orders.fulfillment.read` only. `TASK-CM-ADMIN-003` deliberately leaves Manual Fulfillment blocked. No purchase-processing or direct-DB substitute is allowed.
-
-## Phase 7 — Production hardening and operations
-
-Verification contract:
+Branch/PR:
 
 ```text
-npm ci
-npm test
-npm run typecheck
-npm run build
-git diff --check
-git status --short --untracked-files=all
+task/cm-share-discord-audit-time
+PR #2
 ```
 
-Additional priorities:
+Implementation includes:
 
-- restore/reliably execute GitHub-hosted CI if account billing/spending limits still block it;
+- `/cm user` lookup by exact email or selected Discord user;
+- linked Discord identity in User Operations;
+- Share to Chat on meaningful private `/cm` panels;
+- dedicated buttonless/customer-safe public renderer under ADR-0008;
+- absolute + relative Discord timestamps across `/cm`, share and audit views;
+- concise Components V2 refund/Aura/wallet audit summaries;
+- focused tests for selector validation, disclosure boundary, no-public-controls, timestamps, audit layout and share state.
+
+No new API operation, website source/config, DB path or manual fulfillment behavior is introduced.
+
+### Executable gate
+
+After the repository became public, the standard GitHub-hosted runner executed the full workflow. An initial real run exposed a TypeScript narrowing defect in the new share-success renderer; that defect was fixed narrowly.
+
+Final successful run:
+
+```text
+GitHub Actions 32142352087
+Node 22.23.2
+npm ci: PASS, 0 vulnerabilities
+npm test: PASS — 127/127
+npm run typecheck: PASS
+npm run build: PASS
+git diff --check: PASS
+```
+
+Final static/security review remains clean for direct DB/Supabase access, new API operations, purchase-processing/manual-fulfillment shortcuts, secrets/HMAC material, `legacy/` changes, authorization regression and customer control disclosure.
+
+TASK-CM-ADMIN-004 is complete for implementation/verification and may be directly merged under the existing product authorization.
+
+## Phase 6 — Manual fulfillment — BACKEND OPERATION REQUIRED
+
+Still out of scope. The API exposes `orders.fulfillment.read` only; no purchase-processing or direct-DB substitute is allowed.
+
+## Phase 7 — Production hardening / operations
+
+Priorities:
+
 - branch protection/status checks;
-- registration-specific config loader so command registration requires fewer unrelated secrets;
+- registration-specific config loader;
 - stronger generic PII/secret redaction;
 - deployment/rollback/credential-rotation runbooks;
-- controlled authenticated read/mutation smoke tests only when explicitly authorized.
+- controlled authenticated read/mutation smoke tests only with explicit authorization.
 
-## Current position
-
-`TASK-CM-ADMIN-003` source/tests/docs are on a feature branch with a draft PR. Local Node `v24.11.1` verification passed `npm ci`, all 113 tests, typecheck, build, `git diff --check`, clean-status inspection and the focused security/diff scans. The repository task is ready for PR finalization and an explicitly authorized merge.
-
-After a clean merge, operational rollout requires bot redeploy/restart and guild command re-registration because `/cm` gained the `order` subcommand. Live Aura/wallet/refund mutation tests remain separately controlled actions.
+After any merge that changes `/cm` registration, production rollout requires bot redeploy/restart and one explicit `npm run register:commands`; those remain separate operational actions.

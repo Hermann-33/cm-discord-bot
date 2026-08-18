@@ -17,6 +17,7 @@ import {
 } from "../api/schemas";
 import type { AppConfig } from "../config/env";
 import { postAdjustmentAudit } from "../discord/adminAudit";
+import { findDiscordIdentity } from "../discord/presentation";
 import { logger, sanitizeError } from "../logger";
 import type { CmAdminSession, UserAdjustmentProposal } from "./cmSessions";
 import { rejectUnauthorized, safeApiMessage } from "./cmSupport";
@@ -183,6 +184,7 @@ export async function handleAdjustmentModal(
     }
 
     session.adjustmentProposal = proposal;
+    session.shareView = { kind: "adjustment-preview" };
     await interaction.editReply(panelPayload(buildAdjustmentPreviewPanel(session.id, proposal)));
   } catch (error) {
     logger.warn("CM adjustment preview failed", { code: isInternalApiError(error) ? error.code : "UNKNOWN" });
@@ -294,20 +296,21 @@ export async function confirmAdjustment(
     }
 
     session.adjustmentProposal = undefined;
+    const discordIdentity = findDiscordIdentity(session.overview);
     let auditPosted = true;
     try {
       await dependencies.postAdjustmentAudit({
         client: interaction.client,
         channelId: config.botAuditLogChannelId,
         operatorId: interaction.user.id,
-        userId: result.userId,
+        accountEmail: session.overview.identity.email,
+        customerDiscordUserId: discordIdentity?.externalUserId,
         kind: proposal.kind,
         delta: expectedDelta,
         resultValue,
         currency: resultCurrency,
         reason: proposal.reason,
-        transactionId: result.transactionId,
-        auditEventId: result.auditEventId,
+        completedAt: result.createdAt,
         idempotentReplay: result.idempotentReplay
       });
     } catch (auditError) {
@@ -323,6 +326,11 @@ export async function confirmAdjustment(
       });
     }
 
+    if ("deltaAura" in result) {
+      session.shareView = { kind: "adjustment-success", adjustmentKind: "aura", data: result };
+    } else {
+      session.shareView = { kind: "adjustment-success", adjustmentKind: "wallet", data: result };
+    }
     await interaction.editReply(panelPayload(buildAdjustmentSuccessPanel(session.id, proposal.kind, result, auditPosted)));
   } catch (error) {
     logger.warn("CM adjustment execute failed", { code: isInternalApiError(error) ? error.code : "UNKNOWN" });
@@ -341,6 +349,7 @@ export async function confirmAdjustment(
       return;
     }
 
+    session.shareView = { kind: "adjustment-preview" };
     await interaction.editReply(panelPayload(buildAdjustmentPreviewPanel(
       session.id,
       proposal,

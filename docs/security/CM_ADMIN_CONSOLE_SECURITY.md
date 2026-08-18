@@ -2,25 +2,23 @@
 
 Updated: 2026-08-18
 
-ADR-0005 governs customer/admin interface separation. ADR-0006 governs shared `/cm` authorization. ADR-0007 governs Aura/wallet confirmation. Refund retains the canonical backend preview/re-preview contract from the existing admin-console design.
+ADR-0005 governs customer/admin interface separation. ADR-0006 governs shared `/cm` authorization. ADR-0007 governs Aura/wallet confirmation. ADR-0008 governs customer-safe sharing and current Discord presentation policy. Refund retains its canonical backend preview/re-preview contract.
 
 ## Global `/cm` authorization
 
-Before sensitive backend access:
+Before sensitive backend access or any customer-share action:
 
 1. interaction must be a supported `/cm` slash/button/modal interaction;
 2. interaction must be in a guild;
 3. guild must exactly equal `DISCORD_GUILD_ID`;
 4. `BOT_ADMIN_USER_IDS` must be non-empty;
-5. invoking Discord user ID must be explicitly present in that allowlist;
-6. every component/modal repeats the authorization check;
+5. invoking Discord user must be explicitly allowlisted;
+6. every component/modal repeats authorization;
 7. operator-bound session ownership must pass where applicable.
 
-There is no `/cm` command-channel requirement. DMs, wrong guild, non-whitelisted operators and missing allowlist fail closed.
+There is no `/cm` command-channel requirement. DMs, wrong guild, non-whitelisted users and missing allowlist fail closed. Ephemeral output is confidentiality only; roles do not replace explicit user IDs.
 
-Ephemeral output is confidentiality/UX only. Roles do not replace the explicit user-ID allowlist.
-
-The bot never carries database credentials and never calls Supabase/Postgres tables/functions/RPCs directly.
+The bot never carries database/service-role credentials or calls Supabase/Postgres directly.
 
 ## Admin configuration
 
@@ -29,139 +27,141 @@ BOT_ADMIN_USER_IDS
 BOT_AUDIT_LOG_CHANNEL_ID
 ```
 
-`BOT_ADMIN_COMMAND_CHANNEL_ID` is not supported.
-
-`BOT_AUDIT_LOG_CHANNEL_ID` is separate from command authorization and must be configured before refund, Aura adjustment or wallet adjustment execution.
+`BOT_ADMIN_COMMAND_CHANNEL_ID` is unsupported. `BOT_AUDIT_LOG_CHANNEL_ID` is separate from command authorization and is mandatory before refund/Aura/wallet execute.
 
 ## Private session safety
 
-`CmSessionStore` holds bounded, expiring state:
+`CmSessionStore` holds bounded/expiring state:
 
 - random session UUID;
 - owning operator Discord ID;
 - current user overview;
 - optional selected order;
 - optional refund proposal;
-- optional Aura/wallet adjustment proposal;
+- optional Aura/wallet proposal;
+- current customer-safe share-view descriptor/data;
 - 15-minute inactivity TTL;
 - bounded session count.
 
-Component custom IDs contain session/action/index tokens only. They do not embed email, balances, reasons, internal user IDs, order economics or credentials.
+Private component custom IDs contain only routing/session/index tokens; no email, balances, reasons, backend UUID targets or credentials. Every component/modal requires the same original operator.
 
-Every component/modal requires both shared authorization and session ownership by the original operator.
+## `/cm user` lookup
 
-## `/cm user`
+Exactly one input is accepted:
 
-`/cm user email:<email>` resolves `users.overview.read` only after authorization, then creates the private session.
+- exact email; or
+- selected Discord user.
 
-The panel may expose privileged account email, wallet/Aura summaries and recent-order metadata only to the authorized ephemeral interaction.
+Discord lookup maps to `users.overview.read` with `external_identity/provider=discord`. Both/neither inputs fail before backend access. No user identity supplied by Discord authorizes the operator; the Discord selection is target lookup data only.
 
-`TASK-CM-ADMIN-003` activates the Aura and wallet controls under ADR-0007.
+The private User Operations panel may display privileged email, wallet/Aura/order state and linked Discord metadata because the interaction remains authorized/private.
+
+## Customer-safe Share to Chat — ADR-0008
+
+A Share to Chat button is an **admin action**, not a customer control. The button click runs through the normal shared authorization and session-owner checks.
+
+The bot must never send the private admin component tree to the channel and attempt to “strip buttons” after the fact. Instead `cmShare` builds a separate public view from allowlisted customer-facing fields.
+
+Public message requirements:
+
+- current text-capable guild channel only;
+- Components V2 display components only;
+- no Button/Select/Modal/action custom IDs;
+- no full account email;
+- no internal CM user UUID;
+- no admin refund/adjustment reason;
+- no backend audit/transaction/idempotency identifiers;
+- no internal provider/failure codes;
+- no HMAC/API/credential material;
+- `safeAllowedMentions` always applied;
+- no API mutation or database action.
+
+Customer-relevant status, linked Discord identity, wallet/Aura summary, public order reference/item/status/amount, fulfillment status/messages and refund/adjustment effects may be shown.
+
+System/error/authorization panels without an explicit customer-safe model are not shareable.
+
+## Timestamp presentation
+
+`/cm`, customer-shared panels and Discord audit use:
+
+```text
+<t:unix:f> · <t:unix:R>
+```
+
+This avoids server-local string formatting and lets Discord show locale-aware absolute date/time plus relative age.
 
 ## `/cm order`
 
-`/cm order reference:<CM-public-ref-or-order-UUID>` is a new authorized read/navigation entry point.
+Direct order entry remains:
 
-Security sequence:
+1. authorize;
+2. normalize `public_ref` or `order_id`;
+3. `orders.details.read` canonical order;
+4. `users.overview.read(user_id)` canonical owner;
+5. require owner equality;
+6. create operator-owned session;
+7. render private order panel.
 
-1. authorize `/cm` interaction;
-2. validate/normalize input to `public_ref` or `order_id`;
-3. call `orders.details.read`;
-4. use returned canonical `userId` to call `users.overview.read`;
-5. require exact returned owner ID match;
-6. create an operator-bound session;
-7. render the standard order panel.
-
-No caller-provided user identity is trusted separately from the canonical order result.
+No caller-provided independent user identity is trusted against order ownership.
 
 ## Refund
-
-Refund retains the canonical website preview contract:
 
 ```text
 orders.refund.preview
 orders.refund.execute
 ```
 
-Flow:
+Security flow:
 
-1. authorized operator opens selected canonical order;
-2. reason modal requires 8–1000 characters;
-3. read-only canonical refund preview;
-4. private consequence confirmation;
-5. five-minute confirmation TTL;
-6. fresh canonical preview immediately before execute;
-7. every strict preview field must match;
-8. execute using one stable logical idempotency key/body;
-9. website owns refund economics/accounting/audit;
-10. sanitized Discord audit is attempted.
+1. authorized selected canonical order;
+2. reason 8–1000;
+3. canonical preview;
+4. private confirmation;
+5. five-minute TTL;
+6. fresh preview immediately before execute;
+7. strict full preview equality;
+8. stable logical idempotency key/body;
+9. website-owned refund economics/accounting/audit;
+10. concise mention-safe Discord audit.
 
-Caller cannot provide refund amount, wallet credit, Aura effects or transaction IDs independently of the selected order.
+Caller never supplies refund amount/wallet credit/Aura effects independently of the order.
 
 ## Aura adjustment — ADR-0007
 
-The website exposes audited/idempotent `users.aura.adjust`.
+- signed non-zero integer;
+- max ±1,000,000,000 Aura;
+- reason 1–500;
+- fresh overview before confirmation;
+- current/change/projected private preview;
+- five-minute TTL;
+- second fresh exact available-Aura equality;
+- stable UUID idempotency/body;
+- `users.aura.adjust` only after equality;
+- returned target/delta validated;
+- website owns accounting/immutable audit;
+- concise Discord audit + best-effort user refresh.
 
-Bot flow:
-
-1. authorized `Adjust Aura` button;
-2. private modal: signed non-zero whole-number delta + 1–500 character reason;
-3. local max magnitude `1,000,000,000`, matching backend;
-4. fresh `users.overview.read`;
-5. current available Aura + delta + projected Aura shown privately;
-6. proposal binds target, delta, reason, operator ID, current available Aura, projected value, UUID idempotency key and five-minute expiry;
-7. Confirm reauthorizes and fetches overview again;
-8. exact available-Aura equality is required;
-9. changed state aborts without mutation;
-10. execute `users.aura.adjust` using the frozen logical request;
-11. verify returned target/delta;
-12. preserve transaction/audit IDs and attempt sanitized Discord audit;
-13. refresh user overview best-effort.
-
-Projected negative available Aura is blocked locally and remains backend-rejected.
+Projected negative Aura is blocked locally and backend-rejected.
 
 ## Wallet adjustment — ADR-0007
 
-The website exposes audited/idempotent `users.wallet.adjust`.
+Mirrors Aura with exact signed decimal-to-integer-cents parsing, max ±100,000,000 cents, fresh exact wallet-balance equality and `users.wallet.adjust`. Missing wallet preview uses verified zero/USD behavior. Website owns wallet ledger/funding-state accounting; bot never overwrites a balance.
 
-Bot flow mirrors Aura, with these domain-specific rules:
+## Mutation idempotency/retry
 
-- operator enters signed decimal major-currency amount;
-- at most two decimal places;
-- bot converts exactly to integer cents;
-- non-zero;
-- maximum magnitude `100,000,000` cents;
-- relevant state comparison is current wallet balance;
-- absent wallet is previewed as zero/USD, matching the verified website primitive;
-- projected negative balance is blocked;
-- website owns wallet transaction and funding-state accounting.
+One logical mutation retains target/delta/reason/operator/UUID idempotency/raw request body. Each HTTP attempt gets fresh timestamp/nonce/HMAC signature. Deterministic adjustment/refund/idempotency conflicts fail safely rather than generating a new logical mutation.
 
-The bot never directly sets a wallet balance.
+Backend immutable audit remains authoritative if Discord audit posting fails after successful execution.
 
-## Balance mutation idempotency and retries
+## Discord audit presentation
 
-The validated request is serialized once before transport retry. One logical mutation therefore keeps the same:
-
-- target;
-- delta;
-- reason;
-- operator context;
-- UUID idempotency key;
-- raw JSON body.
-
-Every HTTP attempt uses fresh timestamp/nonce/HMAC signature.
-
-Deterministic `INVALID_ADJUSTMENT`, `INSUFFICIENT_BALANCE` and `IDEMPOTENCY_CONFLICT` outcomes fail safely instead of generating a new logical mutation.
-
-Backend audit is authoritative if a Discord audit post fails after successful execution.
+Audit messages are private operational evidence in the configured audit channel, not authorization. They use concise Components V2 summaries containing useful customer identity, change/result, reason, operator and completion time. Replay warning appears only when relevant. Backend transaction/audit IDs are intentionally not repeated as display noise; the website record remains authoritative.
 
 ## Fulfillment
 
-`orders.fulfillment.read` is diagnostics-only.
+`orders.fulfillment.read` is diagnostics-only. Manual fulfillment remains blocked because no dedicated website mutation exists. No DB/purchase-processing/unrelated endpoint substitute is allowed.
 
-Manual Fulfillment remains informational/blocked because no dedicated website mutation exists. The bot must not use direct DB access, purchase processing or another endpoint as a substitute.
-
-## Bot API permission requirements for this console
+## API permission requirements
 
 ```text
 users.overview.read
@@ -173,29 +173,29 @@ users.aura.adjust
 users.wallet.adjust
 ```
 
-API endpoint existence does not itself authorize a deployment credential. Website-side `allowedOperations` remains an independent security boundary and secret configuration is never committed here.
+TASK-CM-ADMIN-004 adds no API permission. Website `allowedOperations` remains an independent security boundary.
 
 ## Mention/log/secret safety
 
-- Components V2 responses use safe mention configuration where applicable.
-- Discord mutation audits disable mentions.
-- reasons are sanitized/truncated before Discord audit output.
-- raw HMAC secrets, signing headers and backend credential values must never be logged or included in component IDs.
-- generic errors are mapped to stable safe user messages.
+- private/public/audit Components V2 output uses safe mentions where applicable;
+- public Discord identities are display-only and non-notifying;
+- reasons are sanitized/truncated before private audit display;
+- raw HMAC/signing headers/API secrets/request credentials never belong in logs/components;
+- generic backend failures are mapped to stable safe messages.
 
 ## Forbidden shortcuts
 
-- direct Supabase/Postgres credentials or calls;
+- direct DB/service-role access;
 - role-only admin authorization;
-- DM/wrong-guild mutation;
-- treating ephemeral visibility as authorization;
-- target/balance/reason data in component custom IDs;
-- Aura/wallet execute without explicit confirmation and final fresh-state equality;
-- refund execute without canonical preview/re-preview equality;
-- changing logical mutation idempotency key/body on retry;
+- DM/wrong-guild admin mutation/share;
+- treating ephemeral output as authorization;
+- copying private admin panels into public chat;
+- customer-visible admin buttons/selects/modals/custom IDs;
+- private/internal fields in public share;
+- Aura/wallet execute without confirmation/final fresh-state equality;
+- refund execute without canonical fresh preview equality;
+- changing mutation idempotency body/key on retry;
 - caller-supplied refund economics;
-- direct wallet/Aura balance overwrite;
-- destructive ledger/audit history edits;
-- manual fulfillment through DB/unrelated API workarounds;
-- purchase processing as an admin fulfillment shortcut;
-- real secrets in repository/docs/logs.
+- direct balance overwrite/destructive ledger edits;
+- manual fulfillment through DB/purchase-processing/unrelated endpoint;
+- real secrets in repo/docs/logs.

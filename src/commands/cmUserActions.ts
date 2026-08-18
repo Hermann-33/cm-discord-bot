@@ -21,6 +21,7 @@ export async function refreshUserPanel(
       { kind: "user_id", value: session.overview.identity.userId },
       10
     );
+    session.shareView = { kind: "user" };
     await interaction.editReply(panelPayload(buildUserPanel(session.id, session.overview)));
   } catch (error) {
     await interaction.editReply(panelPayload(buildNoticePanel(
@@ -55,6 +56,7 @@ export async function openOrder(
     if (order.userId !== session.overview.identity.userId) throw new Error("Order target mismatch");
     session.selectedOrder = order;
     session.refundProposal = undefined;
+    session.shareView = { kind: "order" };
     await interaction.editReply(panelPayload(buildOrderPanel(session.id, order)));
   } catch (error) {
     await interaction.editReply(panelPayload(buildNoticePanel(
@@ -87,6 +89,7 @@ export async function refreshSelectedOrder(
     if (order.userId !== session.overview.identity.userId) throw new Error("Order target mismatch");
     session.selectedOrder = order;
     session.refundProposal = undefined;
+    session.shareView = { kind: "order" };
     await interaction.editReply(panelPayload(buildOrderPanel(session.id, order)));
   } catch (error) {
     await interaction.editReply(panelPayload(buildNoticePanel(
@@ -117,6 +120,7 @@ export async function openFulfillment(
   try {
     const fulfillment = await api.fetchOrderFulfillment(session.selectedOrder.orderId);
     if (fulfillment.order.orderId !== session.selectedOrder.orderId) throw new Error("Fulfillment target mismatch");
+    session.shareView = { kind: "fulfillment", data: fulfillment };
     await interaction.editReply(panelPayload(buildFulfillmentPanel(session.id, fulfillment)));
   } catch (error) {
     await interaction.editReply(panelPayload(buildNoticePanel(

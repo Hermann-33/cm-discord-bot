@@ -63,6 +63,7 @@ function session(): CmAdminSession {
       idempotencyKey: IDEMPOTENCY_ID,
       expiresAtMs: 2_000
     },
+    shareView: { kind: "adjustment-preview" },
     createdAtMs: 0,
     touchedAtMs: 0
   };
@@ -126,7 +127,7 @@ test("Aura confirmation fails closed if fresh balance changed", async () => {
   assert.equal(interaction.edits.length, 1);
 });
 
-test("Aura confirmation executes exact proposal and posts audit", async () => {
+test("Aura confirmation executes exact proposal, posts concise audit input, and exposes shareable success", async () => {
   const state = session();
   let overviewCalls = 0;
   let executedInput: unknown;
@@ -167,8 +168,22 @@ test("Aura confirmation executes exact proposal and posts audit", async () => {
     idempotencyKey: IDEMPOTENCY_ID,
     operator: { provider: "discord", externalUserId: ADMIN_ID }
   });
-  assert.equal((auditInput as { auditEventId: string }).auditEventId, AUDIT_ID);
+  const audit = auditInput as {
+    accountEmail?: string;
+    completedAt: string;
+    delta: number;
+    resultValue: number;
+  };
+  assert.equal(audit.accountEmail, "user@example.com");
+  assert.equal(audit.completedAt, result.createdAt);
+  assert.equal(audit.delta, 250);
+  assert.equal(audit.resultValue, 750);
   assert.equal(state.adjustmentProposal, undefined);
   assert.equal(state.overview.aura?.availableAura, 750);
+  assert.deepEqual(state.shareView, {
+    kind: "adjustment-success",
+    adjustmentKind: "aura",
+    data: result
+  });
   assert.equal(interaction.edits.length, 1);
 });

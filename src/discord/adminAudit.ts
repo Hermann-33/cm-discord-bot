@@ -1,4 +1,18 @@
-import type { Client, Message, MessageCreateOptions, TextBasedChannel } from "discord.js";
+import {
+  ContainerBuilder,
+  MessageFlags,
+  SeparatorBuilder,
+  TextDisplayBuilder,
+  type Client,
+  type Message,
+  type MessageCreateOptions,
+  type TextBasedChannel
+} from "discord.js";
+import {
+  discordUserMention,
+  escapeDiscordText,
+  formatDiscordTimestampPair
+} from "./presentation";
 import { safeAllowedMentions } from "./safeMessages";
 
 export type AuditChannel = TextBasedChannel & {
@@ -13,8 +27,27 @@ function isAuditChannel(channel: unknown): channel is AuditChannel {
     && typeof candidate.send === "function";
 }
 
-function sanitizeAuditText(value: string): string {
-  return value.replace(/@/g, "@\u200b").slice(0, 500);
+function text(content: string): TextDisplayBuilder {
+  return new TextDisplayBuilder().setContent(content);
+}
+
+function separator(): SeparatorBuilder {
+  return new SeparatorBuilder().setDivider(true);
+}
+
+function formatMoney(cents: number, currency: string): string {
+  return `${escapeDiscordText(currency.toUpperCase())} ${(cents / 100).toFixed(2)}`;
+}
+
+function formatSignedMoney(cents: number, currency: string): string {
+  return `${escapeDiscordText(currency.toUpperCase())} ${cents > 0 ? "+" : ""}${(cents / 100).toFixed(2)}`;
+}
+
+function customerLines(accountEmail?: string | null, discordUserId?: string | null): string {
+  const lines: string[] = [];
+  if (accountEmail) lines.push(`Account: **${escapeDiscordText(accountEmail)}**`);
+  if (discordUserId) lines.push(`Discord: ${discordUserMention(discordUserId)}`);
+  return lines.length > 0 ? lines.join("\n") : "Customer: —";
 }
 
 async function fetchAuditChannel(client: Client, channelId: string): Promise<AuditChannel> {
@@ -25,67 +58,79 @@ async function fetchAuditChannel(client: Client, channelId: string): Promise<Aud
   return channel;
 }
 
+async function sendAuditPanel(channel: AuditChannel, container: ContainerBuilder): Promise<void> {
+  await channel.send({
+    components: [container],
+    flags: MessageFlags.IsComponentsV2,
+    allowedMentions: safeAllowedMentions
+  });
+}
+
 export async function postRefundAudit(input: {
   client: Client;
   channelId: string;
   operatorId: string;
   orderRef: string;
+  accountEmail?: string | null;
+  customerDiscordUserId?: string | null;
   reason: string;
   walletCreditCents: number;
   currency: string;
-  auditEventId: string;
+  completedAt: string;
   idempotentReplay: boolean;
 }): Promise<void> {
   const channel = await fetchAuditChannel(input.client, input.channelId);
-  await channel.send({
-    content: [
-      "**CM Admin Refund**",
-      `Operator: ${input.operatorId}`,
-      `Order: ${sanitizeAuditText(input.orderRef)}`,
-      `Wallet credit: ${sanitizeAuditText(input.currency)} ${(input.walletCreditCents / 100).toFixed(2)}`,
-      `Reason: ${sanitizeAuditText(input.reason)}`,
-      `Backend audit: ${sanitizeAuditText(input.auditEventId)}`,
-      `Idempotent replay: ${input.idempotentReplay ? "yes" : "no"}`
-    ].join("\n"),
-    allowedMentions: safeAllowedMentions
-  });
+  const replay = input.idempotentReplay
+    ? "\n> Backend returned an idempotent replay of the same refund request."
+    : "";
+  const panel = new ContainerBuilder()
+    .addTextDisplayComponents(text(`# CM Audit · Refund\nOrder **${escapeDiscordText(input.orderRef)}**`))
+    .addSeparatorComponents(separator())
+    .addTextDisplayComponents(text(`### Customer\n${customerLines(input.accountEmail, input.customerDiscordUserId)}`))
+    .addTextDisplayComponents(text(
+      `### Result\nWallet credit: **${formatMoney(input.walletCreditCents, input.currency)}**\nReason: ${escapeDiscordText(input.reason)}${replay}`
+    ))
+    .addTextDisplayComponents(text(
+      `### Operator\n${discordUserMention(input.operatorId)}\nCompleted: ${formatDiscordTimestampPair(input.completedAt)}`
+    ));
+  await sendAuditPanel(channel, panel);
 }
 
 export async function postAdjustmentAudit(input: {
   client: Client;
   channelId: string;
   operatorId: string;
-  userId: string;
+  accountEmail?: string | null;
+  customerDiscordUserId?: string | null;
   kind: "aura" | "wallet";
   delta: number;
   resultValue: number;
   currency?: string;
   reason: string;
-  transactionId: string;
-  auditEventId: string;
+  completedAt: string;
   idempotentReplay: boolean;
 }): Promise<void> {
   const channel = await fetchAuditChannel(input.client, input.channelId);
   const isWallet = input.kind === "wallet";
   const deltaLabel = isWallet
-    ? `${sanitizeAuditText(input.currency ?? "USD")} ${(input.delta / 100).toFixed(2)}`
-    : `${input.delta.toLocaleString()} Aura`;
+    ? formatSignedMoney(input.delta, input.currency ?? "USD")
+    : `${input.delta > 0 ? "+" : ""}${input.delta.toLocaleString()} Aura`;
   const resultLabel = isWallet
-    ? `${sanitizeAuditText(input.currency ?? "USD")} ${(input.resultValue / 100).toFixed(2)}`
+    ? formatMoney(input.resultValue, input.currency ?? "USD")
     : `${input.resultValue.toLocaleString()} Aura`;
-
-  await channel.send({
-    content: [
-      `**CM Admin ${isWallet ? "Wallet" : "Aura"} Adjustment**`,
-      `Operator: ${input.operatorId}`,
-      `User: ${sanitizeAuditText(input.userId)}`,
-      `Delta: ${deltaLabel}`,
-      `Result: ${resultLabel}`,
-      `Reason: ${sanitizeAuditText(input.reason)}`,
-      `Transaction: ${sanitizeAuditText(input.transactionId)}`,
-      `Backend audit: ${sanitizeAuditText(input.auditEventId)}`,
-      `Idempotent replay: ${input.idempotentReplay ? "yes" : "no"}`
-    ].join("\n"),
-    allowedMentions: safeAllowedMentions
-  });
+  const replay = input.idempotentReplay
+    ? "\n> Backend returned an idempotent replay of the same adjustment request."
+    : "";
+  const title = isWallet ? "Wallet Adjustment" : "Aura Adjustment";
+  const panel = new ContainerBuilder()
+    .addTextDisplayComponents(text(`# CM Audit · ${title}`))
+    .addSeparatorComponents(separator())
+    .addTextDisplayComponents(text(`### Customer\n${customerLines(input.accountEmail, input.customerDiscordUserId)}`))
+    .addTextDisplayComponents(text(
+      `### Change\nApplied: **${deltaLabel}**\nNew balance: **${resultLabel}**\nReason: ${escapeDiscordText(input.reason)}${replay}`
+    ))
+    .addTextDisplayComponents(text(
+      `### Operator\n${discordUserMention(input.operatorId)}\nCompleted: ${formatDiscordTimestampPair(input.completedAt)}`
+    ));
+  await sendAuditPanel(channel, panel);
 }

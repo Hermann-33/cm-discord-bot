@@ -2,131 +2,159 @@
 
 Updated: 2026-08-18
 
-## Product command-surface rule
+## Authorities
 
-ADR-0005 governs customer vs admin command presentation. ADR-0006 governs shared `/cm` authorization. ADR-0007 governs Aura/wallet confirmation and execution.
-
-- **customers/self-service:** message/text commands are allowed;
-- **staff/admin:** configured-guild slash commands;
-- **`/cm` authorization:** exact configured guild + non-empty explicit `BOT_ADMIN_USER_IDS`; usable from any channel in that guild;
-- **ephemeral visibility:** privacy only, never authorization;
-- **admin mutations:** explicit confirmation, stable idempotency, website-owned mutation, backend audit, sanitized Discord audit.
+- ADR-0005 — customer vs admin command presentation.
+- ADR-0006 — shared `/cm` exact-guild + explicit-user authorization.
+- ADR-0007 — Aura/wallet confirmation/idempotency/audit.
+- ADR-0008 — customer-safe panel sharing, Discord lookup/time/audit presentation.
 
 No command may directly connect to Supabase/Postgres.
 
-## Current command surfaces
+## `cm aura`
 
-### `cm aura`
+Customer message command. Keeps configured-guild/blocked-channel guards, bot-author protection, privacy/sanitization and safe mentions.
 
-Customer message command. Keeps bot-author, configured-guild, blocked-channel, privacy/sanitization and safe-mention guards.
+## `/refresh-leaderboard`
 
-### `/refresh-leaderboard`
+Operational guild slash command. Keeps exact configured guild + configured command channel + `ManageGuild|Administrator`. It is independent from `/cm` authorization.
 
-Operational guild slash command. Keeps exact configured guild + configured command channel + `ManageGuild|Administrator` runtime permission checks. It is independent from `/cm` authorization.
+## `/cm` shared authorization
 
-### `/cm user email:<email>`
+Before sensitive backend access, every slash/button/modal interaction requires:
 
-Private Components V2 admin console. It resolves `users.overview.read`, creates an operator-bound expiring session and shows account, wallet, Aura, counts and recent orders.
+1. guild interaction;
+2. exact `DISCORD_GUILD_ID`;
+3. non-empty `BOT_ADMIN_USER_IDS`;
+4. invoking Discord user explicitly allowlisted;
+5. operator-bound unexpired session for subsequent components/modals.
 
-User-panel controls:
+A whitelisted admin may use `/cm` from any channel inside the configured guild. `BOT_ADMIN_COMMAND_CHANNEL_ID` is not supported.
 
-- **Adjust Aura** — active on `TASK-CM-ADMIN-003` under ADR-0007;
-- **Adjust Wallet** — active on `TASK-CM-ADMIN-003` under ADR-0007;
-- **Open Recent Order**;
-- **Order History**.
+## `/cm user`
 
-### `/cm order reference:<CM-public-ref-or-order-UUID>`
+Exactly one lookup input is required:
 
-Added by `TASK-CM-ADMIN-003` as a direct private order entry point.
+```text
+/cm user email:<exact email>
+```
+
+or:
+
+```text
+/cm user discord_user:<selected Discord user>
+```
+
+Email uses `users.overview.read` with the `email` selector. Discord lookup uses the same operation with:
+
+```text
+kind=external_identity
+provider=discord
+externalUserId=<selected user ID>
+```
+
+Providing both or neither fails before backend access.
+
+The private User Operations panel shows:
+
+- account status;
+- account creation/last sign-in time;
+- Discord Linked/Not linked state;
+- linked Discord user plus returned username/display name/link time when available;
+- wallet balance/update time;
+- Aura balances/update time;
+- counts;
+- most recent order;
+- bounded recent Order History;
+- Adjust Aura;
+- Adjust Wallet;
+- Share to Chat.
+
+All `/cm` date/time displays use:
+
+```text
+<t:unix:f> · <t:unix:R>
+```
+
+for absolute + relative time.
+
+## `/cm order reference:<CM-public-ref-or-order-UUID>`
 
 Flow:
 
-1. shared `/cm` authorization runs before backend access;
-2. input is normalized to the documented `public_ref` or `order_id` selector;
-3. `orders.details.read` resolves the canonical order;
-4. `users.overview.read` resolves the canonical order owner;
-5. target IDs must match;
-6. an operator-bound session opens directly on the normal order panel.
+1. shared authorization;
+2. normalize `public_ref` or `order_id`;
+3. `orders.details.read` resolves canonical order;
+4. `users.overview.read(user_id)` resolves canonical owner;
+5. require exact owner/order target match;
+6. create operator-bound session and render the standard order panel.
 
-The order panel therefore has the same controls as an order reached from `/cm user`:
+Controls include Refund, Fulfillment diagnostics, Refresh Order, User Operations, recent Order History and Share to Chat.
 
-- Refund;
-- Fulfillment diagnostics;
-- Refresh Order;
-- User Operations for the order owner;
-- that user's bounded recent Order History.
+## Share to Chat
+
+Meaningful private User/Orders/Order/Fulfillment/Refund/Adjustment panels expose **Share to Chat**.
+
+The click is itself an authorized `/cm` button action and requires the owning session. It sends a separately rendered customer-safe Components V2 message into the current channel.
+
+The public copy:
+
+- contains no buttons/selects/modals/custom IDs;
+- performs no mutation;
+- disables mentions;
+- omits full email, internal user UUID, backend audit/transaction/idempotency identifiers, internal provider/failure codes and admin refund/adjustment reasons;
+- may show customer-relevant status, linked Discord identity, wallet/Aura values, order/refund/fulfillment state and timestamps.
+
+System/error notices without a defined customer-safe representation are intentionally not shareable.
 
 ## Aura adjustment
 
-`Adjust Aura` uses:
+Uses `users.overview.read` + `users.aura.adjust`.
 
-```text
-users.overview.read
-users.aura.adjust
-```
-
-Flow:
-
-1. modal accepts a signed non-zero whole-number Aura delta and 1–500 character reason;
-2. maximum magnitude is `1,000,000,000` Aura, matching the verified website contract;
-3. bot fetches a fresh user overview before displaying confirmation;
-4. confirmation stores target, exact delta/reason/operator, exact current available Aura, projected Aura, one UUID idempotency key and a five-minute expiry;
-5. confirm fetches user overview again and requires the relevant balance to be unchanged;
-6. changed balance fails closed without mutation;
-7. unchanged balance executes `users.aura.adjust` using the frozen request identity;
-8. returned target/delta must match;
-9. backend audit/transaction IDs are preserved and a sanitized Discord audit is attempted;
-10. user overview is refreshed after success.
-
-Negative projected available Aura is blocked locally and remains backend-rejected as defense in depth.
+- signed non-zero whole-number delta;
+- max magnitude ±1,000,000,000 Aura;
+- reason 1–500;
+- fresh overview before preview;
+- projected negative balance blocked;
+- explicit five-minute confirmation;
+- second fresh available-Aura equality check;
+- stable UUID idempotency/body across retry;
+- returned target/delta validation;
+- required audit channel;
+- backend audit + concise mention-safe Discord audit;
+- post-success overview refresh.
 
 ## Wallet adjustment
 
-`Adjust Wallet` uses:
+Uses `users.overview.read` + `users.wallet.adjust`.
 
-```text
-users.overview.read
-users.wallet.adjust
-```
-
-Flow mirrors Aura but the modal accepts a signed decimal currency amount with at most two decimal places. The bot converts it exactly to integer cents before confirmation.
-
-Maximum magnitude is `100,000,000` cents (`1,000,000.00` currency units), matching the verified website contract. A negative projected balance is blocked. When the website has no wallet row, its verified admin primitive prepares a zero-balance USD row; the preview uses that same zero/USD assumption.
-
-## Balance confirmation and audit rules
-
-ADR-0007 supersedes only the earlier requirement that Aura/wallet must have a separate backend preview endpoint and the old Aura-first/wallet-later sequencing.
-
-For both adjustments:
-
-- all command/button/modal interactions reauthorize guild + explicit admin user ID;
-- session is bound to the original operator;
-- confirmation expires after five minutes;
-- final fresh balance must exactly match the preview balance;
-- one stable logical idempotency key/body is reused across retry;
-- HMAC timestamp/nonce/signature remain fresh per transport attempt;
-- `BOT_AUDIT_LOG_CHANNEL_ID` is mandatory before execute;
-- backend immutable audit is authoritative;
-- Discord audit is secondary and mention-safe.
-
-## Order history
-
-`users.overview.read` is requested with `recentOrdersLimit: 10`, the backend maximum. The returned latest ten are paginated locally at five per page. No unsupported older-history API is invented.
+- signed decimal input with max two decimals;
+- exact integer-cent conversion;
+- max magnitude ±100,000,000 cents;
+- projected negative balance blocked;
+- same fresh-state/confirmation/idempotency/audit model as Aura;
+- website remains authoritative for wallet ledger/funding-state behavior.
 
 ## Refund
 
-Refund retains the stronger canonical backend preview/re-preview model:
+Retains the canonical backend model:
 
 ```text
 orders.refund.preview
-orders.refund.execute
+  -> explicit confirmation <= 5 minutes
+  -> fresh exact preview equality
+  -> orders.refund.execute
 ```
 
-Reason is 8–1000 characters; confirmation expires after five minutes; a fresh canonical preview must exactly match before execute; one stable idempotency key/body is used across retry; `BOT_AUDIT_LOG_CHANNEL_ID` is mandatory.
+Reason is 8–1000 characters. Caller does not supply refund economics. `BOT_AUDIT_LOG_CHANNEL_ID` is required before execute.
 
-## Fulfillment
+## Discord audit presentation
 
-`orders.fulfillment.read` remains diagnostics-only. The current website API has no manual-fulfillment mutation operation. Manual Fulfillment remains blocked/informational and no substitute operation is used.
+Refund/Aura/wallet audit messages are concise Components V2 panels showing useful operational context: customer identity when available, action/result, reason, operator and completion timestamp. A replay note appears only for an actual idempotent replay. Website immutable audit remains authoritative; backend transaction/audit IDs are not repeated in the Discord presentation.
+
+## Order history and fulfillment
+
+`users.overview.read` returns at most 10 recent orders; the bot paginates the returned set five per page. `orders.fulfillment.read` remains diagnostics-only. Manual Fulfillment stays blocked because no website mutation operation exists.
 
 ## Authorization matrix
 
@@ -134,11 +162,12 @@ Reason is 8–1000 characters; confirmation expires after five minutes; a fresh 
 | --- | --- | --- | --- | --- |
 | `cm aura` | customer | configured guild; blocked channel excluded | no | no |
 | `/refresh-leaderboard` | staff/admin | configured guild + command channel | no current whitelist | no |
-| `/cm user ...` | admin | any channel in configured guild | **mandatory** | Aura / wallet / refund through controls |
-| `/cm order ...` | admin | any channel in configured guild | **mandatory** | refund and owner Aura/wallet through navigation |
+| `/cm user ...` | admin | any configured-guild channel | **mandatory** | Aura/wallet/refund through controls |
+| `/cm order ...` | admin | any configured-guild channel | **mandatory** | refund and owner Aura/wallet through navigation |
+| Share to Chat | admin initiates; channel readers consume | current configured-guild channel | **mandatory for click** | **none** |
 | Manual fulfillment | admin | same `/cm` rule | **mandatory** | **blocked** |
 
-## Bot API surface after TASK-CM-ADMIN-003
+## Bot API surface
 
 ```text
 aura.leaderboards.read
@@ -152,4 +181,4 @@ users.aura.adjust
 users.wallet.adjust
 ```
 
-The website's per-client `allowedOperations` still controls runtime authorization independently of source. No purchase-processing or direct-database path is added.
+TASK-CM-ADMIN-004 adds no API operation. Website per-client `allowedOperations` remains an independent runtime authorization boundary.

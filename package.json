@@ -8,7 +8,7 @@
     "dev": "tsx src/index.ts",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test tests/api/signing.test.ts tests/api/client.test.ts tests/api/admin-client.test.ts tests/config/env.test.ts tests/config/admin-env.test.ts tests/commands/aura.test.ts tests/commands/refreshLeaderboard.test.ts tests/commands/cm.test.ts tests/commands/cmSessions.test.ts tests/commands/cmAdjustments.test.ts tests/discord/adminAuthorization.test.ts tests/leaderboard/format.test.ts tests/leaderboard/service.test.ts tests/scheduler/leaderboardSchedule.test.ts tests/scheduler/shutdown.test.ts tests/discord/registerCommands.test.ts tests/logger/redaction.test.ts tests/architecture.test.ts",
+    "test": "node --import tsx --test tests/api/signing.test.ts tests/api/client.test.ts tests/api/admin-client.test.ts tests/config/env.test.ts tests/config/admin-env.test.ts tests/commands/aura.test.ts tests/commands/refreshLeaderboard.test.ts tests/commands/cm.test.ts tests/commands/cmSessions.test.ts tests/commands/cmAdjustments.test.ts tests/commands/cmShare.test.ts tests/commands/cmShareAuthorization.test.ts tests/commands/cmUi.test.ts tests/discord/adminAuthorization.test.ts tests/discord/adminAudit.test.ts tests/leaderboard/format.test.ts tests/leaderboard/service.test.ts tests/scheduler/leaderboardSchedule.test.ts tests/scheduler/shutdown.test.ts tests/discord/registerCommands.test.ts tests/logger/redaction.test.ts tests/architecture.test.ts",
     "register:commands": "tsx src/discord/registerCommands.ts",
     "start": "node dist/index.js"
   },
