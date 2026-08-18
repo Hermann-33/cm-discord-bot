@@ -9,7 +9,7 @@ import {
 } from "discord.js";
 import { InternalApiClient } from "../api/client";
 import { isInternalApiError } from "../api/errors";
-import type { OrderLookupSelector } from "../api/schemas";
+import type { OrderLookupSelector, UserLookupSelector } from "../api/schemas";
 import type { AppConfig } from "../config/env";
 import { postAdjustmentAudit, postRefundAudit } from "../discord/adminAudit";
 import { logger } from "../logger";
@@ -20,6 +20,7 @@ import {
   type AdjustmentDependencies
 } from "./cmAdjustments";
 import { confirmRefund, handleRefundModal, showRefundModal, type RefundDependencies } from "./cmRefund";
+import { shareCurrentPanel } from "./cmShare";
 import { CmSessionStore } from "./cmSessions";
 import { authorize, parseNonNegativeInteger, rejectUnauthorized, requireSession, safeApiMessage } from "./cmSupport";
 import {
@@ -53,6 +54,20 @@ function parseOrderSelector(value: string): OrderLookupSelector | null {
   return null;
 }
 
+function parseUserSelector(interaction: ChatInputCommandInteraction): UserLookupSelector | null {
+  const email = interaction.options.getString("email")?.trim() ?? "";
+  const discordUser = interaction.options.getUser("discord_user");
+  if ((email.length > 0) === Boolean(discordUser)) return null;
+  if (discordUser) {
+    return {
+      kind: "external_identity",
+      provider: "discord",
+      externalUserId: discordUser.id
+    };
+  }
+  return { kind: "email", value: email };
+}
+
 export function buildCmCommand() {
   return new SlashCommandBuilder()
     .setName("cm")
@@ -62,9 +77,13 @@ export function buildCmCommand() {
       .setDescription("Open private controls for a CM user")
       .addStringOption((option) => option
         .setName("email")
-        .setDescription("Exact CM account email")
-        .setRequired(true)
-        .setMaxLength(320)))
+        .setDescription("Exact CM account email (use this or Discord user)")
+        .setRequired(false)
+        .setMaxLength(320))
+      .addUserOption((option) => option
+        .setName("discord_user")
+        .setDescription("Linked Discord user (use this or email)")
+        .setRequired(false)))
     .addSubcommand((subcommand) => subcommand
       .setName("order")
       .setDescription("Open private controls for a CM order")
@@ -108,10 +127,15 @@ export class CmAdminController {
 
     const subcommand = interaction.options.getSubcommand();
     if (subcommand === "user") {
-      const email = interaction.options.getString("email", true).trim();
+      const selector = parseUserSelector(interaction);
+      if (!selector) {
+        await rejectUnauthorized(interaction, "Provide exactly one user lookup: email or Discord user.");
+        return;
+      }
+
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       try {
-        const overview = await this.api.fetchUserOverview({ kind: "email", value: email }, 10);
+        const overview = await this.api.fetchUserOverview(selector, 10);
         const session = this.sessions.create(interaction.user.id, overview);
         await interaction.editReply(panelPayload(buildUserPanel(session.id, overview)));
       } catch (error) {
@@ -135,6 +159,7 @@ export class CmAdminController {
         if (overview.identity.userId !== order.userId) throw new Error("Order target mismatch");
         const session = this.sessions.create(interaction.user.id, overview);
         session.selectedOrder = order;
+        session.shareView = { kind: "order" };
         await interaction.editReply(panelPayload(buildOrderPanel(session.id, order)));
       } catch (error) {
         logger.warn("CM admin order lookup failed", { code: isInternalApiError(error) ? error.code : "UNKNOWN" });
@@ -156,6 +181,10 @@ export class CmAdminController {
     const session = await requireSession(interaction, this.sessions, parts[3] ?? "");
     if (!session) return;
 
+    if (domain === "share" && action === "current") {
+      await shareCurrentPanel(interaction, session);
+      return;
+    }
     if (domain === "user" && action === "home") {
       session.adjustmentProposal = undefined;
       await refreshUserPanel(interaction, session, this.api);
@@ -163,6 +192,7 @@ export class CmAdminController {
     }
     if (domain === "user" && action === "orders") {
       const page = parseNonNegativeInteger(parts[4]) ?? 0;
+      session.shareView = { kind: "orders", page };
       await interaction.update(panelPayload(buildOrdersPanel(session.id, session.overview, page)));
       return;
     }
