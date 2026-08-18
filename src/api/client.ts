@@ -3,6 +3,8 @@ import type { z } from "zod";
 import type { InternalApiConfig } from "../config/env";
 import { InternalApiClientError } from "./errors";
 import {
+  auraAdjustmentRequestSchema,
+  auraAdjustmentResponseSchema,
   auraLookupRequestSchema,
   auraLookupResponseSchema,
   internalApiErrorEnvelopeSchema,
@@ -19,16 +21,21 @@ import {
   successEnvelopeSchema,
   userOverviewRequestSchema,
   userOverviewResponseSchema,
+  walletAdjustmentRequestSchema,
+  walletAdjustmentResponseSchema,
+  type AuraAdjustmentData,
   type AuraLookupData,
   type InternalApiErrorCode,
   type InternalIntegrationOperator,
   type LeaderboardEntry,
   type OrderDetailsData,
   type OrderFulfillmentData,
+  type OrderLookupSelector,
   type OrderRefundExecuteData,
   type OrderRefundPreviewData,
   type UserLookupSelector,
-  type UserOverviewData
+  type UserOverviewData,
+  type WalletAdjustmentData
 } from "./schemas";
 import { createSignedHeaders } from "./signing";
 
@@ -39,7 +46,9 @@ export const INTERNAL_API_PATHS = {
   orderDetails: "/api/internal/integrations/v1/orders/details",
   orderFulfillment: "/api/internal/integrations/v1/orders/fulfillment",
   orderRefundPreview: "/api/internal/integrations/v1/orders/refund/preview",
-  orderRefundExecute: "/api/internal/integrations/v1/orders/refund/execute"
+  orderRefundExecute: "/api/internal/integrations/v1/orders/refund/execute",
+  userWalletAdjust: "/api/internal/integrations/v1/users/wallet/adjust",
+  userAuraAdjust: "/api/internal/integrations/v1/users/aura/adjust"
 } as const;
 
 const METHOD = "POST";
@@ -59,6 +68,8 @@ const expectedStatuses: Record<InternalApiErrorCode, readonly number[]> = {
   ALREADY_REFUNDED: [409],
   REFUND_STATE_INVALID: [409],
   IDEMPOTENCY_CONFLICT: [409],
+  INVALID_ADJUSTMENT: [400],
+  INSUFFICIENT_BALANCE: [409],
   RATE_LIMITED: [429],
   DEPENDENCY_UNAVAILABLE: [503],
   INTERNAL_FAILURE: [500]
@@ -157,11 +168,14 @@ export class InternalApiClient {
     return data.overview;
   }
 
-  async fetchOrderDetails(orderId: string): Promise<OrderDetailsData> {
+  async fetchOrderDetails(selector: OrderLookupSelector | string): Promise<OrderDetailsData> {
+    const normalizedSelector: OrderLookupSelector = typeof selector === "string"
+      ? { kind: "order_id", value: selector }
+      : selector;
     const data = await this.request(
       INTERNAL_API_PATHS.orderDetails,
       orderDetailsRequestSchema,
-      { selector: { kind: "order_id", value: orderId } },
+      { selector: normalizedSelector },
       orderDetailsResponseSchema
     );
     return data.order;
@@ -204,6 +218,38 @@ export class InternalApiClient {
       orderRefundExecuteResponseSchema
     );
     return data.refund;
+  }
+
+  async executeAuraAdjustment(input: {
+    selector: UserLookupSelector;
+    deltaAura: number;
+    reason: string;
+    idempotencyKey: string;
+    operator?: InternalIntegrationOperator;
+  }): Promise<AuraAdjustmentData> {
+    const data = await this.request(
+      INTERNAL_API_PATHS.userAuraAdjust,
+      auraAdjustmentRequestSchema,
+      input,
+      auraAdjustmentResponseSchema
+    );
+    return data.adjustment;
+  }
+
+  async executeWalletAdjustment(input: {
+    selector: UserLookupSelector;
+    deltaCents: number;
+    reason: string;
+    idempotencyKey: string;
+    operator?: InternalIntegrationOperator;
+  }): Promise<WalletAdjustmentData> {
+    const data = await this.request(
+      INTERNAL_API_PATHS.userWalletAdjust,
+      walletAdjustmentRequestSchema,
+      input,
+      walletAdjustmentResponseSchema
+    );
+    return data.adjustment;
   }
 
   private async request<
