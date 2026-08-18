@@ -24,7 +24,7 @@ const overview = {
   recentOrders: []
 } satisfies UserOverviewData;
 
-test("sessions are bound to the invoking operator", () => {
+test("sessions are bound to the invoking operator and start on the user share view", () => {
   let now = 100;
   const store = new CmSessionStore(1_000, 10, {
     nowMs: () => now,
@@ -32,6 +32,7 @@ test("sessions are bound to the invoking operator", () => {
   });
   const session = store.create("admin-1", overview);
   assert.equal(store.get(session.id, "admin-1")?.overview.identity.email, "user@example.com");
+  assert.deepEqual(session.shareView, { kind: "user" });
   assert.equal(store.get(session.id, "admin-2"), null);
   now += 1;
 });
