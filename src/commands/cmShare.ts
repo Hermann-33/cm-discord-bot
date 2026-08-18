@@ -67,10 +67,11 @@ function orderRef(order: { publicRef: string | null; orderId: string }): string 
   return escapeDiscordText(order.publicRef ?? order.orderId);
 }
 
-function customerDiscordLine(session: CmAdminSession): string {
+function customerIdentityBlock(session: CmAdminSession): string {
+  const email = `Email: ${escapeDiscordText(session.overview.identity.email, 320)}`;
   const identity = findDiscordIdentity(session.overview);
-  if (!identity) return "Discord: **Not linked**";
-  return `Discord: ${discordUserMention(identity.externalUserId)}`;
+  if (!identity) return `${email}\nDiscord: **Not linked**`;
+  return `${email}\nDiscord: ${discordUserMention(identity.externalUserId)}`;
 }
 
 function buildUserShare(session: CmAdminSession): ContainerBuilder {
@@ -87,7 +88,7 @@ function buildUserShare(session: CmAdminSession): ContainerBuilder {
     .addTextDisplayComponents(text("# CM Account Summary"))
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(text(
-      `### Account\nStatus: **${overview.accountControl.isBanned ? "BANNED" : "Active"}**\n${customerDiscordLine(session)}\nCreated: ${formatDiscordTimestampPair(overview.identity.createdAt)}\nLast sign-in: ${formatDiscordTimestampPair(overview.identity.lastSignInAt)}`
+      `### Account\nStatus: **${overview.accountControl.isBanned ? "BANNED" : "Active"}**\n${customerIdentityBlock(session)}\nCreated: ${formatDiscordTimestampPair(overview.identity.createdAt)}\nLast sign-in: ${formatDiscordTimestampPair(overview.identity.lastSignInAt)}`
     ))
     .addTextDisplayComponents(text(`### Wallet\n${wallet}`))
     .addTextDisplayComponents(text(`### Aura\n${aura}`))
@@ -110,7 +111,7 @@ function buildOrdersShare(session: CmAdminSession, requestedPage: number): Conta
   const start = page * ORDERS_PER_PAGE;
   const pageOrders = orders.slice(start, start + ORDERS_PER_PAGE);
   const container = new ContainerBuilder()
-    .addTextDisplayComponents(text(`# Recent Orders\n${customerDiscordLine(session)}\nPage **${page + 1}/${pageCount}**`))
+    .addTextDisplayComponents(text(`# Recent Orders\n${customerIdentityBlock(session)}\nPage **${page + 1}/${pageCount}**`))
     .addSeparatorComponents(separator());
 
   if (pageOrders.length === 0) {
@@ -140,7 +141,7 @@ function buildOrderShare(session: CmAdminSession): ContainerBuilder | null {
   return new ContainerBuilder()
     .addTextDisplayComponents(text(`# Order ${orderRef(order)}\nStatus: **${escapeDiscordText(order.status)}**`))
     .addSeparatorComponents(separator())
-    .addTextDisplayComponents(text(`### Customer\n${customerDiscordLine(session)}`))
+    .addTextDisplayComponents(text(`### Customer\n${customerIdentityBlock(session)}`))
     .addTextDisplayComponents(text(
       `### Purchase\nType: **${escapeDiscordText(order.purchaseKind)}**\n${purchaseLines.join("\n")}\nQuantity: ${order.quantity}\nAmount: **${formatMoney(order.amountCents, order.currency)}**\nCreated: ${formatDiscordTimestampPair(order.createdAt)}`
     ))
@@ -154,7 +155,7 @@ function buildAdjustmentPreviewShare(session: CmAdminSession, proposal: UserAdju
   const container = new ContainerBuilder()
     .addTextDisplayComponents(text(`# ${proposal.kind === "aura" ? "Aura" : "Wallet"} Adjustment Preview`))
     .addSeparatorComponents(separator())
-    .addTextDisplayComponents(text(`### Customer\n${customerDiscordLine(session)}`));
+    .addTextDisplayComponents(text(`### Customer\n${customerIdentityBlock(session)}`));
 
   if (proposal.kind === "aura") {
     return container.addTextDisplayComponents(text(
@@ -177,7 +178,7 @@ export function buildPublicSharePanel(session: CmAdminSession): ContainerBuilder
     const data = view.data;
     const container = new ContainerBuilder()
       .addTextDisplayComponents(text(
-        `# Fulfillment Status\nOrder **${orderRef(data.order)}** · ${escapeDiscordText(data.order.status)}\n${customerDiscordLine(session)}`
+        `# Fulfillment Status\nOrder **${orderRef(data.order)}** · ${escapeDiscordText(data.order.status)}\n${customerIdentityBlock(session)}`
       ))
       .addSeparatorComponents(separator());
     if (data.fulfillments.length === 0) {
@@ -199,7 +200,7 @@ export function buildPublicSharePanel(session: CmAdminSession): ContainerBuilder
     return new ContainerBuilder()
       .addTextDisplayComponents(text(`# Refund Preview\nOrder **${orderRef(preview)}**`))
       .addSeparatorComponents(separator())
-      .addTextDisplayComponents(text(`### Customer\n${customerDiscordLine(session)}`))
+      .addTextDisplayComponents(text(`### Customer\n${customerIdentityBlock(session)}`))
       .addTextDisplayComponents(text(
         `### Refund\nGross refund: **${formatMoney(preview.grossRefundCents, preview.currency)}**\nWallet credit: **${formatMoney(preview.finalWalletCreditCents, preview.currency)}**\nAura recovered: ${preview.auraRecovered}\nAura unrecoverable: ${preview.auraUnrecoverable}`
       ));
@@ -210,7 +211,7 @@ export function buildPublicSharePanel(session: CmAdminSession): ContainerBuilder
     return new ContainerBuilder()
       .addTextDisplayComponents(text(`# Refund Complete\nOrder **${orderRef(refund)}** has been refunded.`))
       .addSeparatorComponents(separator())
-      .addTextDisplayComponents(text(`### Customer\n${customerDiscordLine(session)}`))
+      .addTextDisplayComponents(text(`### Customer\n${customerIdentityBlock(session)}`))
       .addTextDisplayComponents(text(
         `### Result\nWallet credit: **${formatMoney(refund.finalWalletCreditCents, refund.currency)}**\nAura recovered: ${refund.auraRecovered}\nCompleted: ${formatDiscordTimestampPair(refund.refundedAt)}`
       ));
@@ -224,7 +225,7 @@ export function buildPublicSharePanel(session: CmAdminSession): ContainerBuilder
     const container = new ContainerBuilder()
       .addTextDisplayComponents(text(`# ${view.adjustmentKind === "aura" ? "Aura" : "Wallet"} Adjustment Complete`))
       .addSeparatorComponents(separator())
-      .addTextDisplayComponents(text(`### Customer\n${customerDiscordLine(session)}`));
+      .addTextDisplayComponents(text(`### Customer\n${customerIdentityBlock(session)}`));
     if (view.adjustmentKind === "aura") {
       const result = view.data;
       return container.addTextDisplayComponents(text(
