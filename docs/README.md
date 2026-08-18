@@ -20,6 +20,7 @@ This documentation system is the durable memory and governance layer for the Che
 ## Full audit reports
 
 - `audits/2026-08-17-full-codebase-audit.md` — exhaustive active-code/test/config/GitHub/dependency re-baseline (`TASK-AUDIT-001`). Its slash-only recommendation for `cm aura` was superseded by ADR-0005 after explicit product clarification.
+- `audits/2026-08-18-cm-admin-controls-order.md` — `TASK-CM-ADMIN-003` direct order/Aura/wallet implementation audit and current executable-CI blocker.
 
 ## Durable decisions
 
