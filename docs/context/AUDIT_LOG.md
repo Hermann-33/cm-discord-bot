@@ -162,10 +162,20 @@ ADR-0009 supersedes ADR-0008 only for the previous full-email prohibition. The c
 
 Tests require the escaped email while continuing to prove internal user UUID/provider/option identifiers/admin reasons and public custom IDs remain absent.
 
-### Verification state
+### Executable verification
 
-PR #3 / `task/cm-share-email` must pass the normal GitHub Actions Node 22 test/typecheck/build/diff gate before merge.
+GitHub Actions run `32145501289` passed on Node `22.23.2`:
+
+```text
+npm ci: PASS, 0 vulnerabilities
+npm test: PASS — 128/128
+npm run typecheck: PASS
+npm run build: PASS
+git diff --check: PASS
+```
+
+Existing architecture/API/auth/mutation/registration/legacy-isolation tests remained green. Final static diff review found no API client/signing, authorization, mutation, configuration, registration or `legacy/` source changes.
 
 No API, website, database, mutation, authorization, environment, manual-fulfillment or slash-command registration change is part of this task.
 
-Verdict: `PARTIAL` pending executable verification.
+Verdict: `COMPLETE` for implementation/verification; final documentation head must revalidate successfully before PR #3 merge.
