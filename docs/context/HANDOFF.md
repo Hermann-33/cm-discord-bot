@@ -28,14 +28,14 @@ This is the verified/merged TASK-CM-ADMIN-004 result: Share to Chat, Discord-use
 TASK-CM-ADMIN-005
 task/cm-share-email
 PR #3
+status: verified for merge after final-head CI revalidation
 ```
 
-Requested scope:
+Requested/implemented scope:
 
 - include the customer account email when Share to Chat publishes an order/account/support summary;
 - keep the public copy read-only and buttonless;
-- retain all other internal-field exclusions and security boundaries;
-- run GitHub Actions and directly merge only if clean.
+- retain all other internal-field exclusions and security boundaries.
 
 ## Implemented behavior
 
@@ -61,27 +61,25 @@ Still excluded:
 
 Share execution still re-runs `/cm` authorization and requires the original operator-owned session. `safeAllowedMentions` remains applied.
 
-## Tests
+## Verification
 
-`tests/commands/cmShare.test.ts` now requires the escaped customer email in user, recent-orders, direct-order and refund-preview shares while preserving internal-field/control exclusions.
+GitHub Actions run `32145501289` passed on Node `22.23.2`:
 
-## Unchanged boundaries
+```text
+npm ci: PASS, 0 vulnerabilities
+npm test: PASS — 128/128
+npm run typecheck: PASS
+npm run build: PASS
+git diff --check: PASS
+```
 
-No change to:
+The new customer-email disclosure tests and existing authorization/session, architecture, API-surface, mutation, registration and legacy-isolation tests are green.
 
-- Internal Integrations API paths/signing;
-- `/cm` authorization;
-- `/refresh-leaderboard` policy;
-- refund/Aura/wallet mutation logic;
-- manual fulfillment;
-- website/Supabase;
-- environment variables;
-- slash-command definition/registration.
+Final static review confirms there is no change to Internal Integrations API paths/signing, `/cm` authorization, `/refresh-leaderboard`, refund/Aura/wallet mutation logic, manual fulfillment, website/Supabase, environment variables or slash-command registration.
 
 ## Exact next action
 
-1. obtain a successful GitHub Actions run for the complete TASK-CM-ADMIN-005 branch;
-2. update final audit/roadmap evidence to COMPLETE if the gate passes;
-3. merge PR #3 directly under the existing product authorization;
-4. deploy/restart the new `master` normally;
-5. no `npm run register:commands` is required solely for this change because no slash-command definition changed.
+1. require the final documentation head to pass GitHub Actions;
+2. mark PR #3 ready and merge directly if that run is green;
+3. deploy/restart the new `master` normally;
+4. no `npm run register:commands` is required solely for this change because no slash-command definition changed.
