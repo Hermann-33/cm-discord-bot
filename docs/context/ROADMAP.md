@@ -52,16 +52,9 @@ Mainline includes `/cm order`, confirmed Aura adjustment, confirmed wallet adjus
 7a41dbeefae167044091b0aaed8372c3b58acdd0
 ```
 
-It added:
+It added `/cm user` lookup by email/Discord user, linked Discord identity, Share to Chat, Discord timestamps and concise Components V2 audit summaries.
 
-- `/cm user` lookup by exact email or selected Discord user;
-- linked Discord identity in User Operations;
-- Share to Chat on meaningful private `/cm` panels;
-- dedicated buttonless public renderer under ADR-0008;
-- absolute + relative Discord timestamps across `/cm`, share and audit views;
-- concise Components V2 refund/Aura/wallet audit summaries.
-
-## Phase 5.1 — Shared customer email — TASK-CM-ADMIN-005 IN VERIFICATION
+## Phase 5.1 — Shared customer email — TASK-CM-ADMIN-005 COMPLETE / VERIFIED FOR MERGE
 
 Product follow-up:
 
@@ -72,7 +65,7 @@ Product follow-up:
 
 ADR-0009 supersedes ADR-0008 only for the previous full-email prohibition.
 
-Implementation is on:
+Implementation branch/PR:
 
 ```text
 task/cm-share-email
@@ -81,19 +74,19 @@ PR #3
 
 No API operation, website source/config, database path, mutation logic, manual fulfillment behavior or slash-command definition changes.
 
-### Completion gate
+### Executable gate
 
-GitHub Actions must pass:
+GitHub Actions run `32145501289` passed on Node `22.23.2`:
 
 ```text
-npm ci
-npm test
-npm run typecheck
-npm run build
-git diff --check
+npm ci: PASS, 0 vulnerabilities
+npm test: PASS — 128/128
+npm run typecheck: PASS
+npm run build: PASS
+git diff --check: PASS
 ```
 
-Then final security/diff review must confirm the disclosure change is limited to the explicitly authorized customer email.
+Static review confirms the source change is limited to the customer-share renderer plus focused tests; API/auth/mutation/config/registration/legacy source remains untouched. PR #3 may be merged once the final documentation head revalidates successfully.
 
 ## Phase 6 — Manual fulfillment — BACKEND OPERATION REQUIRED
 
