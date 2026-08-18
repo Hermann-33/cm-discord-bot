@@ -8,78 +8,102 @@ Updated: 2026-08-18
 - ADR-0006 — `/cm` exact configured guild + non-empty explicit `BOT_ADMIN_USER_IDS`; no `/cm` channel restriction.
 - ADR-0007 — Aura/wallet five-minute fresh-state-bound confirmation + stable idempotency/audit.
 - ADR-0008 — separate customer-facing Share to Chat renderer, no public admin controls, Discord identity/time/audit presentation policy.
-- ADR-0009 — supersedes ADR-0008 only for the previous full-email prohibition; the canonical CM account email is intentionally shared.
+- ADR-0009 — canonical CM account email is intentionally shared; all other ADR-0008 field/control exclusions remain.
 - `BOT_AUDIT_LOG_CHANNEL_ID` required before refund/Aura/wallet execute.
 - no direct Supabase/Postgres.
 - manual fulfillment blocked until website owns a dedicated mutation.
 
-## Mainline baseline
+## Mainline baseline at task start
 
 ```text
 master
-7a41dbeefae167044091b0aaed8372c3b58acdd0
+c5a38d80e89934431b74a4a078577cd9ef19694f
 ```
 
-This is the verified/merged TASK-CM-ADMIN-004 result: Share to Chat, Discord-user lookup/link presentation, Discord timestamps and concise audit panels are on mainline.
+TASK-CM-ADMIN-005 customer-email sharing is already merged on this lineage.
 
 ## Current task
 
 ```text
-TASK-CM-ADMIN-005
-task/cm-share-email
-PR #3
-status: verified for merge after final-head CI revalidation
+TASK-CM-ADMIN-006
+task/cm-admin-ui-declutter
+PR #4
+status: implementation verified; final documentation-head CI pending
 ```
 
-Requested/implemented scope:
+Objective: remove unnecessary menu/order/statistical clutter without changing any business operation or security boundary.
 
-- include the customer account email when Share to Chat publishes an order/account/support summary;
-- keep the public copy read-only and buttonless;
-- retain all other internal-field exclusions and security boundaries.
+## Implemented UI
 
-## Implemented behavior
+### User Operations
 
-`src/commands/cmShare.ts` uses one customer identity block for shareable User/Orders/Order/Fulfillment/Refund/Aura/Wallet views:
+Shows only:
 
-```text
-Email: <canonical account email>
-Discord: <linked user or Not linked>
-```
+- email;
+- Active/BANNED;
+- compact linked Discord identity;
+- current wallet;
+- available Aura + pending when non-zero;
+- total order count;
+- latest order;
+- Adjust Aura / Adjust Wallet / Open Recent Order / Order History / Share to Chat.
 
-The email source is `session.overview.identity.email`; rendering uses `escapeDiscordText(..., 320)`.
+Removed routine profile/login/update/lifetime/license/delivery statistics.
 
-Still excluded:
+### Orders
 
-- internal CM user UUID;
-- internal purchase option IDs;
-- internal provider/failure codes;
-- admin mutation/refund reasons;
-- backend audit/transaction/idempotency IDs;
-- credentials/HMAC material;
-- private session/custom IDs;
-- customer-operable buttons/selects/modals.
+Recent order entries retain reference, item, status, amount, meaningful quantity and date. The verbose API-limit note is replaced by a compact truncation indicator only when needed.
 
-Share execution still re-runs `/cm` authorization and requires the original operator-owned session. `safeAllowedMentions` remains applied.
+Direct Order keeps customer email, customer-facing item, status, amount, payment method, placed time, delivery progress and core controls. Internal user UUID, option IDs, payment provider, duplicate fulfillment sub-counts and redundant navigation are hidden.
+
+### Delivery Details
+
+The previous Fulfillment Diagnostics view is renamed `Delivery Details` and displays status/progress plus failure/manual-review/message only when present. Provider codes, record timestamps, linked-license top count and empty fields are removed.
+
+The visible nonfunctional Manual Fulfillment button is removed. No manual-fulfillment mutation was added; the API remains diagnostics-only.
+
+### Refund / Aura / Wallet
+
+Preview/success panels retain decision/result information but hide internal target UUIDs, routine transaction/audit IDs and routine idempotency/audit-success flags. Exceptional replay or audit-post-failure warnings remain visible when applicable.
+
+### Share to Chat
+
+Public summaries are also compacted. ADR-0009 customer email remains present; no customer controls/custom IDs or additional internal fields are exposed.
+
+## Unchanged boundaries
+
+No change to:
+
+- Internal Integrations API paths/signing/retry behavior;
+- `/cm` authorization/session ownership;
+- `/refresh-leaderboard` policy;
+- refund preview/re-preview/execute;
+- Aura/wallet confirmation/fresh-state/idempotency;
+- Discord mutation audit authority;
+- website/Supabase;
+- environment variables;
+- slash-command definition/registration;
+- leaderboard logic;
+- `legacy/`.
 
 ## Verification
 
-GitHub Actions run `32145501289` passed on Node `22.23.2`:
+Initial run `32155910678` failed only two newly written UI test assertions because the tests guessed JSON escaping incorrectly. No production defect was identified. The tests were corrected to inspect rendered component content directly.
+
+Implementation-head run `32156144669` then passed on Node `22.23.2`:
 
 ```text
 npm ci: PASS, 0 vulnerabilities
-npm test: PASS — 128/128
+npm test: PASS — 131/131
 npm run typecheck: PASS
 npm run build: PASS
 git diff --check: PASS
 ```
 
-The new customer-email disclosure tests and existing authorization/session, architecture, API-surface, mutation, registration and legacy-isolation tests are green.
-
-Final static review confirms there is no change to Internal Integrations API paths/signing, `/cm` authorization, `/refresh-leaderboard`, refund/Aura/wallet mutation logic, manual fulfillment, website/Supabase, environment variables or slash-command registration.
-
 ## Exact next action
 
-1. require the final documentation head to pass GitHub Actions;
-2. mark PR #3 ready and merge directly if that run is green;
-3. deploy/restart the new `master` normally;
-4. no `npm run register:commands` is required solely for this change because no slash-command definition changed.
+1. let the completed documentation head run through GitHub Actions;
+2. if green, update PR #4 with final evidence and mark ready;
+3. squash-merge PR #4 under the existing product authorization;
+4. verify new `master` ref;
+5. normal Northflank redeploy/restart is sufficient; no `npm run register:commands` is required solely for TASK-CM-ADMIN-006.
