@@ -1,6 +1,5 @@
 import {
   ActionRowBuilder,
-  MessageFlags,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
@@ -8,12 +7,14 @@ import {
   type ModalSubmitInteraction
 } from "discord.js";
 import type { InternalApiClient } from "../api/client";
+import { isInternalApiError } from "../api/errors";
 import {
   CM_ADJUSTMENT_REASON_MAX_LENGTH,
   CM_AURA_DELTA_MAX,
-  CM_WALLET_DELTA_MAX_CENTS
+  CM_WALLET_DELTA_MAX_CENTS,
+  type AuraAdjustmentData,
+  type WalletAdjustmentData
 } from "../api/schemas";
-import { isInternalApiError } from "../api/errors";
 import type { AppConfig } from "../config/env";
 import { postAdjustmentAudit } from "../discord/adminAudit";
 import { logger, sanitizeError } from "../logger";
@@ -256,26 +257,40 @@ export async function confirmAdjustment(
       return;
     }
 
-    const result = proposal.kind === "aura"
-      ? await api.executeAuraAdjustment({
+    let result: AuraAdjustmentData | WalletAdjustmentData;
+    let expectedDelta: number;
+    let resultValue: number;
+    let resultCurrency: string | undefined;
+
+    if (proposal.kind === "aura") {
+      const auraResult = await api.executeAuraAdjustment({
         selector: { kind: "user_id", value: proposal.targetUserId },
         deltaAura: proposal.deltaAura,
         reason: proposal.reason,
         idempotencyKey: proposal.idempotencyKey,
         operator: proposal.operator
-      })
-      : await api.executeWalletAdjustment({
+      });
+      if (auraResult.userId !== proposal.targetUserId || auraResult.deltaAura !== proposal.deltaAura) {
+        throw new Error("Adjustment result target mismatch");
+      }
+      result = auraResult;
+      expectedDelta = proposal.deltaAura;
+      resultValue = auraResult.availableAura;
+    } else {
+      const walletResult = await api.executeWalletAdjustment({
         selector: { kind: "user_id", value: proposal.targetUserId },
         deltaCents: proposal.deltaCents,
         reason: proposal.reason,
         idempotencyKey: proposal.idempotencyKey,
         operator: proposal.operator
       });
-
-    const expectedDelta = proposal.kind === "aura" ? proposal.deltaAura : proposal.deltaCents;
-    const actualDelta = proposal.kind === "aura" ? result.deltaAura : result.deltaCents;
-    if (result.userId !== proposal.targetUserId || actualDelta !== expectedDelta) {
-      throw new Error("Adjustment result target mismatch");
+      if (walletResult.userId !== proposal.targetUserId || walletResult.deltaCents !== proposal.deltaCents) {
+        throw new Error("Adjustment result target mismatch");
+      }
+      result = walletResult;
+      expectedDelta = proposal.deltaCents;
+      resultValue = walletResult.balanceCents;
+      resultCurrency = walletResult.currency;
     }
 
     session.adjustmentProposal = undefined;
@@ -288,8 +303,8 @@ export async function confirmAdjustment(
         userId: result.userId,
         kind: proposal.kind,
         delta: expectedDelta,
-        resultValue: proposal.kind === "aura" ? result.availableAura : result.balanceCents,
-        currency: proposal.kind === "wallet" ? result.currency : undefined,
+        resultValue,
+        currency: resultCurrency,
         reason: proposal.reason,
         transactionId: result.transactionId,
         auditEventId: result.auditEventId,
