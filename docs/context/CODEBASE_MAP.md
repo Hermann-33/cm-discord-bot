@@ -47,12 +47,12 @@ users.wallet.adjust
 - `src/commands/aura.ts` — customer `cm aura`.
 - `src/commands/refreshLeaderboard.ts` — operational `/refresh-leaderboard`.
 - `src/commands/cm.ts` — central `/cm` slash/button/modal controller; email/Discord user lookup; direct order entry; share dispatch; navigation/refund/adjustment routing.
-- `src/commands/cmSessions.ts` — operator-bound bounded session plus selected order, mutation proposals and current safe-share view.
-- `src/commands/cmUserActions.ts` — refresh user/order and fulfillment navigation; updates safe-share state.
+- `src/commands/cmSessions.ts` — operator-bound bounded session plus selected order, mutation proposals and current share view.
+- `src/commands/cmUserActions.ts` — refresh user/order and fulfillment navigation; updates share state.
 - `src/commands/cmRefund.ts` — canonical refund preview/re-preview/execute/audit and share-success state.
 - `src/commands/cmAdjustments.ts` — Aura/wallet parsing, confirmation, fresh-state equality, execute/audit and share-success state.
 - `src/commands/cmUi.ts` — private Components V2 user/order/fulfillment/refund/adjustment panels, Discord identity/timestamps and Share to Chat buttons.
-- `src/commands/cmShare.ts` — **dedicated customer-safe public renderer and channel publisher**; no admin controls/private fields.
+- `src/commands/cmShare.ts` — dedicated customer-facing public renderer and channel publisher; no admin controls/internal-only fields, with canonical customer email disclosure governed by ADR-0009.
 - `src/commands/cmSupport.ts` — safe messages, parsing, authorization wrapper and session retrieval.
 
 ### Discord boundaries
@@ -94,9 +94,9 @@ Commands/admin presentation:
 - `tests/commands/aura.test.ts`
 - `tests/commands/refreshLeaderboard.test.ts`
 - `tests/commands/cm.test.ts` — email/Discord user/order routing and pre-backend validation.
-- `tests/commands/cmSessions.test.ts` — ownership/expiry/default safe-share view.
+- `tests/commands/cmSessions.test.ts` — ownership/expiry/default share view.
 - `tests/commands/cmAdjustments.test.ts` — adjustment confirmation/audit/share state.
-- `tests/commands/cmShare.test.ts` — customer-safe field/control boundary and channel publish behavior.
+- `tests/commands/cmShare.test.ts` — customer-email inclusion plus retained internal-field/control exclusions and channel publish behavior.
 - `tests/commands/cmUi.test.ts` — Discord link state and absolute+relative timestamps.
 - `tests/discord/adminAudit.test.ts` — concise Components V2 audit + mention safety/time presentation.
 
