@@ -39,6 +39,10 @@ function formatMoney(cents: number, currency: string): string {
   return `${escapeDiscordText(currency.toUpperCase())} ${(cents / 100).toFixed(2)}`;
 }
 
+function formatSignedMoney(cents: number, currency: string): string {
+  return `${escapeDiscordText(currency.toUpperCase())} ${cents > 0 ? "+" : ""}${(cents / 100).toFixed(2)}`;
+}
+
 function customerLines(accountEmail?: string | null, discordUserId?: string | null): string {
   const lines: string[] = [];
   if (accountEmail) lines.push(`Account: **${escapeDiscordText(accountEmail)}**`);
@@ -109,7 +113,7 @@ export async function postAdjustmentAudit(input: {
   const channel = await fetchAuditChannel(input.client, input.channelId);
   const isWallet = input.kind === "wallet";
   const deltaLabel = isWallet
-    ? formatMoney(input.delta, input.currency ?? "USD")
+    ? formatSignedMoney(input.delta, input.currency ?? "USD")
     : `${input.delta > 0 ? "+" : ""}${input.delta.toLocaleString()} Aura`;
   const resultLabel = isWallet
     ? formatMoney(input.resultValue, input.currency ?? "USD")
