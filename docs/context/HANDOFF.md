@@ -28,7 +28,7 @@ TASK-CM-ADMIN-005 customer-email sharing is already merged on this lineage.
 TASK-CM-ADMIN-006
 task/cm-admin-ui-declutter
 PR #4
-status: implementation verified; final documentation-head CI pending
+status: COMPLETE / verified for merge when current-head CI is green
 ```
 
 Objective: remove unnecessary menu/order/statistical clutter without changing any business operation or security boundary.
@@ -90,7 +90,9 @@ No change to:
 
 Initial run `32155910678` failed only two newly written UI test assertions because the tests guessed JSON escaping incorrectly. No production defect was identified. The tests were corrected to inspect rendered component content directly.
 
-Implementation-head run `32156144669` then passed on Node `22.23.2`:
+Implementation-head run `32156144669` passed 131/131 tests, typecheck, build and diff check.
+
+After README/context/audit updates, documentation-head run `32156801285` also passed on Node `22.23.2`:
 
 ```text
 npm ci: PASS, 0 vulnerabilities
@@ -102,8 +104,7 @@ git diff --check: PASS
 
 ## Exact next action
 
-1. let the completed documentation head run through GitHub Actions;
-2. if green, update PR #4 with final evidence and mark ready;
-3. squash-merge PR #4 under the existing product authorization;
-4. verify new `master` ref;
-5. normal Northflank redeploy/restart is sufficient; no `npm run register:commands` is required solely for TASK-CM-ADMIN-006.
+1. require GitHub Actions to remain green on the current PR #4 head;
+2. mark PR #4 ready and squash-merge under the existing product authorization;
+3. verify new `master` ref;
+4. normal Northflank redeploy/restart is sufficient; no `npm run register:commands` is required solely for TASK-CM-ADMIN-006.
