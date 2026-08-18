@@ -40,17 +40,20 @@ test("API client exposes only explicitly approved bot operations", () => {
     "/api/internal/integrations/v1/orders/details",
     "/api/internal/integrations/v1/orders/fulfillment",
     "/api/internal/integrations/v1/orders/refund/preview",
-    "/api/internal/integrations/v1/orders/refund/execute"
+    "/api/internal/integrations/v1/orders/refund/execute",
+    "/api/internal/integrations/v1/users/aura/adjust",
+    "/api/internal/integrations/v1/users/wallet/adjust"
   ]) {
     assert.equal(sourceText.includes(path), true, `missing approved path ${path}`);
   }
 
   for (const forbidden of [
-    "/api/internal/integrations/v1/users/aura/adjust",
-    "/api/internal/integrations/v1/users/wallet/adjust",
-    "/api/internal/integrations/v1/purchase-intents/process"
+    "/api/internal/integrations/v1/purchase-intents/process",
+    "/api/internal/integrations/v1/orders/fulfillment/manual",
+    "internal_integration_adjust_aura_balance",
+    "internal_integration_adjust_wallet_balance"
   ]) {
-    assert.equal(sourceText.includes(forbidden), false, `unexpected high-risk path ${forbidden}`);
+    assert.equal(sourceText.includes(forbidden), false, `unexpected forbidden path or DB primitive ${forbidden}`);
   }
 });
 
