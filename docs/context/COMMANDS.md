@@ -1,126 +1,155 @@
 # Command Catalog and Policy
 
-Updated: 2026-08-17
+Updated: 2026-08-18
 
 ## Product command-surface rule
 
-ADR-0005 supersedes ADR-0003 where they conflict. ADR-0006 supersedes the admin-command-channel requirement inherited from ADR-0004/ADR-0005 for the shared `/cm` admin console.
+ADR-0005 governs customer vs admin command presentation. ADR-0006 governs shared `/cm` authorization. ADR-0007 governs Aura/wallet confirmation and execution.
 
 - **customers/self-service:** message/text commands are allowed;
 - **staff/admin:** configured-guild slash commands;
-- **`/cm` admin authorization:** configured guild + explicit `BOT_ADMIN_USER_IDS`, usable from any guild channel;
-- **ephemeral visibility:** privacy only, not an authorization replacement.
+- **`/cm` authorization:** exact configured guild + non-empty explicit `BOT_ADMIN_USER_IDS`; usable from any channel in that guild;
+- **ephemeral visibility:** privacy only, never authorization;
+- **admin mutations:** explicit confirmation, stable idempotency, website-owned mutation, backend audit, sanitized Discord audit.
 
-`cm aura` remains a customer message command. Both customer and admin surfaces use approved website Internal Integrations API operations and never connect directly to Supabase/Postgres.
+No command may directly connect to Supabase/Postgres.
 
-## Current tracked commands
+## Current command surfaces
 
 ### `cm aura`
 
-Intentional customer message command with bot-author, exact-guild, blocked-channel, privacy/sanitization and safe-mention guards. `GuildMessages` and privileged `MessageContent` remain intentional while this command exists.
+Customer message command. Keeps bot-author, configured-guild, blocked-channel, privacy/sanitization and safe-mention guards.
 
 ### `/refresh-leaderboard`
 
-Operational guild slash command with exact runtime guild/channel checks, `ManageGuild|Administrator`, ephemeral result and shared overlap-locked refresh service.
-
-ADR-0006 does not change this command; its configured command channel remains part of its operational authorization.
+Operational guild slash command. Keeps exact configured guild + configured command channel + `ManageGuild|Administrator` runtime permission checks. It is independent from `/cm` authorization.
 
 ### `/cm user email:<email>`
 
-Merged into tracked source by TASK-CM-ADMIN-001 as a private ephemeral Components V2 staff/admin console. It was not registered/deployed as part of that task.
+Private Components V2 admin console. It resolves `users.overview.read`, creates an operator-bound expiring session and shows account, wallet, Aura, counts and recent orders.
 
-TASK-CM-ADMIN-002 changes its shared authorization policy to:
+User-panel controls:
 
-1. guild interaction only;
-2. exact configured `DISCORD_GUILD_ID`;
-3. non-empty mandatory `BOT_ADMIN_USER_IDS`;
-4. invoking Discord user ID in that whitelist;
-5. **no command-channel restriction**.
-
-Every button and modal repeats the same checks and is additionally bound to a short-lived session owned by the original operator.
-
-`BOT_ADMIN_COMMAND_CHANNEL_ID` is removed from the supported environment surface. A stale host variable with that name has no authorization effect.
-
-#### User panel
-
-Shows:
-
-- full account email returned by privileged `users.overview.read`;
-- active/banned state;
-- wallet balance/currency;
-- available/pending/lifetime Aura;
-- account/order/license counts;
-- most recent order.
-
-Buttons:
-
-- **Adjust Aura** — blocked; no adjustment API method/path exists in active source;
-- **Adjust Wallet** — blocked; no adjustment API method/path exists in active source;
+- **Adjust Aura** — active on `TASK-CM-ADMIN-003` under ADR-0007;
+- **Adjust Wallet** — active on `TASK-CM-ADMIN-003` under ADR-0007;
 - **Open Recent Order**;
 - **Order History**.
 
-#### Order history
+### `/cm order reference:<CM-public-ref-or-order-UUID>`
 
-`users.overview.read` is requested with backend maximum `recentOrdersLimit: 10`. The returned latest ten are paginated five per page with one Open button per order. The UI explicitly warns when the account has more than ten total orders.
+Added by `TASK-CM-ADMIN-003` as a direct private order entry point.
 
-There is currently no Internal Integrations API operation that pages older user order history; do not fabricate one in the bot.
+Flow:
 
-#### Order panel
+1. shared `/cm` authorization runs before backend access;
+2. input is normalized to the documented `public_ref` or `order_id` selector;
+3. `orders.details.read` resolves the canonical order;
+4. `users.overview.read` resolves the canonical order owner;
+5. target IDs must match;
+6. an operator-bound session opens directly on the normal order panel.
 
-`orders.details.read` is re-fetched when an order is opened. Available controls:
+The order panel therefore has the same controls as an order reached from `/cm user`:
 
-- **Refund**;
-- **Fulfillment**;
-- **Refresh Order**;
-- **User Operations**;
-- **Order History**.
+- Refund;
+- Fulfillment diagnostics;
+- Refresh Order;
+- User Operations for the order owner;
+- that user's bounded recent Order History.
 
-`Fulfillment` uses `orders.fulfillment.read` only. Manual Fulfillment is shown as unavailable because no dedicated mutation operation exists.
+## Aura adjustment
 
-#### Refund flow
+`Adjust Aura` uses:
 
-Refund is the only mutation implemented in the console:
+```text
+users.overview.read
+users.aura.adjust
+```
 
-1. authorized operator opens Refund;
-2. modal requires reason 8–1000 characters;
-3. bot calls `orders.refund.preview`;
-4. bot displays canonical refund consequences privately;
-5. operator explicitly confirms within five minutes;
-6. bot calls preview again and requires identical canonical consequences;
-7. bot executes `orders.refund.execute` with a stable UUID idempotency key/body;
-8. backend audit identifiers are preserved and a sanitized Discord audit record is attempted.
+Flow:
 
-`BOT_AUDIT_LOG_CHANNEL_ID` remains required before execute. The audit channel is not the command channel and does not determine where `/cm` may be invoked.
+1. modal accepts a signed non-zero whole-number Aura delta and 1–500 character reason;
+2. maximum magnitude is `1,000,000,000` Aura, matching the verified website contract;
+3. bot fetches a fresh user overview before displaying confirmation;
+4. confirmation stores target, exact delta/reason/operator, exact current available Aura, projected Aura, one UUID idempotency key and a five-minute expiry;
+5. confirm fetches user overview again and requires the relevant balance to be unchanged;
+6. changed balance fails closed without mutation;
+7. unchanged balance executes `users.aura.adjust` using the frozen request identity;
+8. returned target/delta must match;
+9. backend audit/transaction IDs are preserved and a sanitized Discord audit is attempted;
+10. user overview is refreshed after success.
 
-Deterministic refund conflicts clear confirmation and do not blindly retry. Transient failures preserve the original logical idempotency identity for safe retry.
+Negative projected available Aura is blocked locally and remains backend-rejected as defense in depth.
+
+## Wallet adjustment
+
+`Adjust Wallet` uses:
+
+```text
+users.overview.read
+users.wallet.adjust
+```
+
+Flow mirrors Aura but the modal accepts a signed decimal currency amount with at most two decimal places. The bot converts it exactly to integer cents before confirmation.
+
+Maximum magnitude is `100,000,000` cents (`1,000,000.00` currency units), matching the verified website contract. A negative projected balance is blocked. When the website has no wallet row, its verified admin primitive prepares a zero-balance USD row; the preview uses that same zero/USD assumption.
+
+## Balance confirmation and audit rules
+
+ADR-0007 supersedes only the earlier requirement that Aura/wallet must have a separate backend preview endpoint and the old Aura-first/wallet-later sequencing.
+
+For both adjustments:
+
+- all command/button/modal interactions reauthorize guild + explicit admin user ID;
+- session is bound to the original operator;
+- confirmation expires after five minutes;
+- final fresh balance must exactly match the preview balance;
+- one stable logical idempotency key/body is reused across retry;
+- HMAC timestamp/nonce/signature remain fresh per transport attempt;
+- `BOT_AUDIT_LOG_CHANNEL_ID` is mandatory before execute;
+- backend immutable audit is authoritative;
+- Discord audit is secondary and mention-safe.
+
+## Order history
+
+`users.overview.read` is requested with `recentOrdersLimit: 10`, the backend maximum. The returned latest ten are paginated locally at five per page. No unsupported older-history API is invented.
+
+## Refund
+
+Refund retains the stronger canonical backend preview/re-preview model:
+
+```text
+orders.refund.preview
+orders.refund.execute
+```
+
+Reason is 8–1000 characters; confirmation expires after five minutes; a fresh canonical preview must exactly match before execute; one stable idempotency key/body is used across retry; `BOT_AUDIT_LOG_CHANNEL_ID` is mandatory.
+
+## Fulfillment
+
+`orders.fulfillment.read` remains diagnostics-only. The current website API has no manual-fulfillment mutation operation. Manual Fulfillment remains blocked/informational and no substitute operation is used.
 
 ## Authorization matrix
 
-| Surface | Audience | Interface | Location | Explicit whitelist | Mutation |
-| --- | --- | --- | --- | --- | --- |
-| `cm aura` | customer | message | configured guild; blocked channel excluded | no | no |
-| `/refresh-leaderboard` | staff/admin | slash | configured guild + configured command channel | no current whitelist | no |
-| `/cm user ...` | admin | slash + private components/modals | **any channel in configured guild** | **mandatory** | refund only |
-| Aura control inside `/cm` | admin | button | same `/cm` guild-wide rule | **mandatory** | **blocked** |
-| Wallet control inside `/cm` | admin | button | same `/cm` guild-wide rule | **mandatory** | **blocked** |
-| Manual fulfillment control | admin | button | same `/cm` guild-wide rule | **mandatory** | **blocked** |
+| Surface | Audience | Location | Explicit whitelist | Mutation |
+| --- | --- | --- | --- | --- |
+| `cm aura` | customer | configured guild; blocked channel excluded | no | no |
+| `/refresh-leaderboard` | staff/admin | configured guild + command channel | no current whitelist | no |
+| `/cm user ...` | admin | any channel in configured guild | **mandatory** | Aura / wallet / refund through controls |
+| `/cm order ...` | admin | any channel in configured guild | **mandatory** | refund and owner Aura/wallet through navigation |
+| Manual fulfillment | admin | same `/cm` rule | **mandatory** | **blocked** |
 
-## Current `/cm` API operations
-
-The console requires these bot-client permissions:
+## Bot API surface after TASK-CM-ADMIN-003
 
 ```text
+aura.leaderboards.read
+aura.lookup.read
 users.overview.read
 orders.details.read
 orders.fulfillment.read
 orders.refund.preview
 orders.refund.execute
+users.aura.adjust
+users.wallet.adjust
 ```
 
-Endpoint existence is not authorization. The bot credential's actual allowlist remains backend-owned and must be provisioned separately before use.
-
-## Aura/wallet status
-
-Website source verification resolves the old selector discrepancy: adjustment schemas use `userLookupSelectorSchema`, which includes external identity. Aura/wallet are nevertheless still blocked because the accepted confirmation/state-binding requirements are not satisfied by the direct execute-only adjustment API contract.
-
-Direct DB calls remain forbidden.
+The website's per-client `allowedOperations` still controls runtime authorization independently of source. No purchase-processing or direct-database path is added.
