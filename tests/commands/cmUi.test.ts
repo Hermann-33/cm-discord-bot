@@ -14,6 +14,7 @@ import {
   buildRefundSuccessPanel,
   buildUserPanel
 } from "../../src/commands/cmUi";
+import { escapeDiscordText } from "../../src/discord/presentation";
 
 const SESSION_ID = "550e8400-e29b-41d4-a716-446655440002";
 const USER_ID = "550e8400-e29b-41d4-a716-446655440000";
@@ -179,101 +180,118 @@ const auraAdjustment = {
   idempotentReplay: false
 } satisfies AuraAdjustmentData;
 
-function json(value: { toJSON(): unknown }): string {
-  return JSON.stringify(value.toJSON());
+function collectContent(value: unknown): string {
+  if (Array.isArray(value)) return value.map(collectContent).join("\n");
+  if (!value || typeof value !== "object") return "";
+  const record = value as Record<string, unknown>;
+  const own = typeof record.content === "string" ? record.content : "";
+  return [own, ...Object.values(record).map(collectContent)].filter(Boolean).join("\n");
+}
+
+function panelData(value: { toJSON(): unknown }): { content: string; serialized: string } {
+  const json = value.toJSON();
+  return {
+    content: collectContent(json),
+    serialized: JSON.stringify(json)
+  };
+}
+
+function assertAbsentEvenIfEscaped(content: string, value: string): void {
+  assert.equal(content.includes(value), false);
+  assert.equal(content.includes(escapeDiscordText(value)), false);
 }
 
 test("User Operations keeps actionable state while removing profile/stat noise", () => {
-  const rendered = json(buildUserPanel(SESSION_ID, overview(true)));
+  const { content, serialized } = panelData(buildUserPanel(SESSION_ID, overview(true)));
   const unix = Math.floor(Date.parse(CREATED_AT) / 1000);
 
-  assert.equal(rendered.includes("user@example\\.com"), true);
-  assert.equal(rendered.includes(`<@${DISCORD_USER_ID}>`), true);
-  assert.equal(rendered.includes("Wallet: **USD 25\\.00**"), true);
-  assert.equal(rendered.includes("500 available"), true);
-  assert.equal(rendered.includes("25 pending"), true);
-  assert.equal(rendered.includes("Orders: **1**"), true);
-  assert.equal(rendered.includes("CM\\-TEST"), true);
-  assert.equal(rendered.includes(`<t:${unix}:f>`), true);
-  assert.equal(rendered.includes(`<t:${unix}:R>`), true);
-  assert.equal(rendered.includes("Share to Chat"), true);
+  assert.equal(content.includes(escapeDiscordText("user@example.com")), true);
+  assert.equal(content.includes(`<@${DISCORD_USER_ID}>`), true);
+  assert.equal(content.includes("Wallet: **USD 25.00**"), true);
+  assert.equal(content.includes("500 available"), true);
+  assert.equal(content.includes("25 pending"), true);
+  assert.equal(content.includes("Orders: **1**"), true);
+  assert.equal(content.includes(escapeDiscordText("CM-TEST")), true);
+  assert.equal(content.includes(`<t:${unix}:f>`), true);
+  assert.equal(content.includes(`<t:${unix}:R>`), true);
+  assert.equal(serialized.includes("Share to Chat"), true);
 
-  assert.equal(rendered.includes("Last sign-in"), false);
-  assert.equal(rendered.includes("Lifetime earned"), false);
-  assert.equal(rendered.includes("Lifetime redeemed"), false);
-  assert.equal(rendered.includes("Updated:"), false);
-  assert.equal(rendered.includes("Licenses:"), false);
-  assert.equal(rendered.includes("Account deliveries:"), false);
-  assert.equal(rendered.includes("Customer Name"), false);
-  assert.equal(rendered.includes("Username:"), false);
+  assert.equal(content.includes("Last sign-in"), false);
+  assert.equal(content.includes("Lifetime earned"), false);
+  assert.equal(content.includes("Lifetime redeemed"), false);
+  assert.equal(content.includes("Updated:"), false);
+  assert.equal(content.includes("Licenses:"), false);
+  assert.equal(content.includes("Account deliveries:"), false);
+  assert.equal(content.includes("Customer Name"), false);
+  assert.equal(content.includes("Username:"), false);
 });
 
 test("User Operations clearly shows when Discord is not linked", () => {
-  const rendered = json(buildUserPanel(SESSION_ID, overview(false)));
-  assert.equal(rendered.includes("Discord: **Not linked**"), true);
-  assert.equal(rendered.includes("Share to Chat"), true);
+  const { content, serialized } = panelData(buildUserPanel(SESSION_ID, overview(false)));
+  assert.equal(content.includes("Discord: **Not linked**"), true);
+  assert.equal(serialized.includes("Share to Chat"), true);
 });
 
 test("Order Operations removes internal IDs and duplicate fulfillment statistics", () => {
-  const rendered = json(buildOrderPanel(SESSION_ID, order));
+  const { content, serialized } = panelData(buildOrderPanel(SESSION_ID, order));
 
-  assert.equal(rendered.includes("user@example\\.com"), true);
-  assert.equal(rendered.includes("example\\-product"), true);
-  assert.equal(rendered.includes("USD 10\\.00"), true);
-  assert.equal(rendered.includes("Payment: wallet"), true);
-  assert.equal(rendered.includes("Delivered: **1/1**"), true);
-  assert.equal(rendered.includes("Delivery Details"), true);
-  assert.equal(rendered.includes("Refund"), true);
-  assert.equal(rendered.includes("Refresh Order"), true);
-  assert.equal(rendered.includes("User Operations"), true);
-  assert.equal(rendered.includes("Share to Chat"), true);
+  assert.equal(content.includes(escapeDiscordText("user@example.com")), true);
+  assert.equal(content.includes(escapeDiscordText("example-product")), true);
+  assert.equal(content.includes("USD 10.00"), true);
+  assert.equal(content.includes("Payment: wallet"), true);
+  assert.equal(content.includes("Delivered: **1/1**"), true);
+  assert.equal(serialized.includes("Delivery Details"), true);
+  assert.equal(serialized.includes("Refund"), true);
+  assert.equal(serialized.includes("Refresh Order"), true);
+  assert.equal(serialized.includes("User Operations"), true);
+  assert.equal(serialized.includes("Share to Chat"), true);
 
-  assert.equal(rendered.includes(USER_ID), false);
-  assert.equal(rendered.includes("internal\\-license\\-option\\-id"), false);
-  assert.equal(rendered.includes("internal\\-provider"), false);
-  assert.equal(rendered.includes("Type:"), false);
-  assert.equal(rendered.includes("Licenses:"), false);
-  assert.equal(rendered.includes("Account deliveries:"), false);
-  assert.equal(rendered.includes("Product deliveries:"), false);
-  assert.equal(rendered.includes("Manual review required"), false);
-  assert.equal(rendered.includes("Order History"), false);
+  assertAbsentEvenIfEscaped(content, USER_ID);
+  assertAbsentEvenIfEscaped(content, "internal-license-option-id");
+  assertAbsentEvenIfEscaped(content, "internal-provider");
+  assert.equal(content.includes("Type:"), false);
+  assert.equal(content.includes("Licenses:"), false);
+  assert.equal(content.includes("Account deliveries:"), false);
+  assert.equal(content.includes("Product deliveries:"), false);
+  assert.equal(content.includes("Manual review required"), false);
+  assert.equal(serialized.includes("Order History"), false);
 });
 
 test("Delivery Details keeps useful status/message and drops diagnostic clutter", () => {
-  const rendered = json(buildFulfillmentPanel(SESSION_ID, fulfillment));
+  const { content, serialized } = panelData(buildFulfillmentPanel(SESSION_ID, fulfillment));
 
-  assert.equal(rendered.includes("Delivery Details"), true);
-  assert.equal(rendered.includes("Status: **delivered**"), true);
-  assert.equal(rendered.includes("Delivered: 1/1"), true);
-  assert.equal(rendered.includes("Delivered successfully"), true);
-  assert.equal(rendered.includes("Back to Order"), true);
-  assert.equal(rendered.includes("Share to Chat"), true);
+  assert.equal(content.includes("Delivery Details"), true);
+  assert.equal(content.includes("Status: **delivered**"), true);
+  assert.equal(content.includes("Delivered: 1/1"), true);
+  assert.equal(content.includes("Delivered successfully"), true);
+  assert.equal(serialized.includes("Back to Order"), true);
+  assert.equal(serialized.includes("Share to Chat"), true);
 
-  assert.equal(rendered.includes("Provider:"), false);
-  assert.equal(rendered.includes("internal\\-provider"), false);
-  assert.equal(rendered.includes("Created:"), false);
-  assert.equal(rendered.includes("Updated:"), false);
-  assert.equal(rendered.includes("Linked licenses"), false);
-  assert.equal(rendered.includes("Manual Fulfillment"), false);
-  assert.equal(rendered.includes("User Operations"), false);
+  assert.equal(content.includes("Provider:"), false);
+  assertAbsentEvenIfEscaped(content, "internal-provider");
+  assert.equal(content.includes("Created:"), false);
+  assert.equal(content.includes("Updated:"), false);
+  assert.equal(content.includes("Linked licenses"), false);
+  assert.equal(serialized.includes("Manual Fulfillment"), false);
+  assert.equal(serialized.includes("User Operations"), false);
 });
 
 test("success panels keep outcomes but omit backend bookkeeping", () => {
-  const refundRendered = json(buildRefundSuccessPanel(SESSION_ID, refund, true));
-  const adjustmentRendered = json(buildAdjustmentSuccessPanel(SESSION_ID, "aura", auraAdjustment, true));
+  const refundData = panelData(buildRefundSuccessPanel(SESSION_ID, refund, true));
+  const adjustmentData = panelData(buildAdjustmentSuccessPanel(SESSION_ID, "aura", auraAdjustment, true));
 
-  for (const rendered of [refundRendered, adjustmentRendered]) {
-    assert.equal(rendered.includes(USER_ID), false);
-    assert.equal(rendered.includes(TRANSACTION_ID), false);
-    assert.equal(rendered.includes(AUDIT_ID), false);
-    assert.equal(rendered.includes("Backend audit:"), false);
-    assert.equal(rendered.includes("Discord audit:"), false);
-    assert.equal(rendered.includes("Idempotent replay:"), false);
-    assert.equal(rendered.includes("Order History"), false);
+  for (const { content, serialized } of [refundData, adjustmentData]) {
+    assertAbsentEvenIfEscaped(content, USER_ID);
+    assertAbsentEvenIfEscaped(content, TRANSACTION_ID);
+    assertAbsentEvenIfEscaped(content, AUDIT_ID);
+    assert.equal(content.includes("Backend audit:"), false);
+    assert.equal(content.includes("Discord audit:"), false);
+    assert.equal(content.includes("Idempotent replay:"), false);
+    assert.equal(serialized.includes("Order History"), false);
   }
 
-  assert.equal(refundRendered.includes("Wallet credit:"), true);
-  assert.equal(refundRendered.includes("Aura recovered:"), true);
-  assert.equal(adjustmentRendered.includes("Applied:"), true);
-  assert.equal(adjustmentRendered.includes("New balance:"), true);
+  assert.equal(refundData.content.includes("Wallet credit:"), true);
+  assert.equal(refundData.content.includes("Aura recovered:"), true);
+  assert.equal(adjustmentData.content.includes("Applied:"), true);
+  assert.equal(adjustmentData.content.includes("New balance:"), true);
 });
