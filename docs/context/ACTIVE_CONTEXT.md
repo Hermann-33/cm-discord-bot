@@ -2,152 +2,147 @@
 
 Updated: 2026-08-18
 
-## Mainline state
+## Mainline
 
-`master` is at:
+`master` is currently:
 
 ```text
-5baa260bb1f804c6c0e9878f2cb5be003564a915
+4b10d74aa80d3fa5c5e5a27b82e4ccf109a880a8
 ```
 
-That mainline includes the private `/cm user` console, canonical refund flow, and ADR-0006 guild-wide `/cm` authorization. The deployed bot has subsequently been operationally configured by the product owner, but deployment/runtime state is external to this repository and is not inferred from source alone.
+That squash-merged `TASK-CM-ADMIN-003` and contains:
+
+- customer `cm aura`;
+- `/refresh-leaderboard`;
+- private `/cm user`;
+- direct `/cm order`;
+- order/fulfillment navigation;
+- canonical refund;
+- confirmed Aura adjustment;
+- confirmed wallet adjustment;
+- ADR-0006 guild-wide `/cm` authorization;
+- ADR-0007 balance-adjustment confirmation model.
 
 The bot remains a standalone Node.js/TypeScript process with no direct Supabase/Postgres client, credential, RPC fallback or database mutation path.
 
-## Current implementation task — TASK-CM-ADMIN-003
+## Current task — TASK-CM-ADMIN-004
 
 Feature branch:
 
 ```text
-task/cm-admin-controls-order
+task/cm-share-discord-audit-time
 ```
 
-Draft PR:
+PR:
 
 ```text
-#1 — TASK-CM-ADMIN-003: balance controls and direct order lookup
+#2 — TASK-CM-ADMIN-004: customer-safe sharing and Discord UX
 ```
 
-Task scope explicitly approved by the product owner:
+Requested/implemented feature-branch scope:
 
-- enable Aura adjustment from the existing `/cm user` panel;
-- enable wallet/balance adjustment from the existing `/cm user` panel;
-- add direct `/cm order reference:<CM-public-ref-or-order-UUID>` lookup;
-- direct order panels must retain refund, fulfillment diagnostics, refresh, user operations and recent-order navigation;
-- do **not** implement manual fulfillment.
-
-No website source mutation is part of this task. Website source is read-only contract evidence. No bot deployment, Discord command registration or live production mutation is performed by the repository implementation step.
+- meaningful `/cm` panels gain **Share to Chat**;
+- the public copy is independently rendered, customer-safe, Components V2 and contains no controls;
+- `/cm user` supports exact email or selected Discord-user lookup;
+- User Operations shows Discord link state/linked user;
+- `/cm`, customer-safe share and Discord audit times use absolute + relative Discord timestamps;
+- refund/Aura/wallet Discord audit messages are concise Components V2 operational summaries;
+- no manual fulfillment, website write, Supabase path or new API operation.
 
 ## Shared `/cm` authorization
 
 ADR-0006 remains authoritative:
 
-1. interaction must be in a guild;
-2. guild ID must exactly equal `DISCORD_GUILD_ID`;
-3. `BOT_ADMIN_USER_IDS` must be non-empty;
-4. invoking Discord user ID must be explicitly allowlisted;
-5. every command/button/modal interaction re-runs authorization;
-6. there is no `/cm` command-channel restriction.
+1. guild interaction;
+2. exact `DISCORD_GUILD_ID`;
+3. non-empty `BOT_ADMIN_USER_IDS`;
+4. invoking Discord user explicitly allowlisted;
+5. every slash/button/modal reauthorizes;
+6. operator-bound session required for components/modals;
+7. no `/cm` command-channel restriction.
 
-Ephemeral/private output is confidentiality, not authorization. Roles do not replace the explicit user-ID whitelist.
+The Share to Chat button passes through this same authorization/session gate. Ephemeral output is confidentiality, not authorization.
 
-`/refresh-leaderboard` remains separate and retains its configured command-channel and Discord permission checks.
+`/refresh-leaderboard` remains separate and retains its configured command-channel + Discord permission checks.
 
-## `/cm user email:<email>`
+## `/cm user` lookup
 
-The existing private Components V2 panel continues to show:
-
-- full privileged account email;
-- active/banned state;
-- wallet balance/currency;
-- available/pending/lifetime Aura;
-- counts;
-- most recent order;
-- latest-ten order navigation.
-
-On `TASK-CM-ADMIN-003`, the existing Aura and wallet buttons become active controls instead of informational blockers.
-
-## `/cm order reference:<...>`
-
-New direct order entry point:
+Exactly one of:
 
 ```text
-/cm order reference:CM-...
+email:<exact CM email>
+discord_user:<selected Discord user>
 ```
 
-or:
+Discord lookup reuses `users.overview.read` with `external_identity/provider=discord`. Current website source already supports this selector and returns linked external identities, so no website/API permission change is needed.
+
+The private panel displays Linked/Not linked and the linked Discord user, username/display name where returned, and link time.
+
+## Customer-safe sharing — ADR-0008
+
+Normal User/Orders/Order/Fulfillment/Refund/Adjustment panels expose Share to Chat.
+
+The public message is rendered by a dedicated customer-safe path and intentionally omits:
+
+- full email;
+- internal CM user UUID;
+- backend audit/transaction/idempotency identifiers;
+- internal provider/failure codes;
+- admin refund/adjustment reasons;
+- session/custom IDs or interactive controls.
+
+It contains display components only and `safeAllowedMentions`. Sharing itself does not call a mutation API.
+
+## Time presentation
+
+User/menu/share/audit timestamps use:
 
 ```text
-/cm order reference:<order UUID>
+<t:unix:f> · <t:unix:R>
 ```
 
-Flow:
+so Discord renders a locale-aware absolute date/time plus relative age.
 
-1. shared `/cm` authorization;
-2. input normalized to documented `public_ref` or `order_id` selector;
-3. `orders.details.read` resolves the canonical order;
-4. `users.overview.read` resolves the canonical owner by returned `userId`;
-5. owner/order IDs must match;
-6. operator-bound private session opens directly on the normal order panel.
+## Discord audit presentation
 
-The order panel retains:
+Refund/Aura/wallet Discord audit output now presents useful operational fields only:
 
-- Refund;
-- Fulfillment diagnostics;
-- Refresh Order;
-- User Operations;
-- recent Order History.
+- customer account/Discord identity when available;
+- action/result;
+- reason;
+- operator;
+- completion time;
+- replay note only on actual idempotent replay.
 
-## Aura and wallet mutation model
+Website immutable audit remains authoritative. Mutation authorization, confirmation, idempotency and audit-channel prerequisites are unchanged.
 
-ADR-0007 supersedes ADR-0004 only for the earlier requirement that Aura/wallet use a dedicated backend preview endpoint and for the old Aura-first/wallet-later rollout sequence.
+## Mutation invariants retained
 
-Both controls use a private two-step state-bound confirmation:
+Aura/wallet retain ADR-0007:
 
 ```text
-whitelisted admin
-  -> adjustment modal (signed delta + reason)
-  -> fresh users.overview.read
-  -> private current / change / projected preview
-  -> explicit Confirm within five minutes
-  -> fresh users.overview.read
-  -> require exact relevant balance equality
-  -> execute website-owned users.aura.adjust or users.wallet.adjust
-  -> validate target/delta result
-  -> backend transaction + immutable audit
-  -> sanitized Discord audit
-  -> refresh user overview
+fresh overview
+  -> private current/change/projected confirmation
+  -> Confirm <= 5 minutes
+  -> fresh relevant-balance equality
+  -> website execute operation
+  -> backend audit + Discord audit
 ```
 
-Rules:
-
-- Aura delta is a non-zero whole integer, max magnitude `1,000,000,000`;
-- wallet input allows at most two decimal places and is converted exactly to cents, max magnitude `100,000,000` cents;
-- projected negative balances are blocked locally and remain backend-rejected;
-- one UUID idempotency key/request body is frozen per logical adjustment;
-- transport retry gets fresh HMAC timestamp/nonce/signature;
-- `BOT_AUDIT_LOG_CHANNEL_ID` is required before execute;
-- backend audit is authoritative if Discord audit posting fails.
-
-The bot never calls database functions directly and never overwrites a balance.
-
-## Refund
-
-Refund keeps its existing, stronger canonical backend preview model:
+Refund retains:
 
 ```text
-orders.refund.preview -> explicit confirmation -> fresh exact re-preview -> orders.refund.execute
+orders.refund.preview
+  -> explicit confirmation
+  -> fresh exact re-preview
+  -> orders.refund.execute
 ```
 
-ADR-0007 does not change refund behavior.
+Manual fulfillment remains blocked/informational because the API still exposes diagnostics only.
 
-## Manual fulfillment
+## Bot API surface
 
-Still deliberately blocked.
-
-`orders.fulfillment.read` is diagnostics-only and the current website Internal Integrations API exposes no manual-fulfillment mutation operation. No purchase-processing or direct-DB shortcut is permitted.
-
-## Typed bot API surface on TASK-CM-ADMIN-003
+Unchanged by TASK-CM-ADMIN-004:
 
 ```text
 aura.leaderboards.read
@@ -161,36 +156,27 @@ users.aura.adjust
 users.wallet.adjust
 ```
 
-No `purchase-intents.process` client path is added.
-
-Backend operation existence is separate from deployed credential authorization. The product owner has separately stated that the production bot client allowlist was expanded; the repository does not store or expose that secret configuration.
-
 ## Verification state
 
-`TASK-CM-ADMIN-003` passed the complete local Node verification gate on the feature branch using Node `v24.11.1`:
+Implementation + focused tests/docs are on the feature branch. GitHub Actions PR run `32138604602` failed before creating any workflow steps (`steps: null`, no logs), matching the existing Actions infrastructure/billing/spending-limit problem.
+
+Therefore the task is **PARTIAL** until an executable Node 22+ environment actually passes:
 
 ```text
-npm ci                                      passed; 0 vulnerabilities reported
-npm test                                    passed; 113/113
-npm run typecheck                           passed
-npm run build                               passed
-git diff --check                            passed
-git status --short --untracked-files=all    passed; no unrelated or untracked files
+npm ci
+npm test
+npm run typecheck
+npm run build
+git diff --check
+git status --short --untracked-files=all
 ```
 
-Focused scans also passed for:
+The product owner requested no separate Codex/local run. Repository governance still forbids claiming COMPLETE or merging without an executable pass.
 
-- direct DB/Supabase access;
-- purchase-processing or invented manual-fulfillment paths;
-- secret/HMAC material;
-- `legacy/` modification/import;
-- authorization/audit regression.
+## Exact next gate
 
-No bot deployment/start, Discord command registration, production API call/mutation, environment change, website write or database change occurred during verification.
-
-## Exact next engineering gate
-
-1. finalize/review the draft PR;
-2. merge only with explicit product-owner authorization;
-3. deployment and guild command re-registration remain separate operational steps after merge;
-4. live Aura/wallet/refund mutation testing remains a separately authorized controlled action.
+1. finish static diff/security/docs review;
+2. obtain an executable verification pass;
+3. merge PR #2 directly only if all applicable gates pass;
+4. deployment/restart and `npm run register:commands` remain separate operational steps after merge;
+5. no live refund/Aura/wallet mutation is part of repository verification.
