@@ -20,7 +20,7 @@ PR #4 — TASK-CM-ADMIN-006: declutter admin and order panels
 
 ## Verdict
 
-`COMPLETE` for implementation-head behavior and executable verification. Final documentation head must revalidate before merge.
+`COMPLETE` for implementation, documentation and executable verification. Merge remains conditioned on the GitHub Actions check being green on the current PR head.
 
 ## Objective
 
@@ -115,7 +115,7 @@ Unchanged:
 
 The first CI run (`32155910678`) exposed two mistakes only in newly added presentation test assertions; production behavior tests were otherwise green. The assertions were corrected to inspect rendered component content rather than guessing JSON-string escaping.
 
-GitHub Actions run `32156144669` then passed on Node `22.23.2`:
+Implementation-head GitHub Actions run `32156144669` passed on Node `22.23.2`:
 
 ```text
 npm ci: PASS — 0 vulnerabilities
@@ -125,7 +125,17 @@ npm run build: PASS
 git diff --check: PASS
 ```
 
-The passing suite includes authorization, API/signing, mutation, Share to Chat disclosure, registration, architecture/no-direct-DB and legacy-isolation tests in addition to the new compact-panel assertions.
+After repository context/audit/readme updates, documentation-head run `32156801285` also passed on Node `22.23.2` with the same complete gate:
+
+```text
+npm ci: PASS — 0 vulnerabilities
+npm test: PASS — 131/131
+npm run typecheck: PASS
+npm run build: PASS
+git diff --check: PASS
+```
+
+The passing suite includes authorization, API/signing, mutation, Share to Chat disclosure, registration, architecture/no-direct-DB and legacy-isolation tests in addition to the compact-panel assertions.
 
 ## Rollout
 
