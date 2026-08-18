@@ -26,15 +26,24 @@ function fakeClient() {
   return { client, sends };
 }
 
-function payloadText(payload: MessageCreateOptions): string {
+function collectContent(value: unknown): string {
+  if (Array.isArray(value)) return value.map(collectContent).join("\n");
+  if (!value || typeof value !== "object") return "";
+  const record = value as Record<string, unknown>;
+  const own = typeof record.content === "string" ? record.content : "";
+  return [own, ...Object.values(record).map(collectContent)].filter(Boolean).join("\n");
+}
+
+function payloadContent(payload: MessageCreateOptions): string {
   const component = payload.components?.[0] as { toJSON(): unknown };
-  return JSON.stringify(component.toJSON());
+  return collectContent(component.toJSON());
 }
 
 test("refund audit uses concise Components V2 layout with customer, result, operator, and Discord timestamps", async () => {
   const { client, sends } = fakeClient();
   const orderRef = "CM-TEST";
   const accountEmail = "user@example.com";
+  const reason = "Customer requested refund @everyone";
   await postRefundAudit({
     client,
     channelId: "123456789012345699",
@@ -42,7 +51,7 @@ test("refund audit uses concise Components V2 layout with customer, result, oper
     orderRef,
     accountEmail,
     customerDiscordUserId: CUSTOMER_DISCORD_ID,
-    reason: "Customer requested refund @everyone",
+    reason,
     walletCreditCents: 1250,
     currency: "USD",
     completedAt: COMPLETED_AT,
@@ -52,21 +61,21 @@ test("refund audit uses concise Components V2 layout with customer, result, oper
   assert.equal(sends.length, 1);
   assert.equal(sends[0]?.flags, MessageFlags.IsComponentsV2);
   assert.deepEqual(sends[0]?.allowedMentions, safeAllowedMentions);
-  const json = payloadText(sends[0]!);
+  const content = payloadContent(sends[0]!);
   const unix = Math.floor(Date.parse(COMPLETED_AT) / 1000);
-  assert.equal(json.includes("CM Audit · Refund"), true);
-  assert.equal(json.includes(escapeDiscordText(orderRef)), true);
-  assert.equal(json.includes(escapeDiscordText(accountEmail)), true);
-  assert.equal(json.includes(`<@${CUSTOMER_DISCORD_ID}>`), true);
-  assert.equal(json.includes(`<@${ADMIN_ID}>`), true);
-  assert.equal(json.includes("USD 12.50"), true);
-  assert.equal(json.includes(`<t:${unix}:f>`), true);
-  assert.equal(json.includes(`<t:${unix}:R>`), true);
-  assert.equal(json.includes("Backend audit"), false);
-  assert.equal(json.includes("Transaction"), false);
-  assert.equal(json.includes("Idempotent replay"), false);
-  assert.equal(json.includes("@everyone"), false);
-  assert.equal(json.includes(escapeDiscordText("Customer requested refund @everyone")), true);
+  assert.equal(content.includes("CM Audit · Refund"), true);
+  assert.equal(content.includes(escapeDiscordText(orderRef)), true);
+  assert.equal(content.includes(escapeDiscordText(accountEmail)), true);
+  assert.equal(content.includes(`<@${CUSTOMER_DISCORD_ID}>`), true);
+  assert.equal(content.includes(`<@${ADMIN_ID}>`), true);
+  assert.equal(content.includes("USD 12.50"), true);
+  assert.equal(content.includes(`<t:${unix}:f>`), true);
+  assert.equal(content.includes(`<t:${unix}:R>`), true);
+  assert.equal(content.includes("Backend audit"), false);
+  assert.equal(content.includes("Transaction"), false);
+  assert.equal(content.includes("Idempotent replay"), false);
+  assert.equal(content.includes("@everyone"), false);
+  assert.equal(content.includes(escapeDiscordText(reason)), true);
 });
 
 test("adjustment audit keeps only useful balance-change information and flags a replay only when relevant", async () => {
@@ -86,11 +95,11 @@ test("adjustment audit keeps only useful balance-change information and flags a 
     idempotentReplay: true
   });
 
-  const json = payloadText(sends[0]!);
-  assert.equal(json.includes("CM Audit · Wallet Adjustment"), true);
-  assert.equal(json.includes("USD +5.00"), true);
-  assert.equal(json.includes("USD 30.00"), true);
-  assert.equal(json.includes("idempotent replay"), true);
-  assert.equal(json.includes("auditEventId"), false);
-  assert.equal(json.includes("transactionId"), false);
+  const content = payloadContent(sends[0]!);
+  assert.equal(content.includes("CM Audit · Wallet Adjustment"), true);
+  assert.equal(content.includes("USD +5.00"), true);
+  assert.equal(content.includes("USD 30.00"), true);
+  assert.equal(content.includes("idempotent replay"), true);
+  assert.equal(content.includes("auditEventId"), false);
+  assert.equal(content.includes("transactionId"), false);
 });
