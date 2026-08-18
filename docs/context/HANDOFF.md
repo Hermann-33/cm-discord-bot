@@ -7,136 +7,79 @@ Updated: 2026-08-18
 - ADR-0005 — `cm aura` customer message command; admin/staff slash/components/modals.
 - ADR-0006 — `/cm` exact configured guild + non-empty explicit `BOT_ADMIN_USER_IDS`; no `/cm` channel restriction.
 - ADR-0007 — Aura/wallet five-minute fresh-state-bound confirmation + stable idempotency/audit.
-- ADR-0008 — customer-safe Share to Chat rendering and current Discord identity/time/audit presentation policy.
+- ADR-0008 — separate customer-facing Share to Chat renderer, no public admin controls, Discord identity/time/audit presentation policy.
+- ADR-0009 — supersedes ADR-0008 only for the previous full-email prohibition; the canonical CM account email is intentionally shared.
 - `BOT_AUDIT_LOG_CHANNEL_ID` required before refund/Aura/wallet execute.
 - no direct Supabase/Postgres.
 - manual fulfillment blocked until website owns a dedicated mutation.
 
-## Mainline baseline before TASK-CM-ADMIN-004 merge
+## Mainline baseline
 
 ```text
 master
-4b10d74aa80d3fa5c5e5a27b82e4ccf109a880a8
+7a41dbeefae167044091b0aaed8372c3b58acdd0
 ```
 
-This is the verified/merged TASK-CM-ADMIN-003 result: `/cm order`, Aura adjustment and wallet adjustment are on mainline.
+This is the verified/merged TASK-CM-ADMIN-004 result: Share to Chat, Discord-user lookup/link presentation, Discord timestamps and concise audit panels are on mainline.
 
 ## Current task
 
 ```text
-TASK-CM-ADMIN-004
-task/cm-share-discord-audit-time
-PR #2
-status: verified for merge
+TASK-CM-ADMIN-005
+task/cm-share-email
+PR #3
+status: verified for merge after final-head CI revalidation
 ```
 
-Implemented scope:
+Requested/implemented scope:
 
-- share current meaningful `/cm` panel into the channel for customer communication, with no customer controls;
-- reduce Discord audit noise and make it visually consistent with User Operations;
-- show Discord link state/user in User Operations;
-- support `/cm user` lookup by Discord user as well as email;
-- use Discord absolute + relative timestamps throughout `/cm` management views;
-- preserve mutation, authorization, data-boundary and manual-fulfillment invariants.
+- include the customer account email when Share to Chat publishes an order/account/support summary;
+- keep the public copy read-only and buttonless;
+- retain all other internal-field exclusions and security boundaries.
 
 ## Implemented behavior
 
-### `/cm user`
-
-Exactly one input:
+`src/commands/cmShare.ts` uses one customer identity block for shareable User/Orders/Order/Fulfillment/Refund/Aura/Wallet views:
 
 ```text
-email:<exact account email>
+Email: <canonical account email>
+Discord: <linked user or Not linked>
 ```
 
-or:
+The email source is `session.overview.identity.email`; rendering uses `escapeDiscordText(..., 320)`.
+
+Still excluded:
+
+- internal CM user UUID;
+- internal purchase option IDs;
+- internal provider/failure codes;
+- admin mutation/refund reasons;
+- backend audit/transaction/idempotency IDs;
+- credentials/HMAC material;
+- private session/custom IDs;
+- customer-operable buttons/selects/modals.
+
+Share execution still re-runs `/cm` authorization and requires the original operator-owned session. `safeAllowedMentions` remains applied.
+
+## Verification
+
+GitHub Actions run `32145501289` passed on Node `22.23.2`:
 
 ```text
-discord_user:<selected Discord user>
-```
-
-Both/neither fail before backend access. Discord selection maps to existing `users.overview.read` `external_identity/provider=discord`; website source already supports it.
-
-User Operations shows Linked/Not linked plus linked Discord user/username/display name/link time when returned.
-
-### Share to Chat
-
-Normal User/Orders/Order/Fulfillment/Refund/Adjustment panels include `cm:share:current:<session>`.
-
-Button handling still performs shared `/cm` authorization and operator-bound session lookup before the share path runs.
-
-`src/commands/cmShare.ts` renders a separate customer-safe Components V2 view. It is never a copy of the private admin component tree. Public output contains no action components/custom IDs and omits email, CM user UUID, internal option IDs, backend audit/transaction/idempotency IDs, internal provider/failure details and admin refund/adjustment reasons. `safeAllowedMentions` disables notifications.
-
-System/error notices without a defined safe view intentionally do not expose a share control.
-
-### Time presentation
-
-`src/discord/presentation.ts` renders:
-
-```text
-<t:unix:f> · <t:unix:R>
-```
-
-across `/cm`, linked Discord state, shared summaries and audit completion times.
-
-### Audit
-
-Refund/Aura/wallet audit channel output is now a concise Components V2 panel containing useful customer identity, result/change, reason, operator and completion time. A replay note appears only on actual idempotent replay. Backend immutable audit remains authoritative.
-
-### Mutation/security invariants
-
-No change to refund re-preview equality, Aura/wallet fresh-balance confirmation, stable idempotency, audit-channel prerequisite, backend API authorization or no-direct-DB boundary. Manual fulfillment remains blocked.
-
-## Source added/changed
-
-New:
-
-```text
-src/discord/presentation.ts
-src/commands/cmShare.ts
-tests/commands/cmShare.test.ts
-tests/commands/cmUi.test.ts
-tests/discord/adminAudit.test.ts
-docs/decisions/ADR-0008-admin-panel-customer-safe-sharing.md
-docs/audits/2026-08-18-cm-admin-sharing-discord-audit.md
-```
-
-Key modified:
-
-```text
-src/commands/cm.ts
-src/commands/cmSessions.ts
-src/commands/cmUi.ts
-src/commands/cmUserActions.ts
-src/commands/cmRefund.ts
-src/commands/cmAdjustments.ts
-src/discord/adminAudit.ts
-package.json
-```
-
-## Verification state
-
-After the repository became public, GitHub Actions could execute on the standard hosted runner. A real run exposed a TypeScript narrowing defect in `cmShare.ts`; it was fixed by narrowing the discriminated result only after checking `adjustmentKind`.
-
-Final executable evidence:
-
-```text
-run 32142352087
-Node 22.23.2
 npm ci: PASS, 0 vulnerabilities
-npm test: PASS — 127/127
+npm test: PASS — 128/128
 npm run typecheck: PASS
 npm run build: PASS
 git diff --check: PASS
 ```
 
-Focused static/security review also remains clean for direct DB/Supabase, new API operations, purchase-processing/manual-fulfillment shortcuts, secrets/HMAC material, `legacy/` changes and public-control disclosure.
+The new customer-email disclosure tests and existing authorization/session, architecture, API-surface, mutation, registration and legacy-isolation tests are green.
 
-Verdict: `COMPLETE` for implementation/verification; PR #2 is authorized for direct merge without another Codex/local run.
+Final static review confirms there is no change to Internal Integrations API paths/signing, `/cm` authorization, `/refresh-leaderboard`, refund/Aura/wallet mutation logic, manual fulfillment, website/Supabase, environment variables or slash-command registration.
 
 ## Exact next action
 
-1. keep final PR/audit evidence aligned with the successful CI result;
-2. direct-merge PR #2;
-3. after merge, deployment/restart and `npm run register:commands` remain separate operational actions because `/cm user` registration changed;
-4. do not perform live refund/Aura/wallet mutations as repository verification.
+1. require the final documentation head to pass GitHub Actions;
+2. mark PR #3 ready and merge directly if that run is green;
+3. deploy/restart the new `master` normally;
+4. no `npm run register:commands` is required solely for this change because no slash-command definition changed.

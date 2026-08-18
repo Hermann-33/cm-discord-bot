@@ -108,7 +108,7 @@ Current website source was inspected read-only. Existing `users.overview.read` a
 
 ### Security design
 
-ADR-0008 requires public copies to use a separate customer-safe renderer and the normal `/cm` authorization + operator-owned session gate. Public copies contain no buttons/selects/modals/custom IDs and omit email, internal CM user UUID, internal option IDs, admin reasons, provider/failure details, backend audit/transaction/idempotency identifiers and credentials. `safeAllowedMentions` is retained.
+ADR-0008 requires public copies to use a separate customer-safe renderer and the normal `/cm` authorization + operator-owned session gate. At the time of TASK-CM-ADMIN-004, ADR-0008 excluded full email as well as internal CM user UUID, internal option IDs, admin reasons, provider/failure details, backend audit/transaction/idempotency identifiers and credentials. `safeAllowedMentions` is retained. ADR-0009 later supersedes only the email exclusion.
 
 Mutation flows and API surface remain unchanged; manual fulfillment remains blocked.
 
@@ -142,4 +142,40 @@ Focused static/security review remained clean for direct DB/Supabase access, new
 
 No live share/refund/Aura/wallet mutation, deployment, command registration, website write or database mutation occurred during repository verification.
 
-Verdict: `COMPLETE` for implementation/verification; authorized for direct PR merge.
+Verdict: `COMPLETE` for implementation/verification and merged into `master` at `7a41dbeefae167044091b0aaed8372c3b58acdd0`.
+
+---
+
+## 2026-08-18 — TASK-CM-ADMIN-005 — Shared customer email
+
+### Scope
+
+The product owner explicitly requested that the customer account email visible in the private `/cm` panel also be visible when Share to Chat publishes the customer-facing summary.
+
+### Policy
+
+ADR-0009 supersedes ADR-0008 only for the previous full-email prohibition. The canonical customer account email is now an intentionally approved shared field. Public admin controls and other internal/operator-only fields remain prohibited.
+
+### Implementation
+
+`src/commands/cmShare.ts` uses the canonical `session.overview.identity.email`, Discord-escapes it, and includes it in the shared customer identity block across User, Orders, Order, Fulfillment, Refund and Aura/Wallet share views.
+
+Tests require the escaped email while continuing to prove internal user UUID/provider/option identifiers/admin reasons and public custom IDs remain absent.
+
+### Executable verification
+
+GitHub Actions run `32145501289` passed on Node `22.23.2`:
+
+```text
+npm ci: PASS, 0 vulnerabilities
+npm test: PASS — 128/128
+npm run typecheck: PASS
+npm run build: PASS
+git diff --check: PASS
+```
+
+Existing architecture/API/auth/mutation/registration/legacy-isolation tests remained green. Final static diff review found no API client/signing, authorization, mutation, configuration, registration or `legacy/` source changes.
+
+No API, website, database, mutation, authorization, environment, manual-fulfillment or slash-command registration change is part of this task.
+
+Verdict: `COMPLETE` for implementation/verification; final documentation head must revalidate successfully before PR #3 merge.

@@ -15,28 +15,22 @@ The Cheater's Market Discord bot is the Discord-facing companion to Cheater's Ma
 
 ## Product scope
 
-Current mainline includes:
+Current release behavior includes:
 
 - persistent Components V2 Aura leaderboard;
 - lifetime/available Aura top-10;
 - customer `cm aura` message command;
 - `/refresh-leaderboard`;
 - private `/cm user` and `/cm order` admin console;
+- `/cm user` lookup by exact email or selected linked Discord user;
+- linked Discord state/user in User Operations;
 - user/order/fulfillment diagnostics;
 - canonical refund;
 - confirmed Aura adjustment;
 - confirmed wallet adjustment;
-- structured sanitized logging and bounded HMAC API transport.
-
-TASK-CM-ADMIN-004 feature-branch scope adds:
-
-- `/cm user` lookup by exact email or selected linked Discord user;
-- linked Discord state/user in User Operations;
-- explicit customer-safe Share to Chat copies from meaningful `/cm` panels;
+- explicit Share to Chat copies from meaningful `/cm` panels;
 - Discord absolute + relative time presentation;
 - concise Components V2 mutation audit summaries.
-
-TASK-CM-ADMIN-004 remains feature-branch work until executable verification and merge gates pass.
 
 ## Data/business boundary
 
@@ -49,14 +43,15 @@ Discord
 
 The bot is never a direct Supabase/Postgres client, does not carry a service-role/database credential and has no table/RPC fallback. Website-side per-client `allowedOperations` remains an independent runtime authorization boundary.
 
-TASK-CM-ADMIN-004 adds no API operation and no website/database change; Discord identity lookup reuses the existing `users.overview.read` external-identity selector.
+Discord identity lookup reuses the existing `users.overview.read` external-identity selector. Share to Chat uses already-authorized session data and adds no API operation, website route, environment value or database dependency.
 
 ## Accepted product/security direction
 
 - ADR-0005 — customer self-service may remain message-based; admin/staff operations use slash/components/modals.
 - ADR-0006 — `/cm` is exact-guild + explicit `BOT_ADMIN_USER_IDS`, usable from any configured-guild channel; DMs/wrong guilds fail closed.
 - ADR-0007 — Aura/wallet require explicit five-minute fresh-state-bound confirmation, stable idempotency and audit.
-- ADR-0008 — admin sharing must create a separate customer-safe read-only rendering with no controls/private fields; timestamps/audit presentation follow the current Discord UX model.
+- ADR-0008 — Share to Chat must use a separate read-only renderer with no customer-operable admin controls or internal/operator fields.
+- ADR-0009 — supersedes ADR-0008 only for the previous email prohibition: the canonical customer account email is intentionally included in shared customer identity sections.
 - refund retains canonical backend preview/re-preview confirmation.
 - website remains the mutation/accounting authority.
 
@@ -75,7 +70,11 @@ The bot must not become:
 
 ## Customer-safe sharing boundary
 
-Share to Chat is a deliberate disclosure action by an authorized admin, not a relaxation of authorization. Public summaries are separately rendered, display-only and field-filtered; they do not inherit the private admin component tree.
+Share to Chat is a deliberate disclosure action by an authorized admin, not a relaxation of authorization. Public summaries are separately rendered and display-only; they do not inherit the private admin component tree.
+
+The product-approved customer identity disclosure now includes the account email and linked Discord identity. Internal CM UUIDs, internal option IDs, admin reasons, backend audit/transaction/idempotency identifiers, provider/failure codes and credentials remain excluded.
+
+Because the message is posted into the current channel, the authorized operator is responsible for choosing an appropriate channel before sharing customer account information.
 
 ## Manual fulfillment
 
@@ -83,8 +82,8 @@ Still blocked by backend contract: `orders.fulfillment.read` is diagnostics-only
 
 ## Current maturity
 
-Production-adjacent and security-sensitive. TASK-CM-ADMIN-003 is merged into `master` at `4b10d74aa80d3fa5c5e5a27b82e4ccf109a880a8`. TASK-CM-ADMIN-004 implementation/tests/docs are on a feature branch; GitHub Actions currently fails before steps, so executable verification remains outstanding.
+Production-adjacent and security-sensitive. TASK-CM-ADMIN-004 is merged into mainline and established the Share to Chat/Discord UX model. TASK-CM-ADMIN-005 is the explicit follow-up that allows the canonical customer account email in shared summaries under ADR-0009.
 
 ## Success criteria
 
-A successful bot remains small/auditable, exact-guild scoped, explicitly allowlisted for high-impact controls, API-bounded, idempotent for mutations, fail-closed on stale confirmation state, audit-producing, customer-safe when publishing support summaries, resilient to transport failure and incapable of bypassing website-owned business/data controls.
+A successful bot remains small/auditable, exact-guild scoped, explicitly allowlisted for high-impact controls, API-bounded, idempotent for mutations, fail-closed on stale confirmation state, audit-producing, deliberately field-scoped when publishing support summaries, resilient to transport failure and incapable of bypassing website-owned business/data controls.

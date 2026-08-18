@@ -106,9 +106,9 @@ The private User Operations panel shows account state, linked Discord identity, 
 
 Meaningful private `/cm` panels include **Share to Chat**. The click itself reauthorizes the admin and session owner, then posts a separate read-only Components V2 summary into the current channel.
 
-The shared copy contains **no buttons or other interactive components**. It is rendered independently from the private panel and omits operator/private/internal fields including account email, CM user UUID, mutation/refund reasons, provider/failure codes, backend audit/transaction IDs and idempotency data. Mentions are disabled with `safeAllowedMentions`.
+The shared copy contains **no buttons or other interactive components**. It is rendered independently from the private panel and includes the canonical customer account email plus linked Discord identity when available. It continues to omit internal CM user UUIDs, internal purchase option IDs, mutation/refund reasons, provider/failure codes, backend audit/transaction IDs and idempotency data. Mentions are disabled with `safeAllowedMentions`.
 
-See ADR-0008 for the disclosure boundary.
+ADR-0008 defines the separate read-only sharing boundary; ADR-0009 supersedes only its previous prohibition on displaying the customer account email.
 
 ## `/cm order`
 

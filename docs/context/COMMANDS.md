@@ -7,7 +7,8 @@ Updated: 2026-08-18
 - ADR-0005 — customer vs admin command presentation.
 - ADR-0006 — shared `/cm` exact-guild + explicit-user authorization.
 - ADR-0007 — Aura/wallet confirmation/idempotency/audit.
-- ADR-0008 — customer-safe panel sharing, Discord lookup/time/audit presentation.
+- ADR-0008 — separate read-only Share to Chat renderer, Discord lookup/time/audit presentation.
+- ADR-0009 — canonical customer account email is intentionally included in shared customer identity sections.
 
 No command may directly connect to Supabase/Postgres.
 
@@ -95,15 +96,18 @@ Controls include Refund, Fulfillment diagnostics, Refresh Order, User Operations
 
 Meaningful private User/Orders/Order/Fulfillment/Refund/Adjustment panels expose **Share to Chat**.
 
-The click is itself an authorized `/cm` button action and requires the owning session. It sends a separately rendered customer-safe Components V2 message into the current channel.
+The click is itself an authorized `/cm` button action and requires the owning session. It sends a separately rendered Components V2 message into the current channel.
 
-The public copy:
+The shared copy:
 
 - contains no buttons/selects/modals/custom IDs;
 - performs no mutation;
 - disables mentions;
-- omits full email, internal user UUID, backend audit/transaction/idempotency identifiers, internal provider/failure codes and admin refund/adjustment reasons;
-- may show customer-relevant status, linked Discord identity, wallet/Aura values, order/refund/fulfillment state and timestamps.
+- **includes the canonical customer account email** from `session.overview.identity.email`, Discord-escaped for display;
+- may include the linked Discord user and customer-relevant status, wallet/Aura values, order/refund/fulfillment state and timestamps;
+- omits internal CM user UUID, internal purchase option IDs, backend audit/transaction/idempotency identifiers, internal provider/failure codes and admin refund/adjustment reasons.
+
+ADR-0009 supersedes ADR-0008 only for the previous prohibition on displaying the full customer email. The rest of the Share to Chat security boundary remains unchanged.
 
 System/error notices without a defined customer-safe representation are intentionally not shareable.
 
@@ -181,4 +185,4 @@ users.aura.adjust
 users.wallet.adjust
 ```
 
-TASK-CM-ADMIN-004 adds no API operation. Website per-client `allowedOperations` remains an independent runtime authorization boundary.
+TASK-CM-ADMIN-005 adds no API operation and does not change the slash-command definition. Website per-client `allowedOperations` remains an independent runtime authorization boundary.

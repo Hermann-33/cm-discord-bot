@@ -42,55 +42,51 @@ Active code/dependency audit plus current Internal Integrations API operation/se
 4b10d74aa80d3fa5c5e5a27b82e4ccf109a880a8
 ```
 
-Mainline includes:
+Mainline includes `/cm order`, confirmed Aura adjustment, confirmed wallet adjustment, canonical refund and backend + Discord audit. Manual fulfillment remains blocked.
 
-- `/cm order reference:<CM-ref-or-UUID>`;
-- confirmed Aura adjustment;
-- confirmed wallet adjustment;
-- canonical refund retained;
-- backend + Discord audit;
-- manual fulfillment still blocked.
+## Phase 5 — Customer-safe sharing / Discord admin UX — COMPLETE ON MAINLINE
 
-## Phase 5 — Customer-safe sharing / Discord admin UX — TASK-CM-ADMIN-004 COMPLETE / VERIFIED FOR MERGE
-
-Branch/PR:
+`TASK-CM-ADMIN-004` was verified by GitHub Actions (127/127 tests, typecheck, build and diff check) and squash-merged into `master` at:
 
 ```text
-task/cm-share-discord-audit-time
-PR #2
+7a41dbeefae167044091b0aaed8372c3b58acdd0
 ```
 
-Implementation includes:
+It added `/cm user` lookup by email/Discord user, linked Discord identity, Share to Chat, Discord timestamps and concise Components V2 audit summaries.
 
-- `/cm user` lookup by exact email or selected Discord user;
-- linked Discord identity in User Operations;
-- Share to Chat on meaningful private `/cm` panels;
-- dedicated buttonless/customer-safe public renderer under ADR-0008;
-- absolute + relative Discord timestamps across `/cm`, share and audit views;
-- concise Components V2 refund/Aura/wallet audit summaries;
-- focused tests for selector validation, disclosure boundary, no-public-controls, timestamps, audit layout and share state.
+## Phase 5.1 — Shared customer email — TASK-CM-ADMIN-005 COMPLETE / VERIFIED FOR MERGE
 
-No new API operation, website source/config, DB path or manual fulfillment behavior is introduced.
+Product follow-up:
+
+- include the canonical CM account email in every shared customer identity section;
+- keep the shared message read-only/no controls;
+- keep internal CM UUIDs, option IDs, provider/failure codes, admin reasons, backend identifiers and credentials excluded;
+- preserve exact-guild + explicit-admin + operator-owned-session checks.
+
+ADR-0009 supersedes ADR-0008 only for the previous full-email prohibition.
+
+Implementation branch/PR:
+
+```text
+task/cm-share-email
+PR #3
+```
+
+No API operation, website source/config, database path, mutation logic, manual fulfillment behavior or slash-command definition changes.
 
 ### Executable gate
 
-After the repository became public, the standard GitHub-hosted runner executed the full workflow. An initial real run exposed a TypeScript narrowing defect in the new share-success renderer; that defect was fixed narrowly.
-
-Final successful run:
+GitHub Actions run `32145501289` passed on Node `22.23.2`:
 
 ```text
-GitHub Actions 32142352087
-Node 22.23.2
 npm ci: PASS, 0 vulnerabilities
-npm test: PASS — 127/127
+npm test: PASS — 128/128
 npm run typecheck: PASS
 npm run build: PASS
 git diff --check: PASS
 ```
 
-Final static/security review remains clean for direct DB/Supabase access, new API operations, purchase-processing/manual-fulfillment shortcuts, secrets/HMAC material, `legacy/` changes, authorization regression and customer control disclosure.
-
-TASK-CM-ADMIN-004 is complete for implementation/verification and may be directly merged under the existing product authorization.
+Static review confirms the source change is limited to the customer-share renderer plus focused tests; API/auth/mutation/config/registration/legacy source remains untouched. PR #3 may be merged once the final documentation head revalidates successfully.
 
 ## Phase 6 — Manual fulfillment — BACKEND OPERATION REQUIRED
 
@@ -106,4 +102,4 @@ Priorities:
 - deployment/rollback/credential-rotation runbooks;
 - controlled authenticated read/mutation smoke tests only with explicit authorization.
 
-After any merge that changes `/cm` registration, production rollout requires bot redeploy/restart and one explicit `npm run register:commands`; those remain separate operational actions.
+TASK-CM-ADMIN-005 does not alter slash registration, so deployment of that change does not require command registration solely for the email-sharing behavior.

@@ -21,7 +21,8 @@ This documentation system is the durable memory and governance layer for the Che
 
 - `audits/2026-08-17-full-codebase-audit.md` — exhaustive active-code/test/config/GitHub/dependency re-baseline (`TASK-AUDIT-001`); its slash-only `cm aura` conclusion was superseded by ADR-0005.
 - `audits/2026-08-18-cm-admin-controls-order.md` — `TASK-CM-ADMIN-003` direct order/Aura/wallet implementation and verification audit.
-- `audits/2026-08-18-cm-admin-sharing-discord-audit.md` — `TASK-CM-ADMIN-004` customer-safe share/Discord identity/timestamp/audit implementation audit and current executable-CI gate.
+- `audits/2026-08-18-cm-admin-sharing-discord-audit.md` — `TASK-CM-ADMIN-004` customer-safe share/Discord identity/timestamp/audit implementation audit.
+- `audits/2026-08-18-cm-share-email.md` — `TASK-CM-ADMIN-005` customer-email disclosure follow-up and verification audit.
 
 ## Durable decisions
 
@@ -32,7 +33,8 @@ This documentation system is the durable memory and governance layer for the Che
 - `decisions/ADR-0005-customer-message-admin-slash-command-policy.md` — current customer/admin command-surface split
 - `decisions/ADR-0006-admin-console-guild-wide-channel-policy.md` — current `/cm` exact-guild/explicit-user authorization policy
 - `decisions/ADR-0007-admin-balance-adjustment-confirmation-model.md` — current Aura/wallet confirmation, fresh-state binding, idempotency and audit model
-- `decisions/ADR-0008-admin-panel-customer-safe-sharing.md` — customer-safe public-copy field/control boundary, Discord lookup/time/audit presentation policy
+- `decisions/ADR-0008-admin-panel-customer-safe-sharing.md` — base customer-safe public-copy/control boundary and Discord lookup/time/audit presentation policy
+- `decisions/ADR-0009-customer-email-in-shared-panels.md` — supersedes ADR-0008 only for the previous full-email prohibition; shared customer identity now includes the canonical account email
 
 ## Specialist references
 

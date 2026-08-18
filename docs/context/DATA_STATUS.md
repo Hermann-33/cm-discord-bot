@@ -45,7 +45,7 @@ users.aura.adjust
 users.wallet.adjust
 ```
 
-TASK-CM-ADMIN-004 adds **no** operation, endpoint, website config or database dependency.
+TASK-CM-ADMIN-005 adds **no** operation, endpoint, website config or database dependency.
 
 ## HTTP/HMAC contract
 
@@ -64,6 +64,8 @@ external_identity
 `external_identity` carries provider + external user ID. `users.overview.read` accepts that selector and its response already returns:
 
 ```text
+identity.userId
+identity.email
 identity.externalIdentities[]
   provider
   externalUserId
@@ -72,9 +74,23 @@ identity.externalIdentities[]
   linkedAt
 ```
 
-TASK-CM-ADMIN-004 uses this existing contract for `/cm user discord_user:<selected Discord user>`. Runtime maps the selection to `external_identity/provider=discord`; email lookup continues to use `email`. Both/neither input fails locally before backend access.
+`/cm user discord_user:<selected Discord user>` uses the existing `external_identity/provider=discord` selector. Email lookup continues to use `email`. Both/neither input fails locally before backend access.
 
 Aura/wallet execution continues against the canonical `user_id` already resolved into the private session.
+
+## Share to Chat data source
+
+Share to Chat performs no extra backend query and no mutation. It renders from the already-authorized `CmAdminSession`.
+
+ADR-0009 explicitly permits and requires the canonical customer account email in shared customer identity sections. The value comes from:
+
+```text
+session.overview.identity.email
+```
+
+and is escaped for Discord presentation before display.
+
+This email disclosure does not authorize exposing other internal session/API data. Internal CM UUIDs, option IDs, provider/failure codes, admin reasons, audit/transaction/idempotency identifiers and credentials remain excluded from the public renderer.
 
 ## Order selectors/history
 
@@ -137,11 +153,7 @@ fresh users.overview.read
 
 Refund keeps its backend preview/re-preview model.
 
-TASK-CM-ADMIN-004 changes only Discord presentation/audit output and safe-share state; it does not alter business mutation authority.
-
-## Customer-safe share data rule
-
-ADR-0008 public summaries are built from already-authorized session/API DTOs. Sharing does not perform a new backend query or mutation. Public output intentionally filters private/internal fields and contains no interactive control.
+TASK-CM-ADMIN-005 changes only Discord share presentation and does not alter business mutation authority.
 
 ## Database/migration ownership
 
