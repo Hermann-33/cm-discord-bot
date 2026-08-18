@@ -4,6 +4,8 @@
 
 Historical standalone bot and channel/presentation evolution. See `../legacy-parity.md`.
 
+Verdict: `COMPLETE` historical record.
+
 ---
 
 ## 2026-08-11 — Internal API rebuild
@@ -58,8 +60,6 @@ Verdict: `COMPLETE` for repository implementation/merge.
 
 ADR-0006 removed shared `/cm` command-channel restriction while retaining exact guild + mandatory explicit `BOT_ADMIN_USER_IDS` + per-interaction authorization. `BOT_ADMIN_COMMAND_CHANNEL_ID` removed; audit channel remains separate.
 
-Current mainline incorporates this policy.
-
 Verdict: `COMPLETE` on mainline.
 
 ---
@@ -93,44 +93,11 @@ Verdict: `COMPLETE`.
 
 ## 2026-08-18 — TASK-CM-ADMIN-004 — Customer-safe sharing / Discord UX
 
-### Scope
+Implemented Share to Chat, Discord-user lookup/link presentation, Discord absolute+relative timestamps and concise Components V2 mutation audits under ADR-0008.
 
-- Share to Chat from meaningful `/cm` operational panels;
-- customer copy is display-only/no admin powers;
-- concise Components V2 Discord mutation audit;
-- linked Discord identity in User Operations;
-- `/cm user` lookup by email or selected Discord user;
-- Discord absolute + relative timestamps throughout `/cm` management/share/audit views.
-
-### External verification
-
-Current website source was inspected read-only. Existing `users.overview.read` already accepts `external_identity` and returns linked external identity records. No website/API permission/DB change is required.
-
-### Security design
-
-ADR-0008 requires public copies to use a separate customer-safe renderer and the normal `/cm` authorization + operator-owned session gate. At the time of TASK-CM-ADMIN-004, ADR-0008 excluded full email as well as internal CM user UUID, internal option IDs, admin reasons, provider/failure details, backend audit/transaction/idempotency identifiers and credentials. `safeAllowedMentions` is retained. ADR-0009 later supersedes only the email exclusion.
-
-Mutation flows and API surface remain unchanged; manual fulfillment remains blocked.
-
-### Implementation/test state
-
-Feature branch/PR:
+Final CI run `32142352087` passed on Node `22.23.2`:
 
 ```text
-task/cm-share-discord-audit-time
-PR #2
-```
-
-Focused tests cover email/Discord selector validation, customer-safe disclosure/control boundary, channel publishing, linked Discord UI, absolute+relative timestamps, concise audit presentation and share/session state.
-
-### Executable verification
-
-After repository visibility was changed to public, the standard GitHub-hosted Actions runner could execute. The first real run passed all tests but exposed a TypeScript narrowing error in the new adjustment-success share renderer. The implementation was corrected narrowly.
-
-Final CI run `32142352087` passed:
-
-```text
-Node 22.23.2
 npm ci: PASS, 0 vulnerabilities
 npm test: PASS — 127/127
 npm run typecheck: PASS
@@ -142,40 +109,68 @@ Focused static/security review remained clean for direct DB/Supabase access, new
 
 No live share/refund/Aura/wallet mutation, deployment, command registration, website write or database mutation occurred during repository verification.
 
-Verdict: `COMPLETE` for implementation/verification and merged into `master` at `7a41dbeefae167044091b0aaed8372c3b58acdd0`.
+Merged into `master` at:
+
+```text
+7a41dbeefae167044091b0aaed8372c3b58acdd0
+```
+
+Verdict: `COMPLETE`.
 
 ---
 
 ## 2026-08-18 — TASK-CM-ADMIN-005 — Shared customer email
 
+The product owner explicitly requested that Share to Chat include the canonical customer account email. ADR-0009 superseded ADR-0008 only for the previous full-email prohibition.
+
+`src/commands/cmShare.ts` renders the escaped `session.overview.identity.email` across the customer identity block while preserving no-control/internal-field exclusions.
+
+Implementation-head CI run `32145501289` passed 128/128 tests, typecheck, build and diff check. Final documentation-head run `32146028530` also passed every workflow step.
+
+No API, website, database, mutation, authorization, environment, manual-fulfillment or slash-command registration change was part of the task.
+
+PR #3 was squash-merged into `master` at:
+
+```text
+9466d6f23a6c2027b0e88c32eb4e78ddeeeb61fd
+```
+
+Verdict: `COMPLETE`.
+
+---
+
+## 2026-08-18 — TASK-CM-ADMIN-006 — Admin UI declutter
+
 ### Scope
 
-The product owner explicitly requested that the customer account email visible in the private `/cm` panel also be visible when Share to Chat publishes the customer-facing summary.
+Reduce menu/order/statistical bloat across private `/cm` panels and Share to Chat without changing operational capability, API contracts, authorization or mutation safety.
 
-### Policy
+### Presentation changes
 
-ADR-0009 supersedes ADR-0008 only for the previous full-email prohibition. The canonical customer account email is now an intentionally approved shared field. Public admin controls and other internal/operator-only fields remain prohibited.
+- User Operations reduced to account status, compact Discord identity, current wallet/Aura, order count, latest order and core controls.
+- Recent Orders removed technical API-limit prose and suppresses quantity when it is one.
+- Order Operations removed internal user/option IDs, provider and redundant fulfillment counts; duplicate Order History navigation removed.
+- `Fulfillment Diagnostics` renamed `Delivery Details`; provider/record timestamps/linked-license top stats removed and exception fields render only when meaningful.
+- visible nonfunctional Manual Fulfillment button removed; capability remains unsupported.
+- refund/Aura/wallet previews and success panels remove routine backend transaction/audit/idempotency bookkeeping while keeping decision/result information and exceptional warnings.
+- Share to Chat summaries were independently compacted while retaining ADR-0009 customer email and ADR-0008 no-control/internal-field boundaries.
 
-### Implementation
+### Verification
 
-`src/commands/cmShare.ts` uses the canonical `session.overview.identity.email`, Discord-escapes it, and includes it in the shared customer identity block across User, Orders, Order, Fulfillment, Refund and Aura/Wallet share views.
+Initial CI run `32155910678` passed existing product/security tests but failed two newly added presentation assertions due to incorrect JSON-string escaping expectations. No production behavior defect was found. The tests were corrected to inspect rendered component content directly.
 
-Tests require the escaped email while continuing to prove internal user UUID/provider/option identifiers/admin reasons and public custom IDs remain absent.
+Implementation-head GitHub Actions run `32156144669` passed 131/131 tests, typecheck, build and diff check.
 
-### Executable verification
-
-GitHub Actions run `32145501289` passed on Node `22.23.2`:
+After README/context/audit updates, documentation-head run `32156801285` also passed on Node `22.23.2`:
 
 ```text
 npm ci: PASS, 0 vulnerabilities
-npm test: PASS — 128/128
+npm test: PASS — 131/131
 npm run typecheck: PASS
 npm run build: PASS
 git diff --check: PASS
 ```
 
-Existing architecture/API/auth/mutation/registration/legacy-isolation tests remained green. Final static diff review found no API client/signing, authorization, mutation, configuration, registration or `legacy/` source changes.
+No API/signing, authorization, mutation, environment, slash-command, website/Supabase, leaderboard or `legacy/` change is in scope.
 
-No API, website, database, mutation, authorization, environment, manual-fulfillment or slash-command registration change is part of this task.
-
-Verdict: `COMPLETE` for implementation/verification; final documentation head must revalidate successfully before PR #3 merge.
+Verdict: `COMPLETE` for implementation/documentation verification; merge requires the current PR #4 head GitHub Actions status to remain green.

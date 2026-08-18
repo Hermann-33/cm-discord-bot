@@ -23,6 +23,7 @@ This documentation system is the durable memory and governance layer for the Che
 - `audits/2026-08-18-cm-admin-controls-order.md` — `TASK-CM-ADMIN-003` direct order/Aura/wallet implementation and verification audit.
 - `audits/2026-08-18-cm-admin-sharing-discord-audit.md` — `TASK-CM-ADMIN-004` customer-safe share/Discord identity/timestamp/audit implementation audit.
 - `audits/2026-08-18-cm-share-email.md` — `TASK-CM-ADMIN-005` customer-email disclosure follow-up and verification audit.
+- `audits/2026-08-18-cm-admin-ui-declutter.md` — `TASK-CM-ADMIN-006` compact User/Order/Delivery/refund/adjustment/share presentation audit.
 
 ## Durable decisions
 

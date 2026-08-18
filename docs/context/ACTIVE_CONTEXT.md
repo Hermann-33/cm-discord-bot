@@ -2,62 +2,87 @@
 
 Updated: 2026-08-18
 
-## Mainline lineage
+## Mainline baseline
 
-TASK-CM-ADMIN-004 was verified and merged into `master` at:
+TASK-CM-ADMIN-005 was verified and merged into `master`; the task-start baseline for the current work is:
 
 ```text
-7a41dbeefae167044091b0aaed8372c3b58acdd0
+c5a38d80e89934431b74a4a078577cd9ef19694f
 ```
 
-That release contains customer `cm aura`, `/refresh-leaderboard`, private `/cm user` by email/Discord user, direct `/cm order`, order/fulfillment navigation, canonical refund, confirmed Aura/wallet adjustment, Share to Chat, Discord timestamps and concise Components V2 mutation audit.
+Current mainline behavior includes customer `cm aura`, `/refresh-leaderboard`, private `/cm user` by email/Discord user, direct `/cm order`, order/delivery navigation, canonical refund, confirmed Aura/wallet adjustment, Share to Chat, Discord timestamps and concise Components V2 mutation audit.
 
 The bot remains a standalone Node.js/TypeScript process with no direct Supabase/Postgres client, credential, RPC fallback or database mutation path.
 
-## Current disclosure policy — ADR-0009
+## Current task — TASK-CM-ADMIN-006
 
-TASK-CM-ADMIN-005 changes one field in the Share to Chat disclosure policy: the canonical customer account email is now intentionally included in customer-visible shared panels.
-
-ADR-0009 supersedes ADR-0008 **only** where ADR-0008 prohibited the full account email. The rest of ADR-0008 remains authoritative.
-
-Shareable User/Orders/Order/Fulfillment/Refund/Aura/Wallet views use the same customer identity block:
+Feature branch / PR:
 
 ```text
-Email: <canonical CM account email>
-Discord: <linked Discord user or Not linked>
+task/cm-admin-ui-declutter
+PR #4 — TASK-CM-ADMIN-006: declutter admin and order panels
 ```
 
-The email comes from `session.overview.identity.email` and is rendered through Discord-safe text escaping.
+Objective: remove routine UI/statistical noise while preserving all operational controls and security/business behavior.
 
-## Shared `/cm` authorization
+### User Operations
 
-ADR-0006 remains authoritative:
+The private user home now prioritizes:
 
-1. guild interaction;
-2. exact `DISCORD_GUILD_ID`;
-3. non-empty `BOT_ADMIN_USER_IDS`;
-4. invoking Discord user explicitly allowlisted;
-5. every slash/button/modal reauthorizes;
-6. operator-bound session required for components/modals;
-7. no `/cm` command-channel restriction.
+- canonical email;
+- Active/BANNED state;
+- compact linked Discord identity;
+- current wallet;
+- available Aura plus pending Aura only when non-zero;
+- order count;
+- latest order;
+- Adjust Aura / Adjust Wallet / Open Recent Order / Order History / Share to Chat.
 
-The Share to Chat button passes through this same authorization/session gate. `/refresh-leaderboard` remains separate and retains its configured command-channel + Discord permission checks.
+Routine account/login timestamps, verbose Discord profile metadata, wallet/Aura update timestamps, lifetime Aura totals and license/account-delivery counters are no longer displayed there.
 
-## Customer-share boundary
+### Orders and delivery
 
-The public message is rendered by `src/commands/cmShare.ts`; it is never a clone of the private admin component tree.
+Recent Orders keeps reference, item, status, amount, meaningful quantity and date. If the overview is truncated, the UI uses a compact `Latest N of total` indicator instead of API-implementation prose.
 
-The shared message may show canonical customer account email, linked Discord identity, customer-relevant account/wallet/Aura state, public order/refund/fulfillment information and Discord-formatted timestamps.
+Order Operations keeps customer email, order status, customer-facing item information, amount, payment method, placed time, delivered/required quantity, exceptional manual-review state, Refund, Delivery Details, Refresh Order, User Operations and Share to Chat.
 
-It must continue to omit internal CM user UUID, internal purchase option IDs, backend audit/transaction/idempotency identifiers, internal provider/failure codes, admin refund/adjustment reasons, session/custom IDs, interactive controls and HMAC/API/credential material.
+It no longer routinely displays internal user UUID, option IDs, payment provider, redundant delivery sub-counts, purchase-type labels or a duplicate Order History button.
 
-It contains display components only and `safeAllowedMentions`. Sharing performs no API mutation or database operation.
+The previous `Fulfillment Diagnostics` panel is now `Delivery Details`. Provider codes, created/updated timestamps, linked-license top count and empty diagnostic fields are removed. Failure/manual-review/message lines appear only when meaningful. The visible nonfunctional Manual Fulfillment button is removed; no manual-fulfillment mutation exists.
 
-## Mutation/API invariants
+### Refund / adjustments
 
-Aura/wallet retain ADR-0007 fresh-overview -> private confirmation -> fresh balance equality -> website execute -> audit. Refund retains canonical preview -> confirmation -> fresh exact re-preview -> execute. Manual fulfillment remains blocked.
+Preview panels retain decision-relevant values and reason. Success panels retain result and completion time while hiding routine transaction/audit/idempotency bookkeeping. Exceptional idempotent-replay or Discord-audit-post-failure warnings remain visible when they actually occur.
 
-TASK-CM-ADMIN-005 adds no API operation. Current bot API surface remains:
+The underlying refund/Aura/wallet mutation flows are unchanged.
+
+## Share to Chat disclosure policy
+
+ADR-0008 + ADR-0009 remain authoritative. The shared message is still a separately rendered, buttonless Components V2 message.
+
+Customer email remains intentionally included. Shared views are also decluttered to customer-relevant current state and outcomes; routine login/update/lifetime/activity statistics are removed.
+
+Still prohibited from public share:
+
+- internal CM user UUID;
+- internal purchase option IDs;
+- backend audit/transaction/idempotency identifiers;
+- internal provider/failure codes;
+- admin refund/adjustment reasons;
+- session/custom IDs or interactive controls;
+- HMAC/API/credential material.
+
+`safeAllowedMentions` remains applied.
+
+## Authorization / mutation invariants
+
+ADR-0006 remains authoritative for `/cm`: exact configured guild, non-empty explicit `BOT_ADMIN_USER_IDS`, invoking user allowlisted, per-interaction reauthorization and operator-owned sessions. `/refresh-leaderboard` retains its separate channel/permission policy.
+
+Aura/wallet retain ADR-0007 fresh-overview -> private confirmation -> fresh relevant-balance equality -> website execute -> audit. Refund retains canonical preview -> confirmation -> fresh exact re-preview -> execute.
+
+Manual fulfillment remains unsupported. No API, website, Supabase, environment, command-registration or legacy boundary changed.
+
+## Bot API surface
 
 ```text
 aura.leaderboards.read
@@ -71,20 +96,20 @@ users.aura.adjust
 users.wallet.adjust
 ```
 
-## TASK-CM-ADMIN-005 verification
+## Verification
 
-GitHub Actions run `32145501289` passed on Node `22.23.2`:
+Implementation-head GitHub Actions run `32156144669` passed on Node `22.23.2` with 131/131 tests, typecheck, build and diff check. The first CI attempt had caught two faulty new test assertions only; those assertions were corrected.
+
+After README/context/audit updates, documentation-head run `32156801285` also passed the full Node 22 gate:
 
 ```text
 npm ci: PASS, 0 vulnerabilities
-npm test: PASS — 128/128
+npm test: PASS — 131/131
 npm run typecheck: PASS
 npm run build: PASS
 git diff --check: PASS
 ```
 
-Static review confirms the task changes only the customer-share renderer, focused tests, ADR-0009 and aligned documentation. No API/auth/mutation/config/registration/legacy source changes are present.
+TASK-CM-ADMIN-006 is `COMPLETE` for implementation/documentation verification. PR #4 may merge once the GitHub Actions check is green on its current head.
 
-PR #3 is authorized for direct merge after the final documentation head revalidates successfully in GitHub Actions.
-
-This change does **not** alter the slash-command definition, so once merged/deployed it does not require `npm run register:commands` solely for the email-sharing change.
+No slash-command definition changed, so TASK-CM-ADMIN-006 does not require `npm run register:commands` solely for this change.
