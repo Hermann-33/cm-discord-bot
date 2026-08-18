@@ -9,28 +9,49 @@ import {
 } from "discord.js";
 import { InternalApiClient } from "../api/client";
 import { isInternalApiError } from "../api/errors";
+import type { OrderLookupSelector } from "../api/schemas";
 import type { AppConfig } from "../config/env";
-import { postRefundAudit } from "../discord/adminAudit";
+import { postAdjustmentAudit, postRefundAudit } from "../discord/adminAudit";
 import { logger } from "../logger";
+import {
+  confirmAdjustment,
+  handleAdjustmentModal,
+  showAdjustmentModal,
+  type AdjustmentDependencies
+} from "./cmAdjustments";
 import { confirmRefund, handleRefundModal, showRefundModal, type RefundDependencies } from "./cmRefund";
 import { CmSessionStore } from "./cmSessions";
 import { authorize, parseNonNegativeInteger, rejectUnauthorized, requireSession, safeApiMessage } from "./cmSupport";
 import {
   buildBlockedPanel,
   buildNoticePanel,
+  buildOrderPanel,
   buildOrdersPanel,
   buildUserPanel,
   panelPayload
 } from "./cmUi";
 import { openFulfillment, openOrder, refreshSelectedOrder, refreshUserPanel } from "./cmUserActions";
 
-export type CmAdminControllerDependencies = RefundDependencies;
+export type CmAdminControllerDependencies = RefundDependencies & AdjustmentDependencies;
 
 const productionDependencies: CmAdminControllerDependencies = {
   nowMs: Date.now,
   idempotencyKey: randomUUID,
-  postRefundAudit
+  postRefundAudit,
+  postAdjustmentAudit
 };
+
+function parseOrderSelector(value: string): OrderLookupSelector | null {
+  const trimmed = value.trim();
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(trimmed)) {
+    return { kind: "order_id", value: trimmed.toLowerCase() };
+  }
+  const publicRef = trimmed.toUpperCase();
+  if (/^[A-Z0-9-]{1,64}$/.test(publicRef)) {
+    return { kind: "public_ref", value: publicRef };
+  }
+  return null;
+}
 
 export function buildCmCommand() {
   return new SlashCommandBuilder()
@@ -43,7 +64,15 @@ export function buildCmCommand() {
         .setName("email")
         .setDescription("Exact CM account email")
         .setRequired(true)
-        .setMaxLength(320)));
+        .setMaxLength(320)))
+    .addSubcommand((subcommand) => subcommand
+      .setName("order")
+      .setDescription("Open private controls for a CM order")
+      .addStringOption((option) => option
+        .setName("reference")
+        .setDescription("CM public reference or order UUID")
+        .setRequired(true)
+        .setMaxLength(128)));
 }
 
 export class CmAdminController {
@@ -77,16 +106,40 @@ export class CmAdminController {
       return;
     }
 
-    if (interaction.options.getSubcommand() !== "user") return;
-    const email = interaction.options.getString("email", true).trim();
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    try {
-      const overview = await this.api.fetchUserOverview({ kind: "email", value: email }, 10);
-      const session = this.sessions.create(interaction.user.id, overview);
-      await interaction.editReply(panelPayload(buildUserPanel(session.id, overview)));
-    } catch (error) {
-      logger.warn("CM admin user lookup failed", { code: isInternalApiError(error) ? error.code : "UNKNOWN" });
-      await interaction.editReply(panelPayload(buildNoticePanel(null, "User Lookup Failed", safeApiMessage(error))));
+    const subcommand = interaction.options.getSubcommand();
+    if (subcommand === "user") {
+      const email = interaction.options.getString("email", true).trim();
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      try {
+        const overview = await this.api.fetchUserOverview({ kind: "email", value: email }, 10);
+        const session = this.sessions.create(interaction.user.id, overview);
+        await interaction.editReply(panelPayload(buildUserPanel(session.id, overview)));
+      } catch (error) {
+        logger.warn("CM admin user lookup failed", { code: isInternalApiError(error) ? error.code : "UNKNOWN" });
+        await interaction.editReply(panelPayload(buildNoticePanel(null, "User Lookup Failed", safeApiMessage(error))));
+      }
+      return;
+    }
+
+    if (subcommand === "order") {
+      const selector = parseOrderSelector(interaction.options.getString("reference", true));
+      if (!selector) {
+        await rejectUnauthorized(interaction, "Order reference must be a CM public reference or a valid order UUID.");
+        return;
+      }
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      try {
+        const order = await this.api.fetchOrderDetails(selector);
+        const overview = await this.api.fetchUserOverview({ kind: "user_id", value: order.userId }, 10);
+        if (overview.identity.userId !== order.userId) throw new Error("Order target mismatch");
+        const session = this.sessions.create(interaction.user.id, overview);
+        session.selectedOrder = order;
+        await interaction.editReply(panelPayload(buildOrderPanel(session.id, order)));
+      } catch (error) {
+        logger.warn("CM admin order lookup failed", { code: isInternalApiError(error) ? error.code : "UNKNOWN" });
+        await interaction.editReply(panelPayload(buildNoticePanel(null, "Order Lookup Failed", safeApiMessage(error))));
+      }
     }
   }
 
@@ -104,6 +157,7 @@ export class CmAdminController {
     if (!session) return;
 
     if (domain === "user" && action === "home") {
+      session.adjustmentProposal = undefined;
       await refreshUserPanel(interaction, session, this.api);
       return;
     }
@@ -129,6 +183,19 @@ export class CmAdminController {
       await openFulfillment(interaction, session, this.api);
       return;
     }
+    if (domain === "adjust" && (action === "aura" || action === "wallet")) {
+      await showAdjustmentModal(interaction, session, action);
+      return;
+    }
+    if (domain === "adjust" && action === "cancel") {
+      session.adjustmentProposal = undefined;
+      await refreshUserPanel(interaction, session, this.api);
+      return;
+    }
+    if (domain === "adjust" && action === "confirm") {
+      await confirmAdjustment(interaction, session, this.api, this.config, this.dependencies);
+      return;
+    }
     if (domain === "refund" && action === "start") {
       await showRefundModal(interaction, session);
       return;
@@ -142,19 +209,12 @@ export class CmAdminController {
       await confirmRefund(interaction, session, this.api, this.config, this.dependencies);
       return;
     }
-    if (domain === "block") {
-      const blockedAction = action ?? "operation";
-      const returnTo = blockedAction === "manual" ? "order" : "user";
-      const message = blockedAction === "manual"
-        ? "The current CM Internal Integrations API exposes fulfillment diagnostics but no manual-fulfillment mutation. No order change was made."
-        : blockedAction === "aura"
-          ? "Aura adjustment execution is intentionally blocked until the ADR-0004 backend confirmation contract is resolved. No Aura change was made."
-          : "Wallet adjustment is intentionally blocked until the Aura mutation path and stricter wallet controls are proven. No wallet change was made.";
+    if (domain === "block" && action === "manual") {
       await interaction.update(panelPayload(buildBlockedPanel(
         session.id,
-        `${blockedAction === "manual" ? "Manual Fulfillment" : blockedAction === "aura" ? "Aura Adjustment" : "Wallet Adjustment"} Unavailable`,
-        message,
-        returnTo
+        "Manual Fulfillment Unavailable",
+        "The current CM Internal Integrations API exposes fulfillment diagnostics but no manual-fulfillment mutation. No order change was made.",
+        "order"
       )));
     }
   }
@@ -166,9 +226,23 @@ export class CmAdminController {
       return;
     }
     const parts = interaction.customId.split(":");
-    if (parts[1] !== "refund" || parts[2] !== "modal") return;
+    const domain = parts[1];
+    const action = parts[2];
     const session = await requireSession(interaction, this.sessions, parts[3] ?? "");
     if (!session) return;
-    await handleRefundModal(interaction, session, this.api, this.dependencies);
+
+    if (domain === "refund" && action === "modal") {
+      await handleRefundModal(interaction, session, this.api, this.dependencies);
+      return;
+    }
+    if (domain === "adjust" && (action === "aura-modal" || action === "wallet-modal")) {
+      await handleAdjustmentModal(
+        interaction,
+        session,
+        this.api,
+        action === "aura-modal" ? "aura" : "wallet",
+        this.dependencies
+      );
+    }
   }
 }

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { MessageFlags, type Interaction } from "discord.js";
 import type { InternalApiClient } from "../../src/api/client";
-import type { UserOverviewData } from "../../src/api/schemas";
+import type { OrderDetailsData, UserOverviewData } from "../../src/api/schemas";
 import { buildCmCommand, CmAdminController } from "../../src/commands/cm";
 import type { AppConfig } from "../../src/config/env";
 
@@ -10,6 +10,8 @@ const GUILD_ID = "123456789012345672";
 const ADMIN_CHANNEL_ID = "123456789012345680";
 const OTHER_CHANNEL_ID = "999999999999999999";
 const ADMIN_ID = "123456789012345681";
+const USER_ID = "550e8400-e29b-41d4-a716-446655440000";
+const ORDER_ID = "550e8400-e29b-41d4-a716-446655440001";
 
 const config = {
   discordGuildId: GUILD_ID,
@@ -18,7 +20,7 @@ const config = {
 
 const overview = {
   identity: {
-    userId: "550e8400-e29b-41d4-a716-446655440000",
+    userId: USER_ID,
     email: "user@example.com",
     createdAt: "2026-08-10T00:00:00.000Z",
     lastSignInAt: null,
@@ -47,7 +49,41 @@ const overview = {
   recentOrders: []
 } satisfies UserOverviewData;
 
-function fakeCommand(userId = ADMIN_ID, channelId = ADMIN_CHANNEL_ID) {
+const order = {
+  orderId: ORDER_ID,
+  publicRef: "CM-TEST",
+  purchaseKind: "product",
+  productSlug: "product",
+  licenseOptionId: null,
+  accountSlug: null,
+  accountVariantId: null,
+  accountName: null,
+  accountVariantLabel: null,
+  accountGameName: null,
+  quantity: 1,
+  amountCents: 1000,
+  currency: "USD",
+  status: "paid",
+  createdAt: "2026-08-10T00:00:00.000Z",
+  userId: USER_ID,
+  customerEmail: "user@example.com",
+  payment: { method: "wallet", provider: null },
+  fulfillmentSummary: {
+    linkedLicenseCount: 1,
+    accountDeliveryCount: 0,
+    productDeliveryCount: 0,
+    quantityRequested: 1,
+    quantityDelivered: 1,
+    manualRequired: false
+  }
+} satisfies OrderDetailsData;
+
+function fakeCommand(
+  userId = ADMIN_ID,
+  channelId = ADMIN_CHANNEL_ID,
+  subcommand: "user" | "order" = "user",
+  value = subcommand === "user" ? "user@example.com" : "CM-TEST"
+) {
   const replies: unknown[] = [];
   const defers: unknown[] = [];
   const edits: unknown[] = [];
@@ -60,8 +96,8 @@ function fakeCommand(userId = ADMIN_ID, channelId = ADMIN_CHANNEL_ID) {
     channelId,
     user: { id: userId, username: "admin", globalName: "Admin" },
     options: {
-      getSubcommand: () => "user",
-      getString: () => "user@example.com"
+      getSubcommand: () => subcommand,
+      getString: () => value
     },
     replied: false,
     deferred: false,
@@ -73,12 +109,14 @@ function fakeCommand(userId = ADMIN_ID, channelId = ADMIN_CHANNEL_ID) {
   return { interaction: fake as unknown as Interaction, replies, defers, edits };
 }
 
-test("/cm registers a user subcommand with required email option", () => {
+test("/cm registers user and order subcommands with required lookup options", () => {
   const json = buildCmCommand().toJSON();
   assert.equal(json.name, "cm");
-  assert.equal(json.options?.[0]?.name, "user");
-  const subcommand = json.options?.[0] as { options?: { name: string; required?: boolean }[] };
-  assert.deepEqual(subcommand.options?.map((option) => [option.name, option.required]), [["email", true]]);
+  assert.deepEqual(json.options?.map((option) => option.name), ["user", "order"]);
+  const user = json.options?.[0] as { options?: { name: string; required?: boolean }[] };
+  const orderCommand = json.options?.[1] as { options?: { name: string; required?: boolean }[] };
+  assert.deepEqual(user.options?.map((option) => [option.name, option.required]), [["email", true]]);
+  assert.deepEqual(orderCommand.options?.map((option) => [option.name, option.required]), [["reference", true]]);
 });
 
 test("unauthorized /cm user is rejected before backend lookup", async () => {
@@ -116,4 +154,21 @@ test("authorized /cm user works from another channel in the configured guild", a
   assert.equal(await controller.handle(context.interaction), true);
   assert.equal(calls, 1);
   assert.deepEqual(context.defers, [{ flags: MessageFlags.Ephemeral }]);
+});
+
+test("authorized /cm order resolves public ref, loads owner, and opens private order panel", async () => {
+  const calls: unknown[] = [];
+  const api = {
+    fetchOrderDetails: async (selector: unknown) => { calls.push(["order", selector]); return order; },
+    fetchUserOverview: async (selector: unknown) => { calls.push(["user", selector]); return overview; }
+  } as unknown as InternalApiClient;
+  const controller = new CmAdminController(config, api);
+  const context = fakeCommand(ADMIN_ID, OTHER_CHANNEL_ID, "order", "cm-test");
+  assert.equal(await controller.handle(context.interaction), true);
+  assert.deepEqual(calls, [
+    ["order", { kind: "public_ref", value: "CM-TEST" }],
+    ["user", { kind: "user_id", value: USER_ID }]
+  ]);
+  assert.deepEqual(context.defers, [{ flags: MessageFlags.Ephemeral }]);
+  assert.equal((context.edits[0] as { flags: number }).flags, MessageFlags.IsComponentsV2);
 });

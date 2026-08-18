@@ -6,6 +6,10 @@ const timestampSchema = z.string().datetime({ offset: true });
 const nullableTimestampSchema = timestampSchema.nullable();
 const discordSnowflakeSchema = z.string().regex(/^\d{5,32}$/);
 
+export const CM_ADJUSTMENT_REASON_MAX_LENGTH = 500;
+export const CM_WALLET_DELTA_MAX_CENTS = 100_000_000;
+export const CM_AURA_DELTA_MAX = 1_000_000_000;
+
 export const leaderboardRequestSchema = z.object({
   limit: z.number().int().min(1).max(10)
 }).strict();
@@ -68,6 +72,29 @@ const internalIntegrationOperatorSchema = z.object({
   externalUserId: discordSnowflakeSchema,
   username: z.string().trim().min(1).max(100).nullable().optional(),
   displayName: z.string().trim().min(1).max(100).nullable().optional()
+}).strict();
+
+const mutationReasonSchema = z.string().trim().min(1).max(CM_ADJUSTMENT_REASON_MAX_LENGTH);
+const nonZeroBoundedInteger = (maximum: number) => z.number()
+  .int()
+  .min(-maximum)
+  .max(maximum)
+  .refine((value) => value !== 0);
+
+export const auraAdjustmentRequestSchema = z.object({
+  selector: userLookupSelectorSchema,
+  deltaAura: nonZeroBoundedInteger(CM_AURA_DELTA_MAX),
+  reason: mutationReasonSchema,
+  idempotencyKey: uuidSchema,
+  operator: internalIntegrationOperatorSchema.optional()
+}).strict();
+
+export const walletAdjustmentRequestSchema = z.object({
+  selector: userLookupSelectorSchema,
+  deltaCents: nonZeroBoundedInteger(CM_WALLET_DELTA_MAX_CENTS),
+  reason: mutationReasonSchema,
+  idempotencyKey: uuidSchema,
+  operator: internalIntegrationOperatorSchema.optional()
 }).strict();
 
 export const orderRefundExecuteRequestSchema = z.object({
@@ -276,6 +303,34 @@ export const orderRefundExecuteResponseSchema = z.object({
   }).strict()
 }).strict();
 
+export const walletAdjustmentResponseSchema = z.object({
+  adjustment: z.object({
+    userId: uuidSchema,
+    deltaCents: z.number().int(),
+    balanceCents: z.number().int().nonnegative(),
+    currency: z.string().min(1).max(12),
+    transactionId: uuidSchema,
+    auditEventId: uuidSchema,
+    createdAt: timestampSchema,
+    idempotentReplay: z.boolean()
+  }).strict()
+}).strict();
+
+export const auraAdjustmentResponseSchema = z.object({
+  adjustment: z.object({
+    userId: uuidSchema,
+    deltaAura: z.number().int(),
+    availableAura: z.number().int().nonnegative(),
+    pendingAura: z.number().int().nonnegative(),
+    lifetimeEarnedAura: z.number().int().nonnegative(),
+    lifetimeRedeemedAura: z.number().int().nonnegative(),
+    transactionId: uuidSchema,
+    auditEventId: uuidSchema,
+    createdAt: timestampSchema,
+    idempotentReplay: z.boolean()
+  }).strict()
+}).strict();
+
 export const internalApiErrorCodeSchema = z.enum([
   "API_DISABLED",
   "AUTHENTICATION_FAILED",
@@ -290,6 +345,8 @@ export const internalApiErrorCodeSchema = z.enum([
   "ALREADY_REFUNDED",
   "REFUND_STATE_INVALID",
   "IDEMPOTENCY_CONFLICT",
+  "INVALID_ADJUSTMENT",
+  "INSUFFICIENT_BALANCE",
   "RATE_LIMITED",
   "DEPENDENCY_UNAVAILABLE",
   "INTERNAL_FAILURE"
@@ -315,11 +372,14 @@ export function successEnvelopeSchema<T extends z.ZodType>(dataSchema: T) {
 export type LeaderboardEntry = z.infer<typeof leaderboardResponseSchema>["leaderboards"][number];
 export type AuraLookupData = z.infer<typeof auraLookupResponseSchema>["aura"];
 export type UserLookupSelector = z.infer<typeof userLookupSelectorSchema>;
+export type OrderLookupSelector = z.infer<typeof orderLookupSelectorSchema>;
 export type UserOverviewData = z.infer<typeof userOverviewResponseSchema>["overview"];
 export type RecentOrderData = UserOverviewData["recentOrders"][number];
 export type OrderDetailsData = z.infer<typeof orderDetailsResponseSchema>["order"];
 export type OrderFulfillmentData = z.infer<typeof orderFulfillmentResponseSchema>;
 export type OrderRefundPreviewData = z.infer<typeof orderRefundPreviewResponseSchema>["refundPreview"];
 export type OrderRefundExecuteData = z.infer<typeof orderRefundExecuteResponseSchema>["refund"];
+export type WalletAdjustmentData = z.infer<typeof walletAdjustmentResponseSchema>["adjustment"];
+export type AuraAdjustmentData = z.infer<typeof auraAdjustmentResponseSchema>["adjustment"];
 export type InternalIntegrationOperator = z.infer<typeof internalIntegrationOperatorSchema>;
 export type InternalApiErrorCode = z.infer<typeof internalApiErrorCodeSchema>;

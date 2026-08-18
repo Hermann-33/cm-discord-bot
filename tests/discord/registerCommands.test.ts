@@ -12,9 +12,8 @@ test("refresh leaderboard registration JSON matches the frozen legacy command fi
   assert.deepEqual(JSON.parse(JSON.stringify(buildRefreshLeaderboardCommand())), expected);
 });
 
-test("CM admin command is a guild slash command with user/email surface", () => {
+test("CM admin command is a guild slash command with user and order surfaces", () => {
   const command = buildCmCommand().toJSON();
   assert.equal(command.name, "cm");
-  assert.equal(command.options?.length, 1);
-  assert.equal(command.options?.[0]?.name, "user");
+  assert.deepEqual(command.options?.map((option) => option.name), ["user", "order"]);
 });

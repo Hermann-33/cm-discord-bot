@@ -1,6 +1,14 @@
 # Cheater's Market Discord bot
 
-The production Cheater's Market Discord bot publishes the Aura leaderboard, answers the self-service `cm aura` message command, and provides the staff-only `/refresh-leaderboard` guild command.
+Standalone Node.js/TypeScript Discord bot for Cheater's Market.
+
+Current command surfaces include:
+
+- customer message command `cm aura`;
+- staff operational slash command `/refresh-leaderboard`;
+- private admin `/cm user email:<email>`;
+- private admin `/cm order reference:<CM-public-ref-or-order-UUID>` on `TASK-CM-ADMIN-003`;
+- private `/cm` Aura, wallet and refund controls.
 
 ## Architecture and data boundary
 
@@ -9,32 +17,44 @@ Discord
   -> CM Discord bot
   -> HMAC-authenticated HTTPS
   -> Cheater's Market Internal Integrations API
-  -> website-owned business and database layer
+  -> website-owned business/database layer
 ```
 
-The bot has no direct Supabase or Postgres access, no database credential, and no database fallback. It uses only:
+The bot has no direct Supabase/Postgres access, database credential, service-role credential or database fallback.
 
-- `aura.leaderboards.read`
-- `aura.lookup.read`
+`TASK-CM-ADMIN-003` source uses only these Internal Integrations API operations:
 
-The bot credential must be dedicated to this deployment and limited to those two operations. Never reuse an owner CLI, terminal-helper, website, or unrelated integration credential.
+```text
+aura.leaderboards.read
+aura.lookup.read
+users.overview.read
+orders.details.read
+orders.fulfillment.read
+orders.refund.preview
+orders.refund.execute
+users.aura.adjust
+users.wallet.adjust
+```
 
-## Local setup
+Backend per-client `allowedOperations` remains an independent deployment authorization boundary. Never reuse a database/service-role credential in the bot and never commit HMAC secrets.
 
-Requirements:
+Manual fulfillment is **not** implemented: the current API exposes fulfillment diagnostics only and no manual-fulfillment mutation operation.
 
-- Node.js 22 or newer
-- A Discord application with the privileged Message Content intent enabled
-- A bot-dedicated Internal Integrations API client/key
+## Requirements
 
-Install and configure:
+- Node.js 22+
+- Discord application/bot
+- privileged Message Content intent enabled while `cm aura` remains message-based
+- bot-dedicated Internal Integrations API client/key
+
+Install:
 
 ```powershell
 npm ci
 Copy-Item .env.example .env
 ```
 
-Set these environment variables without committing their values:
+## Environment variables
 
 ```text
 DISCORD_BOT_TOKEN
@@ -44,6 +64,10 @@ DISCORD_LEADERBOARD_CHANNEL_ID
 DISCORD_COMMAND_CHANNEL_ID
 DISCORD_AURA_COMMAND_BLOCKED_CHANNEL_ID
 DISCORD_LEADERBOARD_MESSAGE_ID
+
+BOT_ADMIN_USER_IDS
+BOT_AUDIT_LOG_CHANNEL_ID
+
 CM_INTERNAL_INTEGRATIONS_API_ORIGIN
 CM_INTERNAL_INTEGRATIONS_API_CLIENT_ID
 CM_INTERNAL_INTEGRATIONS_API_KEY_ID
@@ -51,55 +75,180 @@ CM_INTERNAL_INTEGRATIONS_API_HMAC_SECRET_BASE64
 CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS
 ```
 
-`DISCORD_LEADERBOARD_MESSAGE_ID` is intentionally optional for bootstrap. The API origin must be an origin-only HTTPS URL. Client/key IDs and the canonical standard-base64 secret are strictly validated; the decoded secret must contain at least 32 bytes.
+Notes:
+
+- `DISCORD_LEADERBOARD_MESSAGE_ID` is optional for initial bootstrap.
+- `BOT_ADMIN_USER_IDS` may be absent for non-admin startup, but `/cm` fails closed when the list is empty.
+- `BOT_AUDIT_LOG_CHANNEL_ID` is required before refund/Aura/wallet mutation execution.
+- `BOT_ADMIN_COMMAND_CHANNEL_ID` is not supported.
+- the API origin must be origin-only HTTPS.
+- HMAC secret must be canonical standard Base64 and decode to at least 32 bytes.
+
+## `/cm` authorization
+
+Shared `/cm` authorization is:
+
+1. guild interaction only;
+2. exact `DISCORD_GUILD_ID`;
+3. non-empty `BOT_ADMIN_USER_IDS`;
+4. invoking Discord user ID explicitly allowlisted;
+5. every button/modal reauthorizes.
+
+A whitelisted admin may use `/cm` from any channel in the configured guild. DMs and wrong guilds fail closed. Ephemeral output is privacy, not authorization.
+
+`/refresh-leaderboard` is separate and retains its configured command channel plus Discord permission checks.
+
+## `/cm user`
+
+```text
+/cm user email:user@example.com
+```
+
+Opens a private Components V2 user panel with:
+
+- account state;
+- wallet balance;
+- Aura summary;
+- counts;
+- latest-ten order navigation;
+- Adjust Aura;
+- Adjust Wallet;
+- recent order opening/history.
+
+Aura/wallet changes require amount + reason, explicit confirmation, a fresh current-state check immediately before execution, stable UUID idempotency and audit output.
+
+## `/cm order`
+
+```text
+/cm order reference:CM-...
+```
+
+or:
+
+```text
+/cm order reference:<order UUID>
+```
+
+The bot resolves the canonical order, resolves the canonical owner, verifies target consistency and opens the normal private order panel with:
+
+- Refund;
+- Fulfillment diagnostics;
+- Refresh Order;
+- User Operations;
+- owner recent Order History.
+
+Manual Fulfillment remains blocked/informational.
+
+## Aura adjustment
+
+Website operation:
+
+```text
+users.aura.adjust
+```
+
+Bot rules:
+
+- signed non-zero whole-number delta;
+- maximum magnitude ±1,000,000,000 Aura;
+- reason 1–500 characters;
+- fresh user overview before preview;
+- projected negative available Aura blocked;
+- explicit confirmation expires after five minutes;
+- fresh available-Aura equality check immediately before execute;
+- one stable logical idempotency key/body across retry;
+- backend transaction/audit IDs preserved;
+- sanitized Discord audit attempted.
+
+## Wallet adjustment
+
+Website operation:
+
+```text
+users.wallet.adjust
+```
+
+Bot rules:
+
+- signed decimal input, at most two decimal places;
+- exact conversion to integer cents;
+- maximum magnitude ±100,000,000 cents;
+- projected negative wallet balance blocked;
+- same fresh-state/confirmation/idempotency/audit controls as Aura;
+- website remains authoritative for wallet ledger/funding-state accounting.
+
+## Refund
+
+Refund keeps the canonical website preview/re-preview flow:
+
+```text
+orders.refund.preview
+  -> explicit confirmation
+  -> fresh exact re-preview
+  -> orders.refund.execute
+```
+
+The bot never supplies refund economics independently of the canonical order.
 
 ## Develop and validate
 
 ```powershell
-npm run dev
 npm test
 npm run typecheck
 npm run build
-npm start
+git diff --check
 ```
 
-`npm start` runs `dist/index.js`. The root `index.js` shim is retained for hosts that execute the package entry directly.
+For a clean dependency install first:
+
+```powershell
+npm ci
+```
+
+`npm start` runs compiled `dist/index.js`. The root `index.js` hosting shim remains for hosts that execute the package entry directly.
 
 ## Guild slash-command registration
 
-Register the single guild command explicitly:
+Command registration is explicit and is **not** performed on bot startup:
 
 ```powershell
 npm run register:commands
 ```
 
-Registration uses Discord's guild bulk-overwrite endpoint and intentionally publishes only `/refresh-leaderboard`. Do not run it until the target application and guild configuration have been reviewed. Bot startup never registers commands automatically.
+The guild bulk overwrite contains two top-level commands:
+
+```text
+/refresh-leaderboard
+/cm
+```
+
+`user` and `order` are `/cm` subcommands. After deploying a version that changes the `/cm` definition, run registration again once against the intended guild.
 
 ## Leaderboard bootstrap
 
-To create the initial Components V2 leaderboard message:
+If no leaderboard message exists:
 
-1. Leave `DISCORD_LEADERBOARD_MESSAGE_ID` empty.
-2. Start the bot once.
-3. The bot posts the leaderboard, safely logs the created message ID, and exits successfully.
-4. Set that ID in the environment and restart.
+1. leave `DISCORD_LEADERBOARD_MESSAGE_ID` empty;
+2. start the bot once;
+3. record the created message ID from safe structured output;
+4. configure that ID;
+5. restart for normal long-running scheduling.
 
-Normal startup immediately refreshes the configured message and then refreshes it every five minutes. Scheduled and manual refreshes share one in-memory overlap lock.
-
-## Legacy archive
-
-The pre-rebuild bot is frozen under `legacy/` at commit `6dfe75f`. Production code, builds, and tests exclude that directory and must never import from it. The audit and exact parity matrix are in `docs/legacy-parity.md`.
+Normal startup refreshes the configured message and then uses the five-minute schedule.
 
 ## Production deployment requirements
 
-- Long-running Node.js 22+ process with automatic restart on failure
-- HTTPS egress to the configured CM API origin
-- Discord bot token and dedicated API credentials stored only in the host secret store
-- API allowlist containing only the two Aura read operations
-- Discord Message Content intent enabled
-- Bot access to view/send/read-history/edit in the leaderboard channel and respond in the command surface
-- Explicit guild command registration after environment review
-- Initial message bootstrap completed before normal long-running startup
-- Central collection of the bot's structured JSON logs without secret/body capture
+- long-running Node.js 22+ worker/process;
+- exactly one bot replica unless the in-memory session/scheduler architecture is deliberately redesigned;
+- HTTPS egress to the CM API and Discord;
+- tokens/HMAC credentials only in host secret storage;
+- dedicated website integration client with the exact operations required by deployed source;
+- `BOT_ADMIN_USER_IDS` configured before `/cm` use;
+- `BOT_AUDIT_LOG_CHANNEL_ID` configured before refund/Aura/wallet mutation use;
+- Message Content intent while `cm aura` remains active;
+- command registration performed after `/cm` definition changes;
+- structured logs collected without request bodies or credential material.
 
-The website change adding Aura `displayName` is source-validated at website commit `d0afca510122ab5d828dbc273366480153f6a123`; its deployed additive field still requires a later authenticated HTTP verification with the dedicated bot credential. The bot does not call production during build or tests.
+## Legacy archive
+
+The pre-rebuild implementation remains frozen under `legacy/`. Production source, builds and tests must not import or execute it. Historical parity evidence lives in `docs/legacy-parity.md`.
