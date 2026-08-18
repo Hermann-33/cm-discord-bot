@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { MessageFlags, type Interaction } from "discord.js";
 import type { InternalApiClient } from "../../src/api/client";
-import type { OrderDetailsData, UserOverviewData } from "../../src/api/schemas";
+import type { OrderDetailsData, OrderFulfillmentData, UserOverviewData } from "../../src/api/schemas";
 import { buildCmCommand, CmAdminController } from "../../src/commands/cm";
 import type { AppConfig } from "../../src/config/env";
 
@@ -78,6 +78,35 @@ const order = {
     manualRequired: false
   }
 } satisfies OrderDetailsData;
+
+const fulfillment = {
+  order: {
+    orderId: ORDER_ID,
+    publicRef: "CM-TEST",
+    purchaseKind: "product",
+    status: "paid"
+  },
+  linkedLicenseCount: 1,
+  fulfillments: [{
+    kind: "product",
+    deliveryId: "550e8400-e29b-41d4-a716-446655440006",
+    providerCode: "provider",
+    status: "delivered",
+    quantityRequested: 1,
+    quantityDelivered: 1,
+    failureCode: null,
+    userMessage: null,
+    manualRequiredAt: null,
+    createdAt: "2026-08-10T00:00:00.000Z",
+    updatedAt: "2026-08-10T00:00:00.000Z"
+  }],
+  support: {
+    productTypeLabel: "7 Days",
+    productDurationDays: 7,
+    maskedMaterials: [{ kind: "license_key", maskedValue: "ABCD-****-WXYZ" }],
+    manualRequired: false
+  }
+} satisfies OrderFulfillmentData;
 
 type FakeCommandOptions = {
   userId?: string;
@@ -213,18 +242,20 @@ test("authorized /cm user works from another channel in the configured guild", a
   assert.deepEqual(context.defers, [{ flags: MessageFlags.Ephemeral }]);
 });
 
-test("authorized /cm order resolves public ref, loads owner, and opens private order panel", async () => {
+test("authorized /cm order resolves public ref, owner, and fulfillment support before rendering", async () => {
   const calls: unknown[] = [];
   const api = {
     fetchOrderDetails: async (selector: unknown) => { calls.push(["order", selector]); return order; },
-    fetchUserOverview: async (selector: unknown) => { calls.push(["user", selector]); return overview; }
+    fetchUserOverview: async (selector: unknown) => { calls.push(["user", selector]); return overview; },
+    fetchOrderFulfillment: async (orderId: string) => { calls.push(["fulfillment", orderId]); return fulfillment; }
   } as unknown as InternalApiClient;
   const controller = new CmAdminController(config, api);
   const context = fakeCommand({ channelId: OTHER_CHANNEL_ID, subcommand: "order", email: null, reference: "cm-test" });
   assert.equal(await controller.handle(context.interaction), true);
   assert.deepEqual(calls, [
     ["order", { kind: "public_ref", value: "CM-TEST" }],
-    ["user", { kind: "user_id", value: USER_ID }]
+    ["user", { kind: "user_id", value: USER_ID }],
+    ["fulfillment", ORDER_ID]
   ]);
   assert.deepEqual(context.defers, [{ flags: MessageFlags.Ephemeral }]);
   assert.equal((context.edits[0] as { flags: number }).flags, MessageFlags.IsComponentsV2);
