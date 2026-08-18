@@ -96,7 +96,7 @@ Verdict: `COMPLETE`.
 ### Scope
 
 - Share to Chat from meaningful `/cm` operational panels;
-- customer copy must be display-only/no admin powers;
+- customer copy is display-only/no admin powers;
 - concise Components V2 Discord mutation audit;
 - linked Discord identity in User Operations;
 - `/cm user` lookup by email or selected Discord user;
@@ -108,7 +108,7 @@ Current website source was inspected read-only. Existing `users.overview.read` a
 
 ### Security design
 
-ADR-0008 requires public copies to use a separate customer-safe renderer and the normal `/cm` authorization + operator-owned session gate. Public copies contain no buttons/selects/modals/custom IDs and omit email, internal CM user UUID, admin reasons, provider/failure details, backend audit/transaction/idempotency identifiers and credentials. `safeAllowedMentions` is retained.
+ADR-0008 requires public copies to use a separate customer-safe renderer and the normal `/cm` authorization + operator-owned session gate. Public copies contain no buttons/selects/modals/custom IDs and omit email, internal CM user UUID, internal option IDs, admin reasons, provider/failure details, backend audit/transaction/idempotency identifiers and credentials. `safeAllowedMentions` is retained.
 
 Mutation flows and API surface remain unchanged; manual fulfillment remains blocked.
 
@@ -121,19 +121,25 @@ task/cm-share-discord-audit-time
 PR #2
 ```
 
-Focused tests were added for email/Discord selector validation, customer-safe disclosure/control boundary, channel publishing, linked Discord UI, absolute+relative timestamps, concise audit presentation and share/session state.
+Focused tests cover email/Discord selector validation, customer-safe disclosure/control boundary, channel publishing, linked Discord UI, absolute+relative timestamps, concise audit presentation and share/session state.
 
-### Executable gate blocker
+### Executable verification
 
-PR-triggered GitHub Actions run `32138604602` created `verify` but failed before workflow steps were created:
+After repository visibility was changed to public, the standard GitHub-hosted Actions runner could execute. The first real run passed all tests but exposed a TypeScript narrowing error in the new adjustment-success share renderer. The implementation was corrected narrowly.
+
+Final CI run `32142352087` passed:
 
 ```text
-steps: null
-logs_url: null
+Node 22.23.2
+npm ci: PASS, 0 vulnerabilities
+npm test: PASS — 127/127
+npm run typecheck: PASS
+npm run build: PASS
+git diff --check: PASS
 ```
 
-This matches the existing Actions runner/account billing/spending-limit infrastructure problem. It is neither a source-test failure nor a pass.
+Focused static/security review remained clean for direct DB/Supabase access, new API operations, purchase-processing/manual-fulfillment shortcuts, secret/HMAC material, `legacy/` changes, authorization regression and public interactive-control disclosure.
 
-The product owner explicitly requested no separate Codex/local run, but AGENTS/WORKFLOW still require an actual executable pass before merge. Therefore PR #2 must remain unmerged until `npm ci`, tests, typecheck, build and diff/status gates actually run and pass.
+No live share/refund/Aura/wallet mutation, deployment, command registration, website write or database mutation occurred during repository verification.
 
-Verdict: `PARTIAL` pending executable verification.
+Verdict: `COMPLETE` for implementation/verification; authorized for direct PR merge.
