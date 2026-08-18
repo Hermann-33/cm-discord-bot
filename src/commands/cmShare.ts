@@ -221,16 +221,17 @@ export function buildPublicSharePanel(session: CmAdminSession): ContainerBuilder
   }
 
   if (view.kind === "adjustment-success") {
-    const result = view.data;
     const container = new ContainerBuilder()
       .addTextDisplayComponents(text(`# ${view.adjustmentKind === "aura" ? "Aura" : "Wallet"} Adjustment Complete`))
       .addSeparatorComponents(separator())
       .addTextDisplayComponents(text(`### Customer\n${customerDiscordLine(session)}`));
     if (view.adjustmentKind === "aura") {
+      const result = view.data;
       return container.addTextDisplayComponents(text(
         `### Result\nApplied: **${signedInteger(result.deltaAura)} Aura**\nNew balance: **${result.availableAura.toLocaleString()} Aura**\nCompleted: ${formatDiscordTimestampPair(result.createdAt)}`
       ));
     }
+    const result = view.data;
     return container.addTextDisplayComponents(text(
       `### Result\nApplied: **${formatSignedMoney(result.deltaCents, result.currency)}**\nNew balance: **${formatMoney(result.balanceCents, result.currency)}**\nCompleted: ${formatDiscordTimestampPair(result.createdAt)}`
     ));
