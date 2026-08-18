@@ -15,6 +15,7 @@ const DISCORD_USER_ID = "123456789012345682";
 const CREATED_AT = "2026-08-10T00:00:00.000Z";
 const PRIVATE_EMAIL = "private@example.com";
 const PRIVATE_PROVIDER = "internal-provider";
+const PRIVATE_LICENSE_OPTION = "internal-license-option-id";
 
 const overview = {
   identity: {
@@ -55,7 +56,7 @@ const overview = {
     publicRef: "CM-TEST",
     purchaseKind: "product",
     productSlug: "example-product",
-    licenseOptionId: "standard",
+    licenseOptionId: PRIVATE_LICENSE_OPTION,
     accountSlug: null,
     accountVariantId: null,
     accountName: null,
@@ -84,7 +85,7 @@ const selectedOrder = {
   publicRef: "CM-TEST",
   purchaseKind: "product",
   productSlug: "example-product",
-  licenseOptionId: "standard",
+  licenseOptionId: PRIVATE_LICENSE_OPTION,
   accountSlug: null,
   accountVariantId: null,
   accountName: null,
@@ -153,7 +154,7 @@ test("customer-safe user share has no controls or private account identifiers an
   assert.equal(serialized.includes("custom_id"), false);
 });
 
-test("customer-safe order share omits private email, internal user id, provider, and controls", () => {
+test("customer-safe order share omits private identifiers, provider, option IDs, and controls", () => {
   const state = session();
   state.shareView = { kind: "order" };
   const { content, serialized } = panelData(state);
@@ -161,6 +162,7 @@ test("customer-safe order share omits private email, internal user id, provider,
   assertAbsentEvenIfEscaped(content, PRIVATE_EMAIL);
   assertAbsentEvenIfEscaped(content, USER_ID);
   assertAbsentEvenIfEscaped(content, PRIVATE_PROVIDER);
+  assertAbsentEvenIfEscaped(content, PRIVATE_LICENSE_OPTION);
   assert.equal(content.includes(escapeDiscordText("CM-TEST")), true);
   assert.equal(serialized.includes("custom_id"), false);
 });
