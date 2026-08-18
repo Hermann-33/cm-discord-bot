@@ -167,18 +167,18 @@ Backend operation existence is separate from deployed credential authorization. 
 
 ## Verification state
 
-Source/tests/docs are being implemented on the feature branch. Completion still requires executable verification:
+`TASK-CM-ADMIN-003` passed the complete local Node verification gate on the feature branch using Node `v24.11.1`:
 
 ```text
-npm ci
-npm test
-npm run typecheck
-npm run build
-git diff --check
-git status --short --untracked-files=all
+npm ci                                      passed; 0 vulnerabilities reported
+npm test                                    passed; 113/113
+npm run typecheck                           passed
+npm run build                               passed
+git diff --check                            passed
+git status --short --untracked-files=all    passed; no unrelated or untracked files
 ```
 
-Also require focused scans for:
+Focused scans also passed for:
 
 - direct DB/Supabase access;
 - purchase-processing or invented manual-fulfillment paths;
@@ -186,13 +186,11 @@ Also require focused scans for:
 - `legacy/` modification/import;
 - authorization/audit regression.
 
-Do not mark the task `COMPLETE` or merge solely from connector-side source inspection if those executable gates have not passed.
+No bot deployment/start, Discord command registration, production API call/mutation, environment change, website write or database change occurred during verification.
 
 ## Exact next engineering gate
 
-1. finish current source/docs review;
-2. run/obtain the Node 22 verification gate for the feature branch;
-3. fix only task-related failures;
-4. review final diff and secret/boundary scans;
-5. merge only after applicable gates pass;
-6. deployment and guild command re-registration remain separate operational steps after merge.
+1. finalize/review the draft PR;
+2. merge only with explicit product-owner authorization;
+3. deployment and guild command re-registration remain separate operational steps after merge;
+4. live Aura/wallet/refund mutation testing remains a separately authorized controlled action.

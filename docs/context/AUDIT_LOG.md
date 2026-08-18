@@ -203,3 +203,27 @@ Executable Node test/typecheck/build/diff checks have not yet been run for TASK-
 ### Verdict
 
 `PARTIAL` pending clean local/CI verification and merge. No deployment, command registration, environment modification, website change or production API mutation is part of this implementation step.
+
+---
+
+## 2026-08-18 — TASK-CM-ADMIN-003 — Direct order lookup and balance controls
+
+### Local verification completion
+
+The `task/cm-admin-controls-order` implementation was verified locally on Node `v24.11.1` without starting or deploying the bot, registering Discord commands, calling production APIs, executing a real mutation, changing environment values, modifying the website repository or accessing a database directly.
+
+Final local evidence:
+
+- `npm ci` passed and reported 0 vulnerabilities;
+- `npm test` passed 113/113;
+- `npm run typecheck` passed;
+- `npm run build` passed;
+- `git diff --check` passed;
+- the worktree was clean before recording this evidence;
+- focused direct-DB, forbidden-operation, secret/logging, mention-safety, authorization, API-surface and legacy-isolation reviews passed.
+
+The implementation retains canonical refund preview/re-preview, stable mutation idempotency, required audit-channel checks and operator-bound sessions. Manual fulfillment remains unimplemented.
+
+### Verdict
+
+`COMPLETE` for feature-branch repository verification. PR finalization/merge, deployment, Discord registration and any live mutation remain separately authorized actions.

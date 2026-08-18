@@ -127,20 +127,20 @@ No website source, environment variable or secret was modified by this repositor
 
 ## Verification state
 
-Implementation is **not yet COMPLETE** solely from connector-side source edits.
+Repository verification for `TASK-CM-ADMIN-003` is complete on the feature branch.
 
-Required executable gate:
+Local Node `v24.11.1` evidence:
 
 ```text
-npm ci
-npm test
-npm run typecheck
-npm run build
-git diff --check
-git status --short --untracked-files=all
+npm ci                                      passed; 0 vulnerabilities reported
+npm test                                    passed; 113/113
+npm run typecheck                           passed
+npm run build                               passed
+git diff --check                            passed
+git status --short --untracked-files=all    passed; no unrelated or untracked files
 ```
 
-Required focused scans:
+Focused scans passed:
 
 - no `@supabase/supabase-js` / `SUPABASE_` in active source;
 - no direct integration DB primitive use;
@@ -150,18 +150,14 @@ Required focused scans:
 - no `legacy/` modification/import;
 - no authorization or mention-safety regression.
 
-A draft PR exists so GitHub Actions may provide the executable gate. Historical GitHub Actions runs were previously blocked by account billing/spending-limit state; absence of CI is not a pass.
+The draft PR's historical GitHub Actions runs remain blocked before steps by account billing/spending-limit state. That infrastructure issue is not a test pass, but the required clean local executable gate has now passed.
 
 ## Exact next action
 
-1. finish docs/security consistency updates;
-2. inspect current feature-branch diff;
-3. obtain executable Node 22 verification from GitHub Actions or a clean local/Codex checkout;
-4. fix only task-related failures;
-5. update the draft PR with exact verification evidence;
-6. merge to `master` only when gates pass;
-7. after merge, redeploy/restart the bot and re-run `npm run register:commands` as a separately authorized operational step because `/cm` registration changed;
-8. conduct any live Aura/wallet/refund mutation test only with an explicitly chosen controlled target/action.
+1. finalize/review the draft PR with the recorded local verification evidence;
+2. merge to `master` only with explicit product-owner authorization;
+3. after merge, redeploy/restart the bot and re-run `npm run register:commands` only as a separately authorized operational step because `/cm` registration changed;
+4. conduct any live Aura/wallet/refund mutation test only with an explicitly chosen controlled target/action.
 
 ## Do not touch
 

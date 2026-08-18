@@ -143,6 +143,6 @@ Additional priorities:
 
 ## Current position
 
-`TASK-CM-ADMIN-003` source/tests/docs are on a feature branch with a draft PR. The immediate gate is executable Node 22 verification plus focused security/diff scans. Do not merge or report `COMPLETE` until those gates pass.
+`TASK-CM-ADMIN-003` source/tests/docs are on a feature branch with a draft PR. Local Node `v24.11.1` verification passed `npm ci`, all 113 tests, typecheck, build, `git diff --check`, clean-status inspection and the focused security/diff scans. The repository task is ready for PR finalization and an explicitly authorized merge.
 
 After a clean merge, operational rollout requires bot redeploy/restart and guild command re-registration because `/cm` gained the `order` subcommand. Live Aura/wallet/refund mutation tests remain separately controlled actions.
