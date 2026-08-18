@@ -45,6 +45,10 @@ function formatMoney(cents: number, currency: string): string {
   return `${escapeDiscordText(currency.toUpperCase())} ${(cents / 100).toFixed(2)}`;
 }
 
+function formatSignedMoney(cents: number, currency: string): string {
+  return `${escapeDiscordText(currency.toUpperCase())} ${cents > 0 ? "+" : ""}${(cents / 100).toFixed(2)}`;
+}
+
 function signedInteger(value: number): string {
   return `${value > 0 ? "+" : ""}${value.toLocaleString()}`;
 }
@@ -156,7 +160,7 @@ function buildAdjustmentPreviewShare(proposal: UserAdjustmentProposal): Containe
     .addTextDisplayComponents(text("# Wallet Adjustment Preview"))
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(text(
-      `Current: **${formatMoney(proposal.beforeBalanceCents ?? 0, proposal.currency)}**\nChange: **${formatMoney(proposal.deltaCents, proposal.currency)}**\nProjected: **${formatMoney(proposal.projectedBalanceCents, proposal.currency)}**`
+      `Current: **${formatMoney(proposal.beforeBalanceCents ?? 0, proposal.currency)}**\nChange: **${formatSignedMoney(proposal.deltaCents, proposal.currency)}**\nProjected: **${formatMoney(proposal.projectedBalanceCents, proposal.currency)}**`
     ));
 }
 
@@ -226,7 +230,7 @@ export function buildPublicSharePanel(session: CmAdminSession): ContainerBuilder
         .addTextDisplayComponents(text("# Wallet Adjustment Complete"))
         .addSeparatorComponents(separator())
         .addTextDisplayComponents(text(
-          `Applied: **${formatMoney(result.deltaCents, result.currency)}**\nNew balance: **${formatMoney(result.balanceCents, result.currency)}**\nCompleted: ${formatDiscordTimestampPair(result.createdAt)}`
+          `Applied: **${formatSignedMoney(result.deltaCents, result.currency)}**\nNew balance: **${formatMoney(result.balanceCents, result.currency)}**\nCompleted: ${formatDiscordTimestampPair(result.createdAt)}`
         ));
     }
   }
@@ -247,7 +251,9 @@ export async function shareCurrentPanel(
     });
     return;
   }
-  if (!isShareChannel(interaction.channel)) {
+
+  const channel = interaction.channel;
+  if (!isShareChannel(channel)) {
     await interaction.reply({
       content: "This Discord channel cannot receive the customer-safe CM panel.",
       flags: MessageFlags.Ephemeral,
@@ -258,7 +264,7 @@ export async function shareCurrentPanel(
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   try {
-    await interaction.channel.send({
+    await channel.send({
       components: [panel],
       flags: MessageFlags.IsComponentsV2,
       allowedMentions: safeAllowedMentions
