@@ -98,7 +98,9 @@ users.wallet.adjust
 
 ## Verification
 
-Implementation-head GitHub Actions run `32156144669` passed on Node `22.23.2`:
+Implementation-head GitHub Actions run `32156144669` passed on Node `22.23.2` with 131/131 tests, typecheck, build and diff check. The first CI attempt had caught two faulty new test assertions only; those assertions were corrected.
+
+After README/context/audit updates, documentation-head run `32156801285` also passed the full Node 22 gate:
 
 ```text
 npm ci: PASS, 0 vulnerabilities
@@ -108,6 +110,6 @@ npm run build: PASS
 git diff --check: PASS
 ```
 
-The first CI attempt caught two faulty new test assertions only; those assertions were corrected and the full gate passed.
+TASK-CM-ADMIN-006 is `COMPLETE` for implementation/documentation verification. PR #4 may merge once the GitHub Actions check is green on its current head.
 
-Final documentation head must revalidate before PR #4 merge. No slash-command definition changed, so TASK-CM-ADMIN-006 does not require `npm run register:commands` solely for this change.
+No slash-command definition changed, so TASK-CM-ADMIN-006 does not require `npm run register:commands` solely for this change.
