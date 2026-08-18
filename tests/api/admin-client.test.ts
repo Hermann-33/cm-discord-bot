@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { InternalApiClient, INTERNAL_API_PATHS, type InternalApiClientDependencies } from "../../src/api/client";
+import { isInternalApiError } from "../../src/api/errors";
 import type { InternalApiConfig } from "../../src/config/env";
 
 const REQUEST_ID = "550e8400-e29b-41d4-a716-446655440000";
@@ -89,6 +90,37 @@ function orderDetailsData() {
         quantityDelivered: 1,
         manualRequired: false
       }
+    }
+  };
+}
+
+function fulfillmentData() {
+  return {
+    order: {
+      orderId: ORDER_ID,
+      publicRef: "CM-TEST",
+      purchaseKind: "product",
+      status: "paid"
+    },
+    linkedLicenseCount: 1,
+    fulfillments: [{
+      kind: "product",
+      deliveryId: "550e8400-e29b-41d4-a716-446655440006",
+      providerCode: "provider",
+      status: "delivered",
+      quantityRequested: 1,
+      quantityDelivered: 1,
+      failureCode: null,
+      userMessage: null,
+      manualRequiredAt: null,
+      createdAt: "2026-08-10T00:00:00.000Z",
+      updatedAt: "2026-08-10T00:00:00.000Z"
+    }],
+    support: {
+      productTypeLabel: "7 Days",
+      productDurationDays: 7,
+      maskedMaterials: [{ kind: "license_key", maskedValue: "ABCD-****-WXYZ" }],
+      manualRequired: false
     }
   };
 }
@@ -188,6 +220,44 @@ test("order details accepts a public CM reference selector", async () => {
   assert.equal(capturedUrl, `https://example.test${INTERNAL_API_PATHS.orderDetails}`);
   assert.deepEqual(JSON.parse(capturedBody), { selector: { kind: "public_ref", value: "CM-TEST" } });
   assert.equal(order.userId, USER_ID);
+});
+
+test("order fulfillment accepts human-readable type and masked support material", async () => {
+  let capturedUrl = "";
+  const fetchMock = (async (url: unknown) => {
+    capturedUrl = String(url);
+    return success(fulfillmentData());
+  }) as typeof fetch;
+
+  const client = new InternalApiClient(config, dependencies(fetchMock));
+  const fulfillment = await client.fetchOrderFulfillment(ORDER_ID);
+  assert.equal(capturedUrl, `https://example.test${INTERNAL_API_PATHS.orderFulfillment}`);
+  assert.equal(fulfillment.support?.productTypeLabel, "7 Days");
+  assert.deepEqual(fulfillment.support?.maskedMaterials, [
+    { kind: "license_key", maskedValue: "ABCD-****-WXYZ" }
+  ]);
+});
+
+test("order fulfillment rejects unexpected raw fulfillment material fields", async () => {
+  const unsafe = fulfillmentData();
+  const payload = {
+    ...unsafe,
+    support: {
+      ...unsafe.support,
+      maskedMaterials: [{
+        kind: "license_key",
+        maskedValue: "ABCD-****-WXYZ",
+        rawValue: "FULL-SECRET-LICENSE-KEY"
+      }]
+    }
+  };
+  const fetchMock = (async () => success(payload)) as typeof fetch;
+  const client = new InternalApiClient(config, dependencies(fetchMock));
+
+  await assert.rejects(
+    () => client.fetchOrderFulfillment(ORDER_ID),
+    (error: unknown) => isInternalApiError(error) && error.code === "INVALID_RESPONSE"
+  );
 });
 
 test("refund execute preserves logical body/idempotency while transport signing changes on retry", async () => {
