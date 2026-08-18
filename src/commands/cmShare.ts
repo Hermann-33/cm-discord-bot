@@ -129,16 +129,20 @@ function buildOrderShare(session: CmAdminSession): ContainerBuilder | null {
   const order = session.selectedOrder;
   if (!order) return null;
   const fulfillment = order.fulfillmentSummary;
-  const purchase = order.purchaseKind === "product"
-    ? `Product: ${escapeDiscordText(order.productSlug)}\nLicense option: ${escapeDiscordText(order.licenseOptionId)}`
-    : `Account: ${escapeDiscordText(order.accountName ?? order.accountSlug)}\nVariant: ${escapeDiscordText(order.accountVariantLabel ?? order.accountVariantId)}\nGame: ${escapeDiscordText(order.accountGameName)}`;
+  const purchaseLines = order.purchaseKind === "product"
+    ? [`Product: ${escapeDiscordText(order.productSlug)}`]
+    : [
+        `Account: ${escapeDiscordText(order.accountName ?? order.accountGameName ?? "Account purchase")}`,
+        ...(order.accountVariantLabel ? [`Variant: ${escapeDiscordText(order.accountVariantLabel)}`] : []),
+        ...(order.accountGameName ? [`Game: ${escapeDiscordText(order.accountGameName)}`] : [])
+      ];
 
   return new ContainerBuilder()
     .addTextDisplayComponents(text(`# Order ${orderRef(order)}\nStatus: **${escapeDiscordText(order.status)}**`))
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(text(`### Customer\n${customerDiscordLine(session)}`))
     .addTextDisplayComponents(text(
-      `### Purchase\nType: **${escapeDiscordText(order.purchaseKind)}**\n${purchase}\nQuantity: ${order.quantity}\nAmount: **${formatMoney(order.amountCents, order.currency)}**\nCreated: ${formatDiscordTimestampPair(order.createdAt)}`
+      `### Purchase\nType: **${escapeDiscordText(order.purchaseKind)}**\n${purchaseLines.join("\n")}\nQuantity: ${order.quantity}\nAmount: **${formatMoney(order.amountCents, order.currency)}**\nCreated: ${formatDiscordTimestampPair(order.createdAt)}`
     ))
     .addTextDisplayComponents(text(`### Payment\nMethod: ${escapeDiscordText(order.payment.method)}`))
     .addTextDisplayComponents(text(
@@ -146,22 +150,21 @@ function buildOrderShare(session: CmAdminSession): ContainerBuilder | null {
     ));
 }
 
-function buildAdjustmentPreviewShare(proposal: UserAdjustmentProposal): ContainerBuilder {
+function buildAdjustmentPreviewShare(session: CmAdminSession, proposal: UserAdjustmentProposal): ContainerBuilder {
+  const container = new ContainerBuilder()
+    .addTextDisplayComponents(text(`# ${proposal.kind === "aura" ? "Aura" : "Wallet"} Adjustment Preview`))
+    .addSeparatorComponents(separator())
+    .addTextDisplayComponents(text(`### Customer\n${customerDiscordLine(session)}`));
+
   if (proposal.kind === "aura") {
-    return new ContainerBuilder()
-      .addTextDisplayComponents(text("# Aura Adjustment Preview"))
-      .addSeparatorComponents(separator())
-      .addTextDisplayComponents(text(
-        `Current: **${(proposal.beforeAvailableAura ?? 0).toLocaleString()} Aura**\nChange: **${signedInteger(proposal.deltaAura)} Aura**\nProjected: **${proposal.projectedAvailableAura.toLocaleString()} Aura**`
-      ));
+    return container.addTextDisplayComponents(text(
+      `### Change\nCurrent: **${(proposal.beforeAvailableAura ?? 0).toLocaleString()} Aura**\nChange: **${signedInteger(proposal.deltaAura)} Aura**\nProjected: **${proposal.projectedAvailableAura.toLocaleString()} Aura**`
+    ));
   }
 
-  return new ContainerBuilder()
-    .addTextDisplayComponents(text("# Wallet Adjustment Preview"))
-    .addSeparatorComponents(separator())
-    .addTextDisplayComponents(text(
-      `Current: **${formatMoney(proposal.beforeBalanceCents ?? 0, proposal.currency)}**\nChange: **${formatSignedMoney(proposal.deltaCents, proposal.currency)}**\nProjected: **${formatMoney(proposal.projectedBalanceCents, proposal.currency)}**`
-    ));
+  return container.addTextDisplayComponents(text(
+    `### Change\nCurrent: **${formatMoney(proposal.beforeBalanceCents ?? 0, proposal.currency)}**\nChange: **${formatSignedMoney(proposal.deltaCents, proposal.currency)}**\nProjected: **${formatMoney(proposal.projectedBalanceCents, proposal.currency)}**`
+  ));
 }
 
 export function buildPublicSharePanel(session: CmAdminSession): ContainerBuilder | null {
@@ -174,7 +177,7 @@ export function buildPublicSharePanel(session: CmAdminSession): ContainerBuilder
     const data = view.data;
     const container = new ContainerBuilder()
       .addTextDisplayComponents(text(
-        `# Fulfillment Status\nOrder **${orderRef(data.order)}** · ${escapeDiscordText(data.order.status)}`
+        `# Fulfillment Status\nOrder **${orderRef(data.order)}** · ${escapeDiscordText(data.order.status)}\n${customerDiscordLine(session)}`
       ))
       .addSeparatorComponents(separator());
     if (data.fulfillments.length === 0) {
@@ -196,8 +199,9 @@ export function buildPublicSharePanel(session: CmAdminSession): ContainerBuilder
     return new ContainerBuilder()
       .addTextDisplayComponents(text(`# Refund Preview\nOrder **${orderRef(preview)}**`))
       .addSeparatorComponents(separator())
+      .addTextDisplayComponents(text(`### Customer\n${customerDiscordLine(session)}`))
       .addTextDisplayComponents(text(
-        `Gross refund: **${formatMoney(preview.grossRefundCents, preview.currency)}**\nWallet credit: **${formatMoney(preview.finalWalletCreditCents, preview.currency)}**\nAura recovered: ${preview.auraRecovered}\nAura unrecoverable: ${preview.auraUnrecoverable}`
+        `### Refund\nGross refund: **${formatMoney(preview.grossRefundCents, preview.currency)}**\nWallet credit: **${formatMoney(preview.finalWalletCreditCents, preview.currency)}**\nAura recovered: ${preview.auraRecovered}\nAura unrecoverable: ${preview.auraUnrecoverable}`
       ));
   }
 
@@ -206,33 +210,30 @@ export function buildPublicSharePanel(session: CmAdminSession): ContainerBuilder
     return new ContainerBuilder()
       .addTextDisplayComponents(text(`# Refund Complete\nOrder **${orderRef(refund)}** has been refunded.`))
       .addSeparatorComponents(separator())
+      .addTextDisplayComponents(text(`### Customer\n${customerDiscordLine(session)}`))
       .addTextDisplayComponents(text(
-        `Wallet credit: **${formatMoney(refund.finalWalletCreditCents, refund.currency)}**\nAura recovered: ${refund.auraRecovered}\nCompleted: ${formatDiscordTimestampPair(refund.refundedAt)}`
+        `### Result\nWallet credit: **${formatMoney(refund.finalWalletCreditCents, refund.currency)}**\nAura recovered: ${refund.auraRecovered}\nCompleted: ${formatDiscordTimestampPair(refund.refundedAt)}`
       ));
   }
 
   if (view.kind === "adjustment-preview") {
-    return session.adjustmentProposal ? buildAdjustmentPreviewShare(session.adjustmentProposal) : null;
+    return session.adjustmentProposal ? buildAdjustmentPreviewShare(session, session.adjustmentProposal) : null;
   }
 
   if (view.kind === "adjustment-success") {
     const result = view.data;
-    if (view.adjustmentKind === "aura" && "deltaAura" in result) {
-      return new ContainerBuilder()
-        .addTextDisplayComponents(text("# Aura Adjustment Complete"))
-        .addSeparatorComponents(separator())
-        .addTextDisplayComponents(text(
-          `Applied: **${signedInteger(result.deltaAura)} Aura**\nNew balance: **${result.availableAura.toLocaleString()} Aura**\nCompleted: ${formatDiscordTimestampPair(result.createdAt)}`
-        ));
+    const container = new ContainerBuilder()
+      .addTextDisplayComponents(text(`# ${view.adjustmentKind === "aura" ? "Aura" : "Wallet"} Adjustment Complete`))
+      .addSeparatorComponents(separator())
+      .addTextDisplayComponents(text(`### Customer\n${customerDiscordLine(session)}`));
+    if (view.adjustmentKind === "aura") {
+      return container.addTextDisplayComponents(text(
+        `### Result\nApplied: **${signedInteger(result.deltaAura)} Aura**\nNew balance: **${result.availableAura.toLocaleString()} Aura**\nCompleted: ${formatDiscordTimestampPair(result.createdAt)}`
+      ));
     }
-    if (view.adjustmentKind === "wallet" && "deltaCents" in result) {
-      return new ContainerBuilder()
-        .addTextDisplayComponents(text("# Wallet Adjustment Complete"))
-        .addSeparatorComponents(separator())
-        .addTextDisplayComponents(text(
-          `Applied: **${formatSignedMoney(result.deltaCents, result.currency)}**\nNew balance: **${formatMoney(result.balanceCents, result.currency)}**\nCompleted: ${formatDiscordTimestampPair(result.createdAt)}`
-        ));
-    }
+    return container.addTextDisplayComponents(text(
+      `### Result\nApplied: **${formatSignedMoney(result.deltaCents, result.currency)}**\nNew balance: **${formatMoney(result.balanceCents, result.currency)}**\nCompleted: ${formatDiscordTimestampPair(result.createdAt)}`
+    ));
   }
 
   return null;
