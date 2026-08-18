@@ -67,6 +67,10 @@ function orderRef(order: { publicRef: string | null; orderId: string }): string 
   return escapeDiscordText(order.publicRef ?? order.orderId);
 }
 
+function quantitySuffix(quantity: number): string {
+  return quantity > 1 ? ` · Qty ${quantity}` : "";
+}
+
 function customerIdentityBlock(session: CmAdminSession): string {
   const email = `Email: ${escapeDiscordText(session.overview.identity.email, 320)}`;
   const identity = findDiscordIdentity(session.overview);
@@ -78,27 +82,22 @@ function buildUserShare(session: CmAdminSession): ContainerBuilder {
   const overview = session.overview;
   const latest = overview.recentOrders[0];
   const wallet = overview.wallet
-    ? `Balance: **${formatMoney(overview.wallet.balanceCents, overview.wallet.currency)}**\nUpdated: ${formatDiscordTimestampPair(overview.wallet.updatedAt)}`
-    : "No wallet record";
+    ? formatMoney(overview.wallet.balanceCents, overview.wallet.currency)
+    : "—";
   const aura = overview.aura
-    ? `Available: **${overview.aura.availableAura.toLocaleString()}**\nPending: ${overview.aura.pendingAura.toLocaleString()}\nLifetime earned: ${overview.aura.lifetimeEarnedAura.toLocaleString()}\nUpdated: ${formatDiscordTimestampPair(overview.aura.updatedAt)}`
-    : "No Aura record";
+    ? `${overview.aura.availableAura.toLocaleString()} available${overview.aura.pendingAura > 0 ? ` · ${overview.aura.pendingAura.toLocaleString()} pending` : ""}`
+    : "—";
 
   const container = new ContainerBuilder()
     .addTextDisplayComponents(text("# CM Account Summary"))
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(text(
-      `### Account\nStatus: **${overview.accountControl.isBanned ? "BANNED" : "Active"}**\n${customerIdentityBlock(session)}\nCreated: ${formatDiscordTimestampPair(overview.identity.createdAt)}\nLast sign-in: ${formatDiscordTimestampPair(overview.identity.lastSignInAt)}`
-    ))
-    .addTextDisplayComponents(text(`### Wallet\n${wallet}`))
-    .addTextDisplayComponents(text(`### Aura\n${aura}`))
-    .addTextDisplayComponents(text(
-      `### Activity\nOrders: **${overview.counts.orders}** · Licenses: ${overview.counts.licenses} · Account deliveries: ${overview.counts.accountDeliveries}`
+      `${customerIdentityBlock(session)}\nStatus: **${overview.accountControl.isBanned ? "BANNED" : "Active"}**\nWallet: **${wallet}** · Aura: **${aura}**`
     ));
 
   if (latest) {
     container.addSeparatorComponents(separator()).addTextDisplayComponents(text(
-      `### Most Recent Order\n**${orderRef(latest)}** — ${orderLabel(latest)}\n${escapeDiscordText(latest.status)} · ${formatMoney(latest.amountCents, latest.currency)} · ${formatDiscordTimestampPair(latest.createdAt)}`
+      `### Latest Order\n**${orderRef(latest)}** — ${orderLabel(latest)}\n${escapeDiscordText(latest.status)} · ${formatMoney(latest.amountCents, latest.currency)}${quantitySuffix(latest.quantity)}\n${formatDiscordTimestampPair(latest.createdAt)}`
     ));
   }
   return container;
@@ -120,7 +119,7 @@ function buildOrdersShare(session: CmAdminSession, requestedPage: number): Conta
 
   pageOrders.forEach((order, offset) => {
     container.addTextDisplayComponents(text(
-      `**${start + offset + 1}. ${orderRef(order)}** — ${orderLabel(order)}\nStatus: ${escapeDiscordText(order.status)} · ${formatMoney(order.amountCents, order.currency)} · Qty ${order.quantity}\nCreated: ${formatDiscordTimestampPair(order.createdAt)}`
+      `**${start + offset + 1}. ${orderRef(order)}** — ${orderLabel(order)}\n${escapeDiscordText(order.status)} · ${formatMoney(order.amountCents, order.currency)}${quantitySuffix(order.quantity)}\n${formatDiscordTimestampPair(order.createdAt)}`
     ));
   });
   return container;
@@ -131,24 +130,24 @@ function buildOrderShare(session: CmAdminSession): ContainerBuilder | null {
   if (!order) return null;
   const fulfillment = order.fulfillmentSummary;
   const purchaseLines = order.purchaseKind === "product"
-    ? [`Product: ${escapeDiscordText(order.productSlug)}`]
+    ? [`Item: **${escapeDiscordText(order.productSlug ?? "Product")}**`]
     : [
-        `Account: ${escapeDiscordText(order.accountName ?? order.accountGameName ?? "Account purchase")}`,
+        `Item: **${escapeDiscordText(order.accountName ?? order.accountGameName ?? "Account purchase")}**`,
         ...(order.accountVariantLabel ? [`Variant: ${escapeDiscordText(order.accountVariantLabel)}`] : []),
         ...(order.accountGameName ? [`Game: ${escapeDiscordText(order.accountGameName)}`] : [])
       ];
+  if (order.quantity > 1) purchaseLines.push(`Quantity: ${order.quantity}`);
+  const deliveryLines = [`Delivered: **${fulfillment.quantityDelivered}/${fulfillment.quantityRequested}**`];
+  if (fulfillment.manualRequired) deliveryLines.push("Manual review required: **Yes**");
 
   return new ContainerBuilder()
     .addTextDisplayComponents(text(`# Order ${orderRef(order)}\nStatus: **${escapeDiscordText(order.status)}**`))
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(text(`### Customer\n${customerIdentityBlock(session)}`))
     .addTextDisplayComponents(text(
-      `### Purchase\nType: **${escapeDiscordText(order.purchaseKind)}**\n${purchaseLines.join("\n")}\nQuantity: ${order.quantity}\nAmount: **${formatMoney(order.amountCents, order.currency)}**\nCreated: ${formatDiscordTimestampPair(order.createdAt)}`
+      `### Purchase\n${purchaseLines.join("\n")}\nAmount: **${formatMoney(order.amountCents, order.currency)}**\nPlaced: ${formatDiscordTimestampPair(order.createdAt)}`
     ))
-    .addTextDisplayComponents(text(`### Payment\nMethod: ${escapeDiscordText(order.payment.method)}`))
-    .addTextDisplayComponents(text(
-      `### Fulfillment\nRequested: ${fulfillment.quantityRequested} · Delivered: ${fulfillment.quantityDelivered}\nManual required: **${fulfillment.manualRequired ? "Yes" : "No"}**`
-    ));
+    .addTextDisplayComponents(text(`### Delivery\n${deliveryLines.join("\n")}`));
 }
 
 function buildAdjustmentPreviewShare(session: CmAdminSession, proposal: UserAdjustmentProposal): ContainerBuilder {
@@ -178,17 +177,20 @@ export function buildPublicSharePanel(session: CmAdminSession): ContainerBuilder
     const data = view.data;
     const container = new ContainerBuilder()
       .addTextDisplayComponents(text(
-        `# Fulfillment Status\nOrder **${orderRef(data.order)}** · ${escapeDiscordText(data.order.status)}\n${customerIdentityBlock(session)}`
+        `# Delivery Status\nOrder **${orderRef(data.order)}** · ${escapeDiscordText(data.order.status)}\n${customerIdentityBlock(session)}`
       ))
       .addSeparatorComponents(separator());
     if (data.fulfillments.length === 0) {
       return container.addTextDisplayComponents(text("No fulfillment records were returned."));
     }
     data.fulfillments.forEach((item, index) => {
-      const message = item.userMessage ? `\nMessage: ${escapeDiscordText(item.userMessage)}` : "";
-      container.addTextDisplayComponents(text(
-        `**${index + 1}. ${item.kind.toUpperCase()}**\nStatus: **${escapeDiscordText(item.status)}**\nRequested: ${item.quantityRequested} · Delivered: ${item.quantityDelivered}\nManual required: ${item.manualRequiredAt ? `Yes · ${formatDiscordTimestampPair(item.manualRequiredAt)}` : "No"}${message}`
-      ));
+      const lines = [
+        `**${index + 1}. ${item.kind.toUpperCase()}**`,
+        `Status: **${escapeDiscordText(item.status)}** · Delivered: ${item.quantityDelivered}/${item.quantityRequested}`
+      ];
+      if (item.manualRequiredAt) lines.push(`Manual review: ${formatDiscordTimestampPair(item.manualRequiredAt)}`);
+      if (item.userMessage) lines.push(`Message: ${escapeDiscordText(item.userMessage)}`);
+      container.addTextDisplayComponents(text(lines.join("\n")));
     });
     return container;
   }
@@ -197,13 +199,17 @@ export function buildPublicSharePanel(session: CmAdminSession): ContainerBuilder
     const proposal = session.refundProposal;
     if (!proposal) return null;
     const preview = proposal.preview;
+    const refundLines = [
+      `Refund: **${formatMoney(preview.grossRefundCents, preview.currency)}**`,
+      `Wallet credit: **${formatMoney(preview.finalWalletCreditCents, preview.currency)}**`,
+      `Aura recovered: ${preview.auraRecovered}`
+    ];
+    if (preview.auraUnrecoverable > 0) refundLines.push(`Aura unrecoverable: ${preview.auraUnrecoverable}`);
     return new ContainerBuilder()
       .addTextDisplayComponents(text(`# Refund Preview\nOrder **${orderRef(preview)}**`))
       .addSeparatorComponents(separator())
       .addTextDisplayComponents(text(`### Customer\n${customerIdentityBlock(session)}`))
-      .addTextDisplayComponents(text(
-        `### Refund\nGross refund: **${formatMoney(preview.grossRefundCents, preview.currency)}**\nWallet credit: **${formatMoney(preview.finalWalletCreditCents, preview.currency)}**\nAura recovered: ${preview.auraRecovered}\nAura unrecoverable: ${preview.auraUnrecoverable}`
-      ));
+      .addTextDisplayComponents(text(`### Refund\n${refundLines.join("\n")}`));
   }
 
   if (view.kind === "refund-success") {
