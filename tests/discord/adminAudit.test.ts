@@ -84,7 +84,7 @@ test("adjustment audit keeps only useful balance-change information and flags a 
 
   const json = payloadText(sends[0]!);
   assert.equal(json.includes("CM Audit · Wallet Adjustment"), true);
-  assert.equal(json.includes("USD 5.00"), true);
+  assert.equal(json.includes("USD +5.00"), true);
   assert.equal(json.includes("USD 30.00"), true);
   assert.equal(json.includes("idempotent replay"), true);
   assert.equal(json.includes("auditEventId"), false);
