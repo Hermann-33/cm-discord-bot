@@ -100,15 +100,15 @@ or select:
 
 Discord lookup reuses `users.overview.read` with the canonical `external_identity` selector; no new backend operation is needed.
 
-The private User Operations panel shows account state, linked Discord identity, wallet, Aura, counts and recent orders. All dates/times use both Discord absolute and relative timestamp forms.
+The User Operations panel is intentionally compact: email, account status, linked Discord state, current wallet, available/pending Aura, order count and latest order. Routine login/update/lifetime/license statistics are not displayed there. Adjust Aura, Adjust Wallet, recent-order access, Order History and Share to Chat remain available.
 
 ## Customer-safe sharing
 
 Meaningful private `/cm` panels include **Share to Chat**. The click itself reauthorizes the admin and session owner, then posts a separate read-only Components V2 summary into the current channel.
 
-The shared copy contains **no buttons or other interactive components**. It is rendered independently from the private panel and includes the canonical customer account email plus linked Discord identity when available. It continues to omit internal CM user UUIDs, internal purchase option IDs, mutation/refund reasons, provider/failure codes, backend audit/transaction IDs and idempotency data. Mentions are disabled with `safeAllowedMentions`.
+The shared copy contains **no buttons or other interactive components**. It is rendered independently from the private panel and includes the canonical customer account email plus linked Discord identity when available. It continues to omit internal CM user UUIDs, internal purchase option IDs, mutation/refund reasons, provider/failure internals, backend audit/transaction IDs and idempotency data. Mentions are disabled with `safeAllowedMentions`.
 
-ADR-0008 defines the separate read-only sharing boundary; ADR-0009 supersedes only its previous prohibition on displaying the customer account email.
+Shared summaries are intentionally concise: current customer-relevant state and outcomes are preferred over historical/update/statistical noise. ADR-0008 defines the separate read-only sharing boundary; ADR-0009 supersedes only its previous prohibition on displaying the customer account email.
 
 ## `/cm order`
 
@@ -117,11 +117,15 @@ ADR-0008 defines the separate read-only sharing boundary; ADR-0009 supersedes on
 /cm order reference:<order UUID>
 ```
 
-The bot resolves the canonical order and owner, verifies target consistency and opens the normal private order panel with Refund, Fulfillment diagnostics, Refresh Order, User Operations and recent Order History. Manual Fulfillment remains blocked/informational.
+The bot resolves the canonical order and owner, verifies target consistency and opens a compact order panel with customer-facing item/status/amount/payment/delivery information plus Refund, Delivery Details, Refresh Order, User Operations and Share to Chat.
+
+`Delivery Details` keeps useful delivery status/progress and only shows failure/manual-review/message fields when present. Internal provider/timestamp diagnostics and the nonfunctional Manual Fulfillment button are not shown. Manual fulfillment remains unsupported because no website-owned execute operation exists.
 
 ## Mutations
 
 Aura and wallet adjustments retain the ADR-0007 model: signed bounded delta, reason, fresh overview, current/change/projected preview, explicit five-minute confirmation, second fresh relevant-balance equality check, stable UUID idempotency/body, website-owned execution and backend + Discord audit.
+
+Private mutation panels show decision/result information rather than routine backend transaction/audit bookkeeping. Exceptional replay or Discord-audit-post-failure warnings remain visible when they occur.
 
 Refund retains:
 
@@ -154,7 +158,7 @@ Registration is explicit and never happens on startup:
 npm run register:commands
 ```
 
-Top-level commands remain `/refresh-leaderboard` and `/cm`; `user` and `order` are `/cm` subcommands. Re-run registration after deploying any `/cm` definition change.
+Top-level commands remain `/refresh-leaderboard` and `/cm`; `user` and `order` are `/cm` subcommands. Re-run registration after deploying any `/cm` definition change. Pure presentation changes such as TASK-CM-ADMIN-006 do not require registration.
 
 ## Production notes
 
