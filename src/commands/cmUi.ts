@@ -17,6 +17,11 @@ import type {
   UserOverviewData,
   WalletAdjustmentData
 } from "../api/schemas";
+import {
+  escapeDiscordText,
+  formatDiscordIdentity,
+  formatDiscordTimestampPair
+} from "../discord/presentation";
 import { safeAllowedMentions } from "../discord/safeMessages";
 import type { UserAdjustmentProposal } from "./cmSessions";
 
@@ -34,23 +39,14 @@ function button(customId: string, label: string, style = ButtonStyle.Secondary):
   return new ButtonBuilder().setCustomId(customId).setLabel(label).setStyle(style);
 }
 
-function escapeText(value: string | null | undefined): string {
-  if (!value) return "—";
-  return value
-    .replace(/\\/g, "\\\\")
-    .replace(/([`*_{}\[\]()<>#+\-.!|])/g, "\\$1")
-    .replace(/@/g, "@\u200b")
-    .slice(0, 500);
-}
-
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "—" : date.toISOString().replace("T", " ").replace(".000Z", " UTC");
+function shareRow(sessionId: string): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    button(`cm:share:current:${sessionId}`, "Share to Chat", ButtonStyle.Success)
+  );
 }
 
 function formatMoney(cents: number, currency: string): string {
-  const safeCurrency = escapeText(currency.toUpperCase());
+  const safeCurrency = escapeDiscordText(currency.toUpperCase());
   return `${safeCurrency} ${(cents / 100).toFixed(2)}`;
 }
 
@@ -59,7 +55,7 @@ function signedInteger(value: number): string {
 }
 
 function orderLabel(order: RecentOrderData | OrderDetailsData): string {
-  return escapeText(
+  return escapeDiscordText(
     order.accountName
       ?? order.accountGameName
       ?? order.productSlug
@@ -69,7 +65,7 @@ function orderLabel(order: RecentOrderData | OrderDetailsData): string {
 }
 
 function orderRef(order: { publicRef: string | null; orderId: string }): string {
-  return escapeText(order.publicRef ?? order.orderId);
+  return escapeDiscordText(order.publicRef ?? order.orderId);
 }
 
 export type CmPanelPayload = {
@@ -89,13 +85,13 @@ export function panelPayload(container: ContainerBuilder): CmPanelPayload {
 export function buildUserPanel(sessionId: string, overview: UserOverviewData): ContainerBuilder {
   const latest = overview.recentOrders[0];
   const wallet = overview.wallet
-    ? `${formatMoney(overview.wallet.balanceCents, overview.wallet.currency)}\nUpdated: ${formatDate(overview.wallet.updatedAt)}`
+    ? `Balance: **${formatMoney(overview.wallet.balanceCents, overview.wallet.currency)}**\nUpdated: ${formatDiscordTimestampPair(overview.wallet.updatedAt)}`
     : "No wallet record";
   const aura = overview.aura
-    ? `Available: **${overview.aura.availableAura.toLocaleString()}**\nPending: ${overview.aura.pendingAura.toLocaleString()}\nLifetime earned: ${overview.aura.lifetimeEarnedAura.toLocaleString()}`
+    ? `Available: **${overview.aura.availableAura.toLocaleString()}**\nPending: ${overview.aura.pendingAura.toLocaleString()}\nLifetime earned: ${overview.aura.lifetimeEarnedAura.toLocaleString()}\nLifetime redeemed: ${overview.aura.lifetimeRedeemedAura.toLocaleString()}\nUpdated: ${formatDiscordTimestampPair(overview.aura.updatedAt)}`
     : "No Aura record";
   const latestText = latest
-    ? `**${orderRef(latest)}** — ${orderLabel(latest)}\n${escapeText(latest.status)} · ${formatMoney(latest.amountCents, latest.currency)} · ${formatDate(latest.createdAt)}`
+    ? `**${orderRef(latest)}** — ${orderLabel(latest)}\n${escapeDiscordText(latest.status)} · ${formatMoney(latest.amountCents, latest.currency)}\nCreated: ${formatDiscordTimestampPair(latest.createdAt)}`
     : "No recent orders";
 
   const actions = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -106,11 +102,12 @@ export function buildUserPanel(sessionId: string, overview: UserOverviewData): C
   );
 
   return new ContainerBuilder()
-    .addTextDisplayComponents(text(`# CM User Operations\n**${escapeText(overview.identity.email ?? overview.identity.userId)}**`))
+    .addTextDisplayComponents(text(`# CM User Operations\n**${escapeDiscordText(overview.identity.email ?? overview.identity.userId)}**`))
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(text(
-      `### Account\nStatus: **${overview.accountControl.isBanned ? "BANNED" : "Active"}**\nCreated: ${formatDate(overview.identity.createdAt)}\nLast sign-in: ${formatDate(overview.identity.lastSignInAt)}`
+      `### Account\nStatus: **${overview.accountControl.isBanned ? "BANNED" : "Active"}**\nCreated: ${formatDiscordTimestampPair(overview.identity.createdAt)}\nLast sign-in: ${formatDiscordTimestampPair(overview.identity.lastSignInAt)}`
     ))
+    .addTextDisplayComponents(text(`### Discord\n${formatDiscordIdentity(overview)}`))
     .addTextDisplayComponents(text(`### Wallet\n${wallet}`))
     .addTextDisplayComponents(text(`### Aura\n${aura}`))
     .addTextDisplayComponents(text(
@@ -118,7 +115,8 @@ export function buildUserPanel(sessionId: string, overview: UserOverviewData): C
     ))
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(text(`### Most Recent Order\n${latestText}`))
-    .addActionRowComponents(actions);
+    .addActionRowComponents(actions)
+    .addActionRowComponents(shareRow(sessionId));
 }
 
 export function buildOrdersPanel(
@@ -132,7 +130,7 @@ export function buildOrdersPanel(
   const start = page * ORDERS_PER_PAGE;
   const pageOrders = overview.recentOrders.slice(start, start + ORDERS_PER_PAGE);
   const container = new ContainerBuilder()
-    .addTextDisplayComponents(text(`# Recent Orders\n${escapeText(overview.identity.email ?? overview.identity.userId)}\nPage **${page + 1}/${pageCount}**`));
+    .addTextDisplayComponents(text(`# Recent Orders\n${escapeDiscordText(overview.identity.email ?? overview.identity.userId)}\nPage **${page + 1}/${pageCount}**`));
 
   if (overview.counts.orders > totalVisible) {
     container.addTextDisplayComponents(text(
@@ -147,7 +145,7 @@ export function buildOrdersPanel(
     pageOrders.forEach((order, offset) => {
       const absoluteIndex = start + offset;
       container.addTextDisplayComponents(text(
-        `**${absoluteIndex + 1}. ${orderRef(order)}** — ${orderLabel(order)}\nStatus: ${escapeText(order.status)} · ${formatMoney(order.amountCents, order.currency)} · Qty ${order.quantity}\n${formatDate(order.createdAt)}`
+        `**${absoluteIndex + 1}. ${orderRef(order)}** — ${orderLabel(order)}\nStatus: ${escapeDiscordText(order.status)} · ${formatMoney(order.amountCents, order.currency)} · Qty ${order.quantity}\nCreated: ${formatDiscordTimestampPair(order.createdAt)}`
       ));
     });
 
@@ -168,13 +166,15 @@ export function buildOrdersPanel(
     button(`cm:user:orders:${sessionId}:${page - 1}`, "Previous").setDisabled(page === 0),
     button(`cm:user:orders:${sessionId}:${page + 1}`, "Next").setDisabled(page >= pageCount - 1)
   );
-  return container.addActionRowComponents(nav);
+  return container
+    .addActionRowComponents(nav)
+    .addActionRowComponents(shareRow(sessionId));
 }
 
 export function buildOrderPanel(sessionId: string, order: OrderDetailsData): ContainerBuilder {
   const productOrAccount = order.purchaseKind === "product"
-    ? `Product: ${escapeText(order.productSlug)}\nLicense option: ${escapeText(order.licenseOptionId)}`
-    : `Account: ${escapeText(order.accountName ?? order.accountSlug)}\nVariant: ${escapeText(order.accountVariantLabel ?? order.accountVariantId)}\nGame: ${escapeText(order.accountGameName)}`;
+    ? `Product: ${escapeDiscordText(order.productSlug)}\nLicense option: ${escapeDiscordText(order.licenseOptionId)}`
+    : `Account: ${escapeDiscordText(order.accountName ?? order.accountSlug)}\nVariant: ${escapeDiscordText(order.accountVariantLabel ?? order.accountVariantId)}\nGame: ${escapeDiscordText(order.accountGameName)}`;
   const fulfillment = order.fulfillmentSummary;
   const actions = new ActionRowBuilder<ButtonBuilder>().addComponents(
     button(`cm:refund:start:${sessionId}`, "Refund", ButtonStyle.Danger),
@@ -185,21 +185,22 @@ export function buildOrderPanel(sessionId: string, order: OrderDetailsData): Con
   );
 
   return new ContainerBuilder()
-    .addTextDisplayComponents(text(`# Order ${orderRef(order)}\nStatus: **${escapeText(order.status)}**`))
+    .addTextDisplayComponents(text(`# Order ${orderRef(order)}\nStatus: **${escapeDiscordText(order.status)}**`))
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(text(
-      `### Customer\n${escapeText(order.customerEmail)}\nUser ID: ${escapeText(order.userId)}`
+      `### Customer\n${escapeDiscordText(order.customerEmail)}\nUser ID: ${escapeDiscordText(order.userId)}`
     ))
     .addTextDisplayComponents(text(
-      `### Purchase\nType: **${order.purchaseKind}**\n${productOrAccount}\nQuantity: ${order.quantity}\nAmount: **${formatMoney(order.amountCents, order.currency)}**\nCreated: ${formatDate(order.createdAt)}`
+      `### Purchase\nType: **${escapeDiscordText(order.purchaseKind)}**\n${productOrAccount}\nQuantity: ${order.quantity}\nAmount: **${formatMoney(order.amountCents, order.currency)}**\nCreated: ${formatDiscordTimestampPair(order.createdAt)}`
     ))
     .addTextDisplayComponents(text(
-      `### Payment\nMethod: ${escapeText(order.payment.method)}\nProvider: ${escapeText(order.payment.provider)}`
+      `### Payment\nMethod: ${escapeDiscordText(order.payment.method)}\nProvider: ${escapeDiscordText(order.payment.provider)}`
     ))
     .addTextDisplayComponents(text(
       `### Fulfillment Summary\nRequested: ${fulfillment.quantityRequested} · Delivered: ${fulfillment.quantityDelivered}\nLicenses: ${fulfillment.linkedLicenseCount} · Account deliveries: ${fulfillment.accountDeliveryCount} · Product deliveries: ${fulfillment.productDeliveryCount}\nManual required: **${fulfillment.manualRequired ? "Yes" : "No"}**`
     ))
-    .addActionRowComponents(actions);
+    .addActionRowComponents(actions)
+    .addActionRowComponents(shareRow(sessionId));
 }
 
 export function buildFulfillmentPanel(
@@ -208,7 +209,7 @@ export function buildFulfillmentPanel(
 ): ContainerBuilder {
   const container = new ContainerBuilder()
     .addTextDisplayComponents(text(
-      `# Fulfillment Diagnostics\nOrder **${orderRef(data.order)}** · ${escapeText(data.order.status)}\nLinked licenses: ${data.linkedLicenseCount}`
+      `# Fulfillment Diagnostics\nOrder **${orderRef(data.order)}** · ${escapeDiscordText(data.order.status)}\nLinked licenses: ${data.linkedLicenseCount}`
     ))
     .addSeparatorComponents(separator());
 
@@ -216,9 +217,9 @@ export function buildFulfillmentPanel(
     container.addTextDisplayComponents(text("No fulfillment records were returned."));
   } else {
     data.fulfillments.forEach((item, index) => {
-      const deliveryKind = item.kind === "account" ? ` · ${escapeText(item.deliveryKind)}` : "";
+      const deliveryKind = item.kind === "account" ? ` · ${escapeDiscordText(item.deliveryKind)}` : "";
       container.addTextDisplayComponents(text(
-        `**${index + 1}. ${item.kind.toUpperCase()}**${deliveryKind}\nProvider: ${escapeText(item.providerCode)} · Status: **${escapeText(item.status)}**\nRequested: ${item.quantityRequested} · Delivered: ${item.quantityDelivered}\nFailure: ${escapeText(item.failureCode)}\nManual required at: ${formatDate(item.manualRequiredAt)}\nMessage: ${escapeText(item.userMessage)}`
+        `**${index + 1}. ${item.kind.toUpperCase()}**${deliveryKind}\nProvider: ${escapeDiscordText(item.providerCode)} · Status: **${escapeDiscordText(item.status)}**\nRequested: ${item.quantityRequested} · Delivered: ${item.quantityDelivered}\nFailure: ${escapeDiscordText(item.failureCode)}\nManual required at: ${formatDiscordTimestampPair(item.manualRequiredAt)}\nCreated: ${formatDiscordTimestampPair(item.createdAt)}\nUpdated: ${formatDiscordTimestampPair(item.updatedAt)}\nMessage: ${escapeDiscordText(item.userMessage)}`
       ));
     });
   }
@@ -228,7 +229,9 @@ export function buildFulfillmentPanel(
     button(`cm:order:back:${sessionId}`, "Back to Order"),
     button(`cm:user:home:${sessionId}`, "User Operations")
   );
-  return container.addActionRowComponents(actions);
+  return container
+    .addActionRowComponents(actions)
+    .addActionRowComponents(shareRow(sessionId));
 }
 
 export function buildRefundPreviewPanel(
@@ -243,16 +246,18 @@ export function buildRefundPreviewPanel(
     .addTextDisplayComponents(text(
       `Gross refund: **${formatMoney(preview.grossRefundCents, preview.currency)}**\nWallet credit: **${formatMoney(preview.finalWalletCreditCents, preview.currency)}**\nAura awarded: ${preview.auraAwarded}\nAura recovered: ${preview.auraRecovered} (${preview.auraRecoveredAvailable} available + ${preview.auraRecoveredPending} pending)\nAura unrecoverable: ${preview.auraUnrecoverable}\nAura deduction: ${formatMoney(preview.auraDeductionCents, preview.currency)}\nResidual Aura: ${preview.auraResidual}`
     ))
-    .addTextDisplayComponents(text(`### Reason\n${escapeText(reason)}`));
+    .addTextDisplayComponents(text(`### Reason\n${escapeDiscordText(reason)}`));
 
-  if (note) container.addTextDisplayComponents(text(`> ${escapeText(note)}`));
+  if (note) container.addTextDisplayComponents(text(`> ${escapeDiscordText(note)}`));
 
-  return container.addActionRowComponents(
-    new ActionRowBuilder<ButtonBuilder>().addComponents(
-      button(`cm:refund:confirm:${sessionId}`, "Confirm Refund", ButtonStyle.Danger),
-      button(`cm:refund:cancel:${sessionId}`, "Cancel")
+  return container
+    .addActionRowComponents(
+      new ActionRowBuilder<ButtonBuilder>().addComponents(
+        button(`cm:refund:confirm:${sessionId}`, "Confirm Refund", ButtonStyle.Danger),
+        button(`cm:refund:cancel:${sessionId}`, "Cancel")
+      )
     )
-  );
+    .addActionRowComponents(shareRow(sessionId));
 }
 
 export function buildRefundSuccessPanel(
@@ -264,7 +269,7 @@ export function buildRefundSuccessPanel(
     .addTextDisplayComponents(text(`# Refund Complete\nOrder **${orderRef(refund)}** has been refunded.`))
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(text(
-      `Wallet credit: **${formatMoney(refund.finalWalletCreditCents, refund.currency)}**\nAura recovered: ${refund.auraRecovered}\nRefunded: ${formatDate(refund.refundedAt)}\nIdempotent replay: ${refund.idempotentReplay ? "Yes" : "No"}\nBackend audit: ${escapeText(refund.auditEventId)}\nDiscord audit: ${auditPosted ? "Posted" : "Failed to post; backend audit is authoritative"}`
+      `Wallet credit: **${formatMoney(refund.finalWalletCreditCents, refund.currency)}**\nAura recovered: ${refund.auraRecovered}\nRefunded: ${formatDiscordTimestampPair(refund.refundedAt)}\nIdempotent replay: ${refund.idempotentReplay ? "Yes" : "No"}\nBackend audit: ${escapeDiscordText(refund.auditEventId)}\nDiscord audit: ${auditPosted ? "Posted" : "Failed to post; backend audit is authoritative"}`
     ))
     .addActionRowComponents(
       new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -272,7 +277,8 @@ export function buildRefundSuccessPanel(
         button(`cm:user:home:${sessionId}`, "User Operations"),
         button(`cm:user:orders:${sessionId}:0`, "Order History")
       )
-    );
+    )
+    .addActionRowComponents(shareRow(sessionId));
 }
 
 export function buildAdjustmentPreviewPanel(
@@ -286,7 +292,7 @@ export function buildAdjustmentPreviewPanel(
     : `${formatMoney(proposal.beforeBalanceCents ?? 0, proposal.currency)}${proposal.beforeBalanceCents === null ? " (no prior wallet row)" : ""}`;
   const delta = isAura
     ? `${signedInteger(proposal.deltaAura)} Aura`
-    : formatMoney(proposal.deltaCents, proposal.currency).replace(`${escapeText(proposal.currency.toUpperCase())} `, `${escapeText(proposal.currency.toUpperCase())} ${proposal.deltaCents > 0 ? "+" : ""}`);
+    : formatMoney(proposal.deltaCents, proposal.currency).replace(`${escapeDiscordText(proposal.currency.toUpperCase())} `, `${escapeDiscordText(proposal.currency.toUpperCase())} ${proposal.deltaCents > 0 ? "+" : ""}`);
   const projected = isAura
     ? `${proposal.projectedAvailableAura.toLocaleString()} Aura`
     : formatMoney(proposal.projectedBalanceCents, proposal.currency);
@@ -295,20 +301,22 @@ export function buildAdjustmentPreviewPanel(
     .addTextDisplayComponents(text(`# ${isAura ? "Aura" : "Wallet"} Adjustment Preview`))
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(text(
-      `User: ${escapeText(proposal.targetUserId)}\nCurrent: **${before}**\nChange: **${delta}**\nProjected: **${projected}**`
+      `User: ${escapeDiscordText(proposal.targetUserId)}\nCurrent: **${before}**\nChange: **${delta}**\nProjected: **${projected}**`
     ))
-    .addTextDisplayComponents(text(`### Reason\n${escapeText(proposal.reason)}`))
+    .addTextDisplayComponents(text(`### Reason\n${escapeDiscordText(proposal.reason)}`))
     .addTextDisplayComponents(text(
       "> Confirming will re-read the current CM balance. If it changed since this preview, execution is blocked and a new preview is required."
     ));
-  if (note) container.addTextDisplayComponents(text(`> ${escapeText(note)}`));
+  if (note) container.addTextDisplayComponents(text(`> ${escapeDiscordText(note)}`));
 
-  return container.addActionRowComponents(
-    new ActionRowBuilder<ButtonBuilder>().addComponents(
-      button(`cm:adjust:confirm:${sessionId}`, `Confirm ${isAura ? "Aura" : "Wallet"} Adjustment`, ButtonStyle.Danger),
-      button(`cm:adjust:cancel:${sessionId}`, "Cancel")
+  return container
+    .addActionRowComponents(
+      new ActionRowBuilder<ButtonBuilder>().addComponents(
+        button(`cm:adjust:confirm:${sessionId}`, `Confirm ${isAura ? "Aura" : "Wallet"} Adjustment`, ButtonStyle.Danger),
+        button(`cm:adjust:cancel:${sessionId}`, "Cancel")
+      )
     )
-  );
+    .addActionRowComponents(shareRow(sessionId));
 }
 
 export function buildAdjustmentSuccessPanel(
@@ -321,7 +329,7 @@ export function buildAdjustmentSuccessPanel(
   const delta = isAura
     ? `${signedInteger(result.deltaAura)} Aura`
     : "deltaCents" in result
-      ? `${result.currency} ${result.deltaCents > 0 ? "+" : ""}${(result.deltaCents / 100).toFixed(2)}`
+      ? `${escapeDiscordText(result.currency)} ${result.deltaCents > 0 ? "+" : ""}${(result.deltaCents / 100).toFixed(2)}`
       : "—";
   const balance = isAura
     ? `${result.availableAura.toLocaleString()} Aura`
@@ -333,14 +341,15 @@ export function buildAdjustmentSuccessPanel(
     .addTextDisplayComponents(text(`# ${kind === "aura" ? "Aura" : "Wallet"} Adjustment Complete`))
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(text(
-      `User: ${escapeText(result.userId)}\nApplied: **${delta}**\nNew balance: **${balance}**\nCreated: ${formatDate(result.createdAt)}\nTransaction: ${escapeText(result.transactionId)}\nBackend audit: ${escapeText(result.auditEventId)}\nIdempotent replay: ${result.idempotentReplay ? "Yes" : "No"}\nDiscord audit: ${auditPosted ? "Posted" : "Failed to post; backend audit is authoritative"}`
+      `User: ${escapeDiscordText(result.userId)}\nApplied: **${delta}**\nNew balance: **${balance}**\nCreated: ${formatDiscordTimestampPair(result.createdAt)}\nTransaction: ${escapeDiscordText(result.transactionId)}\nBackend audit: ${escapeDiscordText(result.auditEventId)}\nIdempotent replay: ${result.idempotentReplay ? "Yes" : "No"}\nDiscord audit: ${auditPosted ? "Posted" : "Failed to post; backend audit is authoritative"}`
     ))
     .addActionRowComponents(
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         button(`cm:user:home:${sessionId}`, "User Operations", ButtonStyle.Primary),
         button(`cm:user:orders:${sessionId}:0`, "Order History")
       )
-    );
+    )
+    .addActionRowComponents(shareRow(sessionId));
 }
 
 export function buildBlockedPanel(
@@ -350,7 +359,7 @@ export function buildBlockedPanel(
   returnTo: "user" | "order"
 ): ContainerBuilder {
   return new ContainerBuilder()
-    .addTextDisplayComponents(text(`# ${escapeText(title)}\n${escapeText(message)}`))
+    .addTextDisplayComponents(text(`# ${escapeDiscordText(title)}\n${escapeDiscordText(message)}`))
     .addActionRowComponents(
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         button(
@@ -368,7 +377,7 @@ export function buildNoticePanel(
   returnTo?: "user" | "order"
 ): ContainerBuilder {
   const container = new ContainerBuilder()
-    .addTextDisplayComponents(text(`# ${escapeText(title)}\n${escapeText(message)}`));
+    .addTextDisplayComponents(text(`# ${escapeDiscordText(title)}\n${escapeDiscordText(message)}`));
   if (sessionId && returnTo) {
     container.addActionRowComponents(
       new ActionRowBuilder<ButtonBuilder>().addComponents(
