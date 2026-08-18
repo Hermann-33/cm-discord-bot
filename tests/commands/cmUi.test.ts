@@ -246,7 +246,7 @@ test("Order Operations shows Discord, product type, provider and masked delivery
     fulfillment
   ));
 
-  assert.equal(content.includes("Email: user@example.com"), true);
+  assert.equal(content.includes(`Email: ${escapeDiscordText("user@example.com")}`), true);
   assert.equal(content.includes(`Discord: <@${DISCORD_USER_ID}>`), true);
   assert.equal(content.includes(escapeDiscordText("example-product")), true);
   assert.equal(content.includes("Type: **7 Days**"), true);
