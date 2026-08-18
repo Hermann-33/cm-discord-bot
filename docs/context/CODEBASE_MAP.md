@@ -48,11 +48,11 @@ users.wallet.adjust
 - `src/commands/refreshLeaderboard.ts` — operational `/refresh-leaderboard`.
 - `src/commands/cm.ts` — central `/cm` slash/button/modal controller; email/Discord user lookup; direct order entry; share dispatch; navigation/refund/adjustment routing.
 - `src/commands/cmSessions.ts` — operator-bound bounded session plus selected order, mutation proposals and current share view.
-- `src/commands/cmUserActions.ts` — refresh user/order and fulfillment navigation; updates share state.
+- `src/commands/cmUserActions.ts` — refresh user/order and delivery-detail navigation; updates share state.
 - `src/commands/cmRefund.ts` — canonical refund preview/re-preview/execute/audit and share-success state.
 - `src/commands/cmAdjustments.ts` — Aura/wallet parsing, confirmation, fresh-state equality, execute/audit and share-success state.
-- `src/commands/cmUi.ts` — private Components V2 user/order/fulfillment/refund/adjustment panels, Discord identity/timestamps and Share to Chat buttons.
-- `src/commands/cmShare.ts` — dedicated customer-facing public renderer and channel publisher; no admin controls/internal-only fields, with canonical customer email disclosure governed by ADR-0009.
+- `src/commands/cmUi.ts` — **compact private Components V2 presentation** for user/order/delivery/refund/adjustment workflows; keeps action-relevant state and controls while suppressing routine internal/statistical bookkeeping.
+- `src/commands/cmShare.ts` — **compact dedicated customer-facing renderer**; no admin controls/internal-only fields, canonical customer email disclosure governed by ADR-0009.
 - `src/commands/cmSupport.ts` — safe messages, parsing, authorization wrapper and session retrieval.
 
 ### Discord boundaries
@@ -97,7 +97,8 @@ Commands/admin presentation:
 - `tests/commands/cmSessions.test.ts` — ownership/expiry/default share view.
 - `tests/commands/cmAdjustments.test.ts` — adjustment confirmation/audit/share state.
 - `tests/commands/cmShare.test.ts` — customer-email inclusion plus retained internal-field/control exclusions and channel publish behavior.
-- `tests/commands/cmUi.test.ts` — Discord link state and absolute+relative timestamps.
+- `tests/commands/cmShareAuthorization.test.ts` — Share to Chat reauthorization and operator ownership.
+- `tests/commands/cmUi.test.ts` — compact user/order/delivery/result presentation plus internal/bookkeeping omission assertions.
 - `tests/discord/adminAudit.test.ts` — concise Components V2 audit + mention safety/time presentation.
 
 Lifecycle/leaderboard/logging:
