@@ -56,28 +56,30 @@ externalUserId=<selected user ID>
 
 Providing both or neither fails before backend access.
 
-The private User Operations panel shows:
+### User Operations presentation
 
-- account status;
-- account creation/last sign-in time;
-- Discord Linked/Not linked state;
-- linked Discord user plus returned username/display name/link time when available;
-- wallet balance/update time;
-- Aura balances/update time;
-- counts;
-- most recent order;
-- bounded recent Order History;
+The private home panel intentionally shows only the most actionable summary:
+
+- canonical account email;
+- Active/BANNED state;
+- compact linked Discord user / Not linked state;
+- current wallet balance;
+- available Aura and pending Aura when non-zero;
+- total order count;
+- latest order;
 - Adjust Aura;
 - Adjust Wallet;
+- Open Recent Order;
+- Order History;
 - Share to Chat.
 
-All `/cm` date/time displays use:
+Routine account/login timestamps, verbose Discord profile metadata, wallet/Aura update times, lifetime Aura totals and license/account-delivery counters are intentionally omitted from the home panel to reduce operational noise.
+
+Timestamps that remain useful in order/result views use Discord absolute + relative format:
 
 ```text
 <t:unix:f> · <t:unix:R>
 ```
-
-for absolute + relative time.
 
 ## `/cm order reference:<CM-public-ref-or-order-UUID>`
 
@@ -90,11 +92,51 @@ Flow:
 5. require exact owner/order target match;
 6. create operator-bound session and render the standard order panel.
 
-Controls include Refund, Fulfillment diagnostics, Refresh Order, User Operations, recent Order History and Share to Chat.
+### Order Operations presentation
+
+The private order panel shows:
+
+- public order reference and status;
+- customer email;
+- customer-facing item/account details;
+- quantity only when meaningful (>1);
+- amount;
+- payment method;
+- placed timestamp;
+- delivered/requested quantity;
+- manual-review warning only when required;
+- Refund;
+- Delivery Details;
+- Refresh Order;
+- User Operations;
+- Share to Chat.
+
+It intentionally omits internal user UUID, internal option/variant fallback IDs, payment provider, duplicate fulfillment sub-counts, redundant purchase-type labels and duplicate Order History navigation.
+
+## Recent Order History
+
+`users.overview.read` returns at most 10 recent orders; the bot paginates the returned set five per page.
+
+Each entry shows reference, item, status, amount, quantity only when >1 and date/time. If the account has more orders than the overview returned, a compact `Latest N of total` indicator is shown instead of exposing API implementation detail.
+
+## Delivery Details
+
+`orders.fulfillment.read` remains diagnostics-only, but the UI presents only useful operational/customer information:
+
+- fulfillment kind and account delivery kind when relevant;
+- status;
+- delivered/requested quantity;
+- failure only when present;
+- manual-review time only when present;
+- user message only when present.
+
+Provider codes, record created/updated times, linked-license top counts and empty diagnostic fields are not routinely displayed.
+
+The visible nonfunctional **Manual Fulfillment** button has been removed. No manual-fulfillment execute operation exists and no substitute mutation is permitted.
 
 ## Share to Chat
 
-Meaningful private User/Orders/Order/Fulfillment/Refund/Adjustment panels expose **Share to Chat**.
+Meaningful private User/Orders/Order/Delivery/Refund/Adjustment panels expose **Share to Chat**.
 
 The click is itself an authorized `/cm` button action and requires the owning session. It sends a separately rendered Components V2 message into the current channel.
 
@@ -104,7 +146,8 @@ The shared copy:
 - performs no mutation;
 - disables mentions;
 - **includes the canonical customer account email** from `session.overview.identity.email`, Discord-escaped for display;
-- may include the linked Discord user and customer-relevant status, wallet/Aura values, order/refund/fulfillment state and timestamps;
+- may include linked Discord identity and customer-relevant current account/wallet/Aura/order/refund/delivery state;
+- intentionally omits routine account/login/update/lifetime/activity statistics where they do not help the customer;
 - omits internal CM user UUID, internal purchase option IDs, backend audit/transaction/idempotency identifiers, internal provider/failure codes and admin refund/adjustment reasons.
 
 ADR-0009 supersedes ADR-0008 only for the previous prohibition on displaying the full customer email. The rest of the Share to Chat security boundary remains unchanged.
@@ -128,6 +171,8 @@ Uses `users.overview.read` + `users.aura.adjust`.
 - backend audit + concise mention-safe Discord audit;
 - post-success overview refresh.
 
+The preview panel shows current/change/projected values and reason without exposing the internal target UUID. Success shows applied change, new balance and completion time. Routine backend transaction/audit IDs and `Idempotent replay: No`/`Discord audit: Posted` status lines are hidden; exceptional replay or audit-post failure warnings remain visible.
+
 ## Wallet adjustment
 
 Uses `users.overview.read` + `users.wallet.adjust`.
@@ -138,6 +183,8 @@ Uses `users.overview.read` + `users.wallet.adjust`.
 - projected negative balance blocked;
 - same fresh-state/confirmation/idempotency/audit model as Aura;
 - website remains authoritative for wallet ledger/funding-state behavior.
+
+Presentation follows the same compact preview/success rules as Aura.
 
 ## Refund
 
@@ -152,13 +199,11 @@ orders.refund.preview
 
 Reason is 8–1000 characters. Caller does not supply refund economics. `BOT_AUDIT_LOG_CHANNEL_ID` is required before execute.
 
+The preview UI retains refund amount, wallet credit, Aura recovered, non-zero unrecoverable Aura and reason. Internal calculation breakdown fields are omitted from routine display. Success retains the outcome and completion time; backend bookkeeping is hidden unless an exceptional warning is needed.
+
 ## Discord audit presentation
 
 Refund/Aura/wallet audit messages are concise Components V2 panels showing useful operational context: customer identity when available, action/result, reason, operator and completion timestamp. A replay note appears only for an actual idempotent replay. Website immutable audit remains authoritative; backend transaction/audit IDs are not repeated in the Discord presentation.
-
-## Order history and fulfillment
-
-`users.overview.read` returns at most 10 recent orders; the bot paginates the returned set five per page. `orders.fulfillment.read` remains diagnostics-only. Manual Fulfillment stays blocked because no website mutation operation exists.
 
 ## Authorization matrix
 
@@ -169,7 +214,8 @@ Refund/Aura/wallet audit messages are concise Components V2 panels showing usefu
 | `/cm user ...` | admin | any configured-guild channel | **mandatory** | Aura/wallet/refund through controls |
 | `/cm order ...` | admin | any configured-guild channel | **mandatory** | refund and owner Aura/wallet through navigation |
 | Share to Chat | admin initiates; channel readers consume | current configured-guild channel | **mandatory for click** | **none** |
-| Manual fulfillment | admin | same `/cm` rule | **mandatory** | **blocked** |
+
+Manual fulfillment is not exposed as an actionable UI surface and remains unsupported until a dedicated website-owned operation exists.
 
 ## Bot API surface
 
@@ -185,4 +231,4 @@ users.aura.adjust
 users.wallet.adjust
 ```
 
-TASK-CM-ADMIN-005 adds no API operation and does not change the slash-command definition. Website per-client `allowedOperations` remains an independent runtime authorization boundary.
+TASK-CM-ADMIN-006 adds no API operation and does not change the slash-command definition. Website per-client `allowedOperations` remains an independent runtime authorization boundary.
