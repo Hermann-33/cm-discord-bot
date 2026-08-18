@@ -54,11 +54,8 @@ export type CmShareView =
   | { kind: "refund-preview" }
   | { kind: "refund-success"; data: OrderRefundExecuteData }
   | { kind: "adjustment-preview" }
-  | {
-      kind: "adjustment-success";
-      adjustmentKind: "aura" | "wallet";
-      data: AuraAdjustmentData | WalletAdjustmentData;
-    };
+  | { kind: "adjustment-success"; adjustmentKind: "aura"; data: AuraAdjustmentData }
+  | { kind: "adjustment-success"; adjustmentKind: "wallet"; data: WalletAdjustmentData };
 
 export type CmAdminSession = {
   id: string;
