@@ -8,14 +8,17 @@ import {
   TextDisplayBuilder
 } from "discord.js";
 import type {
+  AuraAdjustmentData,
   OrderDetailsData,
   OrderFulfillmentData,
   OrderRefundExecuteData,
   OrderRefundPreviewData,
   RecentOrderData,
-  UserOverviewData
+  UserOverviewData,
+  WalletAdjustmentData
 } from "../api/schemas";
 import { safeAllowedMentions } from "../discord/safeMessages";
+import type { UserAdjustmentProposal } from "./cmSessions";
 
 const ORDERS_PER_PAGE = 5;
 
@@ -49,6 +52,10 @@ function formatDate(value: string | null | undefined): string {
 function formatMoney(cents: number, currency: string): string {
   const safeCurrency = escapeText(currency.toUpperCase());
   return `${safeCurrency} ${(cents / 100).toFixed(2)}`;
+}
+
+function signedInteger(value: number): string {
+  return `${value > 0 ? "+" : ""}${value.toLocaleString()}`;
 }
 
 function orderLabel(order: RecentOrderData | OrderDetailsData): string {
@@ -92,8 +99,8 @@ export function buildUserPanel(sessionId: string, overview: UserOverviewData): C
     : "No recent orders";
 
   const actions = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    button(`cm:block:aura:${sessionId}`, "Adjust Aura"),
-    button(`cm:block:wallet:${sessionId}`, "Adjust Wallet"),
+    button(`cm:adjust:aura:${sessionId}`, "Adjust Aura", ButtonStyle.Primary),
+    button(`cm:adjust:wallet:${sessionId}`, "Adjust Wallet", ButtonStyle.Primary),
     button(`cm:order:open:${sessionId}:0`, "Open Recent Order", ButtonStyle.Primary).setDisabled(!latest),
     button(`cm:user:orders:${sessionId}:0`, "Order History")
   );
@@ -263,6 +270,74 @@ export function buildRefundSuccessPanel(
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         button(`cm:order:refresh:${sessionId}`, "Open Order", ButtonStyle.Primary),
         button(`cm:user:home:${sessionId}`, "User Operations"),
+        button(`cm:user:orders:${sessionId}:0`, "Order History")
+      )
+    );
+}
+
+export function buildAdjustmentPreviewPanel(
+  sessionId: string,
+  proposal: UserAdjustmentProposal,
+  note?: string
+): ContainerBuilder {
+  const isAura = proposal.kind === "aura";
+  const before = isAura
+    ? `${(proposal.beforeAvailableAura ?? 0).toLocaleString()} Aura${proposal.beforeAvailableAura === null ? " (no prior balance row)" : ""}`
+    : `${formatMoney(proposal.beforeBalanceCents ?? 0, proposal.currency)}${proposal.beforeBalanceCents === null ? " (no prior wallet row)" : ""}`;
+  const delta = isAura
+    ? `${signedInteger(proposal.deltaAura)} Aura`
+    : formatMoney(proposal.deltaCents, proposal.currency).replace(`${escapeText(proposal.currency.toUpperCase())} `, `${escapeText(proposal.currency.toUpperCase())} ${proposal.deltaCents > 0 ? "+" : ""}`);
+  const projected = isAura
+    ? `${proposal.projectedAvailableAura.toLocaleString()} Aura`
+    : formatMoney(proposal.projectedBalanceCents, proposal.currency);
+
+  const container = new ContainerBuilder()
+    .addTextDisplayComponents(text(`# ${isAura ? "Aura" : "Wallet"} Adjustment Preview`))
+    .addSeparatorComponents(separator())
+    .addTextDisplayComponents(text(
+      `User: ${escapeText(proposal.targetUserId)}\nCurrent: **${before}**\nChange: **${delta}**\nProjected: **${projected}**`
+    ))
+    .addTextDisplayComponents(text(`### Reason\n${escapeText(proposal.reason)}`))
+    .addTextDisplayComponents(text(
+      "> Confirming will re-read the current CM balance. If it changed since this preview, execution is blocked and a new preview is required."
+    ));
+  if (note) container.addTextDisplayComponents(text(`> ${escapeText(note)}`));
+
+  return container.addActionRowComponents(
+    new ActionRowBuilder<ButtonBuilder>().addComponents(
+      button(`cm:adjust:confirm:${sessionId}`, `Confirm ${isAura ? "Aura" : "Wallet"} Adjustment`, ButtonStyle.Danger),
+      button(`cm:adjust:cancel:${sessionId}`, "Cancel")
+    )
+  );
+}
+
+export function buildAdjustmentSuccessPanel(
+  sessionId: string,
+  kind: "aura" | "wallet",
+  result: AuraAdjustmentData | WalletAdjustmentData,
+  auditPosted: boolean
+): ContainerBuilder {
+  const isAura = kind === "aura" && "deltaAura" in result;
+  const delta = isAura
+    ? `${signedInteger(result.deltaAura)} Aura`
+    : "deltaCents" in result
+      ? `${result.currency} ${result.deltaCents > 0 ? "+" : ""}${(result.deltaCents / 100).toFixed(2)}`
+      : "—";
+  const balance = isAura
+    ? `${result.availableAura.toLocaleString()} Aura`
+    : "balanceCents" in result
+      ? formatMoney(result.balanceCents, result.currency)
+      : "—";
+
+  return new ContainerBuilder()
+    .addTextDisplayComponents(text(`# ${kind === "aura" ? "Aura" : "Wallet"} Adjustment Complete`))
+    .addSeparatorComponents(separator())
+    .addTextDisplayComponents(text(
+      `User: ${escapeText(result.userId)}\nApplied: **${delta}**\nNew balance: **${balance}**\nCreated: ${formatDate(result.createdAt)}\nTransaction: ${escapeText(result.transactionId)}\nBackend audit: ${escapeText(result.auditEventId)}\nIdempotent replay: ${result.idempotentReplay ? "Yes" : "No"}\nDiscord audit: ${auditPosted ? "Posted" : "Failed to post; backend audit is authoritative"}`
+    ))
+    .addActionRowComponents(
+      new ActionRowBuilder<ButtonBuilder>().addComponents(
+        button(`cm:user:home:${sessionId}`, "User Operations", ButtonStyle.Primary),
         button(`cm:user:orders:${sessionId}:0`, "Order History")
       )
     );
