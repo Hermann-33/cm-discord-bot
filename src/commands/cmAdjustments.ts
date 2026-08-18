@@ -326,11 +326,11 @@ export async function confirmAdjustment(
       });
     }
 
-    session.shareView = {
-      kind: "adjustment-success",
-      adjustmentKind: proposal.kind,
-      data: result
-    };
+    if ("deltaAura" in result) {
+      session.shareView = { kind: "adjustment-success", adjustmentKind: "aura", data: result };
+    } else {
+      session.shareView = { kind: "adjustment-success", adjustmentKind: "wallet", data: result };
+    }
     await interaction.editReply(panelPayload(buildAdjustmentSuccessPanel(session.id, proposal.kind, result, auditPosted)));
   } catch (error) {
     logger.warn("CM adjustment execute failed", { code: isInternalApiError(error) ? error.code : "UNKNOWN" });
