@@ -25,7 +25,7 @@ PR:
 
 ## Verdict
 
-`PARTIAL` pending final executable CI verification.
+`COMPLETE` for implementation and executable verification. Merge is permitted once the final documentation head revalidates successfully in GitHub Actions.
 
 ## Product request
 
@@ -90,16 +90,28 @@ No API, website, Supabase/Postgres, mutation, refund, Aura/wallet business logic
 
 A recent-orders share test was added to cover the shared identity block outside the direct order panel.
 
-## Required final gate
+## Executable verification
 
-Before merge, GitHub Actions must pass:
+GitHub Actions run `32145501289` executed on Node `22.23.2` and passed the implementation head:
 
 ```text
-npm ci
-npm test
-npm run typecheck
-npm run build
-git diff --check
+npm ci: PASS — 31 packages installed, 32 audited, 0 vulnerabilities
+npm test: PASS — 128/128, 0 failed, 0 skipped, 0 cancelled
+npm run typecheck: PASS
+npm run build: PASS
+git diff --check: PASS
 ```
 
-Final review must also confirm no unrelated API/auth/mutation/legacy/config changes.
+Relevant new disclosure tests passed for user, recent-orders, direct-order and refund-preview shares. Existing Share authorization/session ownership, architecture/no-direct-DB, API-surface, mutation, registration and legacy-isolation tests also remained green.
+
+## Final static review
+
+PR scope is limited to:
+
+- `src/commands/cmShare.ts`;
+- `tests/commands/cmShare.test.ts`;
+- ADR-0009 and task/context/security documentation.
+
+No API client/signing, authorization, mutation, configuration, registration or `legacy/` source file changes are present. The source diff changes only customer identity rendering to add the explicitly authorized escaped email.
+
+The final documentation-only head must still pass the same GitHub Actions workflow before merge; no additional source behavior is being introduced by those finalization commits.
