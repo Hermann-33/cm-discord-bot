@@ -89,6 +89,28 @@ const config = {
   botAuditLogChannelId: "123456789012345699"
 } as unknown as AppConfig;
 
+const dependencies = {
+  nowMs: () => 1_000,
+  idempotencyKey: () => IDEMPOTENCY_ID,
+  postAdjustmentAudit: async () => undefined
+} as AdjustmentDependencies;
+
+test("Aura confirmation fails closed before backend access when audit channel is missing", async () => {
+  const state = session();
+  let backendCalls = 0;
+  const api = {
+    fetchUserOverview: async () => { backendCalls += 1; return overview(500); },
+    executeAuraAdjustment: async () => { backendCalls += 1; throw new Error("must not execute"); }
+  } as unknown as InternalApiClient;
+  const interaction = fakeButton();
+  const configWithoutAudit = {} as AppConfig;
+
+  await confirmAdjustment(interaction.interaction, state, api, configWithoutAudit, dependencies);
+  assert.equal(backendCalls, 0);
+  assert.equal(interaction.updates.length, 1);
+  assert.notEqual(state.adjustmentProposal, undefined);
+});
+
 test("Aura confirmation fails closed if fresh balance changed", async () => {
   const state = session();
   let executeCalls = 0;
@@ -96,11 +118,6 @@ test("Aura confirmation fails closed if fresh balance changed", async () => {
     fetchUserOverview: async () => overview(501),
     executeAuraAdjustment: async () => { executeCalls += 1; throw new Error("must not execute"); }
   } as unknown as InternalApiClient;
-  const dependencies = {
-    nowMs: () => 1_000,
-    idempotencyKey: () => IDEMPOTENCY_ID,
-    postAdjustmentAudit: async () => undefined
-  } as AdjustmentDependencies;
   const interaction = fakeButton();
 
   await confirmAdjustment(interaction.interaction, state, api, config, dependencies);
@@ -136,14 +153,13 @@ test("Aura confirmation executes exact proposal and posts audit", async () => {
       return result;
     }
   } as unknown as InternalApiClient;
-  const dependencies = {
-    nowMs: () => 1_000,
-    idempotencyKey: () => IDEMPOTENCY_ID,
+  const auditDependencies = {
+    ...dependencies,
     postAdjustmentAudit: async (input: unknown) => { auditInput = input; }
   } as unknown as AdjustmentDependencies;
   const interaction = fakeButton();
 
-  await confirmAdjustment(interaction.interaction, state, api, config, dependencies);
+  await confirmAdjustment(interaction.interaction, state, api, config, auditDependencies);
   assert.deepEqual(executedInput, {
     selector: { kind: "user_id", value: USER_ID },
     deltaAura: 250,
