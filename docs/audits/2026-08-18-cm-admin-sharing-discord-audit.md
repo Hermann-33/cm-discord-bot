@@ -2,7 +2,7 @@
 
 Repository: `Hermann-33/cm-discord-bot`
 
-Base:
+Base before merge:
 
 ```text
 master
@@ -23,11 +23,9 @@ PR:
 
 ## Verdict
 
-`PARTIAL`
+`COMPLETE`
 
-The requested implementation and focused tests are present on the feature branch. Static architecture review is in progress/clean for the intended boundaries. The repository's GitHub Actions runner still fails before creating any workflow steps (`steps: null`, no job log), so no executable test/typecheck/build claim is made yet.
-
-Per repository governance, this task must remain unmerged until an executable gate actually runs and passes. The product owner explicitly requested that a separate Codex/local verification run be skipped, so no local-run claim is substituted for the blocked CI.
+The requested implementation, focused tests, static security review and executable GitHub Actions gate all passed on the feature branch. The repository can be merged under the product owner's existing authorization without a separate Codex/local verification run.
 
 ## Authorized scope
 
@@ -71,6 +69,7 @@ Public rendering intentionally omits:
 
 - full account email;
 - internal CM user UUID;
+- internal license/variant identifiers;
 - backend audit/transaction IDs;
 - idempotency keys;
 - private session/custom IDs;
@@ -86,7 +85,7 @@ Public rendering contains no action rows/buttons/selects/modals/custom IDs. `saf
 
 ```text
 email
-Discord user
+discord_user
 ```
 
 Runtime requires exactly one. Discord lookup maps to:
@@ -151,7 +150,7 @@ Coverage added/updated for:
 - both/neither lookup rejection before backend access;
 - Discord link presentation;
 - absolute + relative Discord timestamps;
-- customer-safe share omission of email/internal UUID/provider/admin reason;
+- customer-safe share omission of email/internal UUID/provider/admin reason/internal option IDs;
 - public share absence of interactive custom IDs;
 - public Components V2 channel send + ephemeral admin acknowledgement;
 - concise Components V2 refund/adjustment audit output;
@@ -159,45 +158,41 @@ Coverage added/updated for:
 - adjustment audit input/share-success state;
 - session default share state.
 
-Root `npm test` includes the new share/UI/audit tests.
+## Executable verification evidence
 
-## GitHub Actions evidence
+Making the repository public allowed the standard GitHub-hosted runner to execute. The first real run exposed a TypeScript narrowing defect in `src/commands/cmShare.ts` after all 127 tests passed. The defect was corrected by narrowing `view.data` only after discriminating `view.adjustmentKind`.
 
-PR-triggered CI run `32138604602` completed `failure`, but job `verify` contains:
-
-```text
-steps: null
-logs_url: null
-```
-
-This is the same pre-execution GitHub Actions infrastructure/billing/spending-limit failure documented on earlier tasks. It is neither a source test failure nor a test pass.
-
-## Required completion gate
-
-Before merge, an executable Node 22+ environment must actually run and pass:
+Final PR-triggered CI run:
 
 ```text
-npm ci
-npm test
-npm run typecheck
-npm run build
-git diff --check
-git status --short --untracked-files=all
+run 32142352087
+job verify: success
+Node 22.23.2
+npm ci: success, 0 vulnerabilities
+npm test: 127/127 passed
+npm run typecheck: success
+npm run build: success
+git diff --check: success
 ```
 
-Focused final scans must also confirm:
+The successful run is the authoritative executable gate for this task.
 
-- no direct DB/Supabase access;
+## Final focused security review
+
+Confirmed:
+
+- no direct DB/Supabase client or credential added;
 - no new API operation path;
 - no manual-fulfillment or purchase-processing shortcut;
-- no secret/HMAC material;
+- no secret/HMAC material added;
 - no `legacy/` modification/import;
-- customer-safe output has no interactive control and no private fields;
-- authorization/mutation/audit prerequisites remain intact.
+- customer-safe output has no interactive control and omits private/internal fields defined by ADR-0008;
+- authorization/mutation/audit prerequisites remain intact;
+- Discord mentions remain disabled on public-share and audit output.
 
 ## Operational exclusions
 
-No repository implementation action performs:
+Repository implementation/verification did not perform:
 
 - bot deployment/restart;
 - Discord command registration;
