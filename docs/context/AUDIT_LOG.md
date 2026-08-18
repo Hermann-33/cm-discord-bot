@@ -159,7 +159,9 @@ Reduce menu/order/statistical bloat across private `/cm` panels and Share to Cha
 
 Initial CI run `32155910678` passed existing product/security tests but failed two newly added presentation assertions due to incorrect JSON-string escaping expectations. No production behavior defect was found. The tests were corrected to inspect rendered component content directly.
 
-GitHub Actions run `32156144669` then passed on Node `22.23.2`:
+Implementation-head GitHub Actions run `32156144669` passed 131/131 tests, typecheck, build and diff check.
+
+After README/context/audit updates, documentation-head run `32156801285` also passed on Node `22.23.2`:
 
 ```text
 npm ci: PASS, 0 vulnerabilities
@@ -171,4 +173,4 @@ git diff --check: PASS
 
 No API/signing, authorization, mutation, environment, slash-command, website/Supabase, leaderboard or `legacy/` change is in scope.
 
-Verdict: `COMPLETE` for implementation-head behavior; final documentation-head CI remains required before PR #4 merge.
+Verdict: `COMPLETE` for implementation/documentation verification; merge requires the current PR #4 head GitHub Actions status to remain green.
