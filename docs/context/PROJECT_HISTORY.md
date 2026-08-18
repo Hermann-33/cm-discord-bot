@@ -39,37 +39,54 @@ ADR-0006 removed the shared `/cm` command-channel restriction while retaining ex
 
 ## 2026-08-18 — Direct order + balance controls merged
 
-TASK-CM-ADMIN-003 added:
+TASK-CM-ADMIN-003 added `/cm order`, confirmed Aura adjustment, confirmed wallet adjustment and ADR-0007 fresh-state-bound Aura/wallet confirmation while retaining canonical refund and blocked manual fulfillment.
 
-- `/cm order reference:<CM-public-ref-or-UUID>`;
-- confirmed Aura adjustment;
-- confirmed wallet adjustment;
-- ADR-0007 fresh-state-bound Aura/wallet confirmation;
-- retained canonical refund and blocked manual fulfillment.
-
-Local Node `v24.11.1` verification passed 113/113 tests, typecheck, build, diff checks and focused security scans.
-
-PR #1 was squash-merged into `master` at:
+Local verification passed 113/113 tests, typecheck, build, diff checks and focused security scans. PR #1 was squash-merged into `master` at:
 
 ```text
 4b10d74aa80d3fa5c5e5a27b82e4ccf109a880a8
 ```
 
-## 2026-08-18 — Customer-safe sharing / Discord UX task
+## 2026-08-18 — Share to Chat / Discord UX merged
 
-TASK-CM-ADMIN-004 began from the verified mainline above.
+TASK-CM-ADMIN-004 added:
 
-Product direction:
+- `/cm user` by email or selected Discord user;
+- linked Discord identity presentation;
+- separate customer-safe Share to Chat rendering;
+- Discord absolute + relative timestamps;
+- concise Components V2 mutation audit summaries;
+- ADR-0008 public sharing/control boundary.
 
-- authorized staff should be able to publish the current meaningful `/cm` state into the channel for customer communication;
-- customer copy must contain no admin controls/private internal fields;
-- User Operations should show linked Discord state/user;
-- `/cm user` should accept email or selected Discord user;
-- admin/share/audit times should use Discord absolute + relative timestamps;
-- Discord mutation audit should be concise and visually structured.
+After repository CI became executable, final run `32142352087` passed 127/127 tests, typecheck, build and diff check. PR #2 was merged at:
 
-Current website source already supports `users.overview.read` by `external_identity` and returns linked identity metadata, so no website/API/DB expansion is required.
+```text
+7a41dbeefae167044091b0aaed8372c3b58acdd0
+```
 
-ADR-0008 records the separate customer-safe renderer/disclosure policy. Implementation is isolated on `task/cm-share-discord-audit-time` / PR #2.
+## 2026-08-18 — Customer email intentionally added to shared panels
 
-GitHub Actions for PR #2 still fails before job steps are created because of the documented runner/account infrastructure problem. The product owner requested no additional Codex/local test run, but repository governance requires a real executable pass before merge; therefore TASK-CM-ADMIN-004 remains feature-branch/PR work until that gate is satisfied.
+TASK-CM-ADMIN-005 / ADR-0009 changed one disclosure decision: the canonical customer account email is intentionally included in Share to Chat customer identity sections. The separate read-only renderer, no public controls and all other internal-field exclusions remain.
+
+Implementation and final-documentation GitHub Actions runs passed; PR #3 was squash-merged at:
+
+```text
+9466d6f23a6c2027b0e88c32eb4e78ddeeeb61fd
+```
+
+## 2026-08-18 — Admin UI declutter
+
+TASK-CM-ADMIN-006 was started to remove unnecessary operational/statistical bloat after reviewing the complete User Operations, recent orders, order, fulfillment, refund, Aura/wallet and Share to Chat presentation surfaces.
+
+The task intentionally changes presentation only:
+
+- User Operations focuses on status, compact identity, current wallet/Aura, order count/latest order and core actions;
+- order views remove internal IDs/provider/redundant fulfillment statistics;
+- fulfillment presentation becomes `Delivery Details` and shows exception data only when meaningful;
+- the nonfunctional Manual Fulfillment button is removed rather than advertising unavailable capability;
+- mutation panels hide routine backend bookkeeping while keeping results and exceptional warnings;
+- customer shares are shortened while preserving ADR-0009 email disclosure and ADR-0008 no-control/internal-field rules.
+
+No API/auth/mutation/database/config/registration/leaderboard/legacy change is part of the task.
+
+The first CI run caught two errors in new test assertion escaping only. After correcting those tests, run `32156144669` passed 131/131 tests, typecheck, build and diff check. Final documentation-head revalidation remains the last pre-merge gate for PR #4.
