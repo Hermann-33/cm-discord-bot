@@ -15,8 +15,10 @@ export function safeApiMessage(error: unknown): string {
   if (isInternalApiError(error, "ALREADY_REFUNDED")) return "This order is already refunded.";
   if (isInternalApiError(error, "REFUND_NOT_ELIGIBLE")) return "This order is not eligible for refund.";
   if (isInternalApiError(error, "REFUND_STATE_INVALID")) return "CM rejected the refund because the order state is inconsistent.";
+  if (isInternalApiError(error, "INVALID_ADJUSTMENT")) return "CM rejected this balance adjustment as invalid.";
+  if (isInternalApiError(error, "INSUFFICIENT_BALANCE")) return "This adjustment would make the available balance negative.";
   if (isInternalApiError(error, "IDEMPOTENCY_CONFLICT")) {
-    return "CM rejected the refund because its idempotency state conflicted. Do not retry with changed details.";
+    return "CM rejected the mutation because its idempotency state conflicted. Start the operation again instead of changing a retry.";
   }
   return "The CM service request could not be completed.";
 }
@@ -52,7 +54,7 @@ export async function requireSession(
   if (session) return session;
   await rejectUnauthorized(
     interaction,
-    "This private CM admin panel expired or does not belong to you. Run /cm user again."
+    "This private CM admin panel expired or does not belong to you. Run /cm user or /cm order again."
   );
   return null;
 }
