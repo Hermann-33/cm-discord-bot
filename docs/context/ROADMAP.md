@@ -42,7 +42,7 @@ Active code/dependency audit plus current Internal Integrations API operation/se
 
 `TASK-CM-ADMIN-005` / ADR-0009 explicitly added canonical customer account email to Share to Chat while preserving the separate read-only renderer and internal-field/control exclusions. Executable verification passed 128/128 tests, typecheck, build and diff check before merge.
 
-## Phase 5.2 — Admin UI declutter — TASK-CM-ADMIN-006 COMPLETE / FINAL-HEAD VERIFICATION PENDING
+## Phase 5.2 — Admin UI declutter — TASK-CM-ADMIN-006 COMPLETE / VERIFIED FOR MERGE
 
 Branch / PR:
 
@@ -64,11 +64,13 @@ Implemented:
 - Share to Chat summaries reduced to customer-relevant current state while retaining ADR-0009 email disclosure;
 - focused presentation tests added/expanded.
 
-No API operation, website source/config, Supabase/Postgres path, mutation logic, authorization, environment variable, slash-command definition, leaderboard behavior or `legacy/` change.
+No API operation, website source/config, database path, mutation logic, authorization, environment variable, slash-command definition, leaderboard behavior or `legacy/` change.
 
 ### Executable gate
 
-The first CI attempt caught two faulty new test assertions only. After fixing those assertions, GitHub Actions run `32156144669` passed on Node `22.23.2`:
+The first CI attempt caught two faulty new test assertions only. After fixing those assertions, GitHub Actions run `32156144669` passed 131/131 tests, typecheck, build and diff check.
+
+After the documentation/audit updates, run `32156801285` also passed on Node `22.23.2`:
 
 ```text
 npm ci: PASS, 0 vulnerabilities
@@ -78,7 +80,7 @@ npm run build: PASS
 git diff --check: PASS
 ```
 
-Final documentation head must pass the same workflow before merge.
+PR #4 is complete for implementation/documentation verification and may merge when its current-head GitHub Actions status is green.
 
 ## Phase 6 — Manual fulfillment — BACKEND OPERATION REQUIRED
 
