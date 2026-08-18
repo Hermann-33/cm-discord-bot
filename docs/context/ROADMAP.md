@@ -42,7 +42,7 @@ Active code/dependency audit plus current Internal Integrations API operation/se
 4b10d74aa80d3fa5c5e5a27b82e4ccf109a880a8
 ```
 
-Mainline now includes:
+Mainline includes:
 
 - `/cm order reference:<CM-ref-or-UUID>`;
 - confirmed Aura adjustment;
@@ -51,7 +51,7 @@ Mainline now includes:
 - backend + Discord audit;
 - manual fulfillment still blocked.
 
-## Phase 5 — Customer-safe sharing / Discord admin UX — TASK-CM-ADMIN-004 PARTIAL
+## Phase 5 — Customer-safe sharing / Discord admin UX — TASK-CM-ADMIN-004 COMPLETE / VERIFIED FOR MERGE
 
 Branch/PR:
 
@@ -60,7 +60,7 @@ task/cm-share-discord-audit-time
 PR #2
 ```
 
-Feature-branch implementation includes:
+Implementation includes:
 
 - `/cm user` lookup by exact email or selected Discord user;
 - linked Discord identity in User Operations;
@@ -72,22 +72,25 @@ Feature-branch implementation includes:
 
 No new API operation, website source/config, DB path or manual fulfillment behavior is introduced.
 
-### Current gate
+### Executable gate
 
-GitHub Actions run `32138604602` fails before job steps are created (`steps: null`, no logs), matching the existing Actions runner/account infrastructure problem.
+After the repository became public, the standard GitHub-hosted runner executed the full workflow. An initial real run exposed a TypeScript narrowing defect in the new share-success renderer; that defect was fixed narrowly.
 
-The product owner requested no separate Codex/local test run. Repository governance still requires an executable pass before merge, so TASK-CM-ADMIN-004 remains PARTIAL/unmerged until this actually runs successfully:
+Final successful run:
 
 ```text
-npm ci
-npm test
-npm run typecheck
-npm run build
-git diff --check
-git status --short --untracked-files=all
+GitHub Actions 32142352087
+Node 22.23.2
+npm ci: PASS, 0 vulnerabilities
+npm test: PASS — 127/127
+npm run typecheck: PASS
+npm run build: PASS
+git diff --check: PASS
 ```
 
-If an executable gate passes and final static/security review is clean, PR #2 may be finalized and directly merged under the current authorization.
+Final static/security review remains clean for direct DB/Supabase access, new API operations, purchase-processing/manual-fulfillment shortcuts, secrets/HMAC material, `legacy/` changes, authorization regression and customer control disclosure.
+
+TASK-CM-ADMIN-004 is complete for implementation/verification and may be directly merged under the existing product authorization.
 
 ## Phase 6 — Manual fulfillment — BACKEND OPERATION REQUIRED
 
@@ -97,7 +100,6 @@ Still out of scope. The API exposes `orders.fulfillment.read` only; no purchase-
 
 Priorities:
 
-- restore reliable GitHub-hosted CI/account runner execution;
 - branch protection/status checks;
 - registration-specific config loader;
 - stronger generic PII/secret redaction;
