@@ -83,6 +83,27 @@ function quantitySuffix(quantity: number): string {
   return quantity > 1 ? ` · Qty ${quantity}` : "";
 }
 
+function fulfillmentTypeLabel(
+  order: OrderDetailsData,
+  fulfillment: OrderFulfillmentData
+): string | null {
+  const support = fulfillment.support;
+  if (support?.productTypeLabel) return escapeDiscordText(support.productTypeLabel);
+  if (order.purchaseKind === "account" && order.accountVariantLabel) {
+    return escapeDiscordText(order.accountVariantLabel);
+  }
+  if (support?.productDurationDays) {
+    const days = support.productDurationDays;
+    return `${days} ${days === 1 ? "Day" : "Days"}`;
+  }
+  return null;
+}
+
+function fulfillmentProviders(data: OrderFulfillmentData): string[] {
+  return [...new Set(data.fulfillments.map((item) => item.providerCode.trim()).filter(Boolean))]
+    .map((provider) => escapeDiscordText(provider));
+}
+
 export type CmPanelPayload = {
   components: [ContainerBuilder];
   flags: MessageFlags.IsComponentsV2;
@@ -102,9 +123,15 @@ export function buildUserPanel(sessionId: string, overview: UserOverviewData): C
   const wallet = overview.wallet
     ? formatMoney(overview.wallet.balanceCents, overview.wallet.currency)
     : "—";
-  const aura = overview.aura
-    ? `${overview.aura.availableAura.toLocaleString()} available${overview.aura.pendingAura > 0 ? ` · ${overview.aura.pendingAura.toLocaleString()} pending` : ""}`
-    : "—";
+  const auraLines = overview.aura
+    ? [
+        `Available Aura: **${overview.aura.availableAura.toLocaleString()}**`,
+        `Lifetime Aura: **${overview.aura.lifetimeEarnedAura.toLocaleString()}**`,
+        ...(overview.aura.pendingAura > 0
+          ? [`Pending Aura: **${overview.aura.pendingAura.toLocaleString()}**`]
+          : [])
+      ]
+    : ["Available Aura: **—**", "Lifetime Aura: **—**"];
   const latestText = latest
     ? `**${orderRef(latest)}** — ${orderLabel(latest)}\n${escapeDiscordText(latest.status)} · ${formatMoney(latest.amountCents, latest.currency)}${quantitySuffix(latest.quantity)}\n${formatDiscordTimestampPair(latest.createdAt)}`
     : "No recent orders";
@@ -120,7 +147,7 @@ export function buildUserPanel(sessionId: string, overview: UserOverviewData): C
     .addTextDisplayComponents(text(`# CM User Operations\n**${escapeDiscordText(overview.identity.email ?? overview.identity.userId)}**`))
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(text(
-      `Status: **${overview.accountControl.isBanned ? "BANNED" : "Active"}** · Discord: ${compactDiscordIdentity(overview)}\nWallet: **${wallet}** · Aura: **${aura}**\nOrders: **${overview.counts.orders}**`
+      `Status: **${overview.accountControl.isBanned ? "BANNED" : "Active"}** · Discord: ${compactDiscordIdentity(overview)}\nWallet: **${wallet}**\n${auraLines.join("\n")}\nOrders: **${overview.counts.orders}** · Licenses: **${overview.counts.licenses}** · Accounts: **${overview.counts.accountDeliveries}**`
     ))
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(text(`### Latest Order\n${latestText}`))
@@ -179,20 +206,46 @@ export function buildOrdersPanel(
     .addActionRowComponents(shareRow(sessionId));
 }
 
-export function buildOrderPanel(sessionId: string, order: OrderDetailsData): ContainerBuilder {
+export function buildOrderPanel(
+  sessionId: string,
+  order: OrderDetailsData,
+  overview: UserOverviewData,
+  fulfillmentData: OrderFulfillmentData
+): ContainerBuilder {
+  const typeLabel = fulfillmentTypeLabel(order, fulfillmentData);
   const purchaseLines = order.purchaseKind === "product"
-    ? [`Item: **${escapeDiscordText(order.productSlug ?? "Product")}**`]
+    ? [
+        `Item: **${escapeDiscordText(order.productSlug ?? "Product")}**`,
+        ...(typeLabel ? [`Type: **${typeLabel}**`] : [])
+      ]
     : [
         `Item: **${escapeDiscordText(order.accountName ?? order.accountGameName ?? order.accountSlug ?? "Account")}**`,
-        ...(order.accountVariantLabel ? [`Variant: ${escapeDiscordText(order.accountVariantLabel)}`] : []),
+        ...(typeLabel ? [`Type: **${typeLabel}**`] : []),
         ...(order.accountGameName ? [`Game: ${escapeDiscordText(order.accountGameName)}`] : [])
       ];
   if (order.quantity > 1) purchaseLines.push(`Quantity: ${order.quantity}`);
+
   const fulfillment = order.fulfillmentSummary;
+  const providers = fulfillmentProviders(fulfillmentData);
+  const materials = fulfillmentData.support?.maskedMaterials ?? [];
   const deliveryLines = [
+    ...(providers.length > 0 ? [`Provider: **${providers.join(", ")}**`] : []),
     `Delivered: **${fulfillment.quantityDelivered}/${fulfillment.quantityRequested}**`
   ];
-  if (fulfillment.manualRequired) deliveryLines.push("Manual review required: **Yes**");
+
+  if (materials.length > 0) {
+    materials.forEach((material, index) => {
+      const label = material.kind === "license_key" ? "License key" : "Token";
+      const suffix = materials.length > 1 ? ` ${index + 1}` : "";
+      deliveryLines.push(`${label}${suffix}: **${escapeDiscordText(material.maskedValue)}**`);
+    });
+  } else {
+    deliveryLines.push("Delivery material: **Manual fulfillment required**");
+  }
+
+  if (fulfillment.manualRequired || fulfillmentData.support?.manualRequired) {
+    deliveryLines.push("Manual review required: **Yes**");
+  }
 
   const actions = new ActionRowBuilder<ButtonBuilder>().addComponents(
     button(`cm:refund:start:${sessionId}`, "Refund", ButtonStyle.Danger),
@@ -204,11 +257,13 @@ export function buildOrderPanel(sessionId: string, order: OrderDetailsData): Con
   return new ContainerBuilder()
     .addTextDisplayComponents(text(`# Order ${orderRef(order)}\nStatus: **${escapeDiscordText(order.status)}**`))
     .addSeparatorComponents(separator())
-    .addTextDisplayComponents(text(`### Customer\n${escapeDiscordText(order.customerEmail)}`))
+    .addTextDisplayComponents(text(
+      `### Customer\nEmail: ${escapeDiscordText(order.customerEmail ?? overview.identity.email ?? "—")}\nDiscord: ${compactDiscordIdentity(overview)}`
+    ))
     .addTextDisplayComponents(text(
       `### Purchase\n${purchaseLines.join("\n")}\nAmount: **${formatMoney(order.amountCents, order.currency)}**\nPayment: ${escapeDiscordText(order.payment.method)}\nPlaced: ${formatDiscordTimestampPair(order.createdAt)}`
     ))
-    .addTextDisplayComponents(text(`### Delivery\n${deliveryLines.join("\n")}`))
+    .addTextDisplayComponents(text(`### Fulfillment\n${deliveryLines.join("\n")}`))
     .addActionRowComponents(actions)
     .addActionRowComponents(shareRow(sessionId));
 }
