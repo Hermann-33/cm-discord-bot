@@ -155,12 +155,21 @@ export class CmAdminController {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       try {
         const order = await this.api.fetchOrderDetails(selector);
-        const overview = await this.api.fetchUserOverview({ kind: "user_id", value: order.userId }, 10);
+        const [overview, fulfillment] = await Promise.all([
+          this.api.fetchUserOverview({ kind: "user_id", value: order.userId }, 10),
+          this.api.fetchOrderFulfillment(order.orderId)
+        ]);
         if (overview.identity.userId !== order.userId) throw new Error("Order target mismatch");
+        if (fulfillment.order.orderId !== order.orderId) throw new Error("Fulfillment target mismatch");
         const session = this.sessions.create(interaction.user.id, overview);
         session.selectedOrder = order;
         session.shareView = { kind: "order" };
-        await interaction.editReply(panelPayload(buildOrderPanel(session.id, order)));
+        await interaction.editReply(panelPayload(buildOrderPanel(
+          session.id,
+          order,
+          overview,
+          fulfillment
+        )));
       } catch (error) {
         logger.warn("CM admin order lookup failed", { code: isInternalApiError(error) ? error.code : "UNKNOWN" });
         await interaction.editReply(panelPayload(buildNoticePanel(null, "Order Lookup Failed", safeApiMessage(error))));
