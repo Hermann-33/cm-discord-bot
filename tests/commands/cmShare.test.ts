@@ -4,6 +4,7 @@ import { MessageFlags, type ButtonInteraction, type MessageCreateOptions } from 
 import type { OrderDetailsData, UserOverviewData } from "../../src/api/schemas";
 import { buildPublicSharePanel, shareCurrentPanel } from "../../src/commands/cmShare";
 import type { CmAdminSession } from "../../src/commands/cmSessions";
+import { escapeDiscordText } from "../../src/discord/presentation";
 import { safeAllowedMentions } from "../../src/discord/safeMessages";
 
 const USER_ID = "550e8400-e29b-41d4-a716-446655440000";
@@ -12,11 +13,13 @@ const SESSION_ID = "550e8400-e29b-41d4-a716-446655440002";
 const ADMIN_ID = "123456789012345681";
 const DISCORD_USER_ID = "123456789012345682";
 const CREATED_AT = "2026-08-10T00:00:00.000Z";
+const PRIVATE_EMAIL = "private@example.com";
+const PRIVATE_PROVIDER = "internal-provider";
 
 const overview = {
   identity: {
     userId: USER_ID,
-    email: "private@example.com",
+    email: PRIVATE_EMAIL,
     createdAt: CREATED_AT,
     lastSignInAt: "2026-08-11T01:02:03.000Z",
     externalIdentities: [{
@@ -93,8 +96,8 @@ const selectedOrder = {
   status: "paid",
   createdAt: CREATED_AT,
   userId: USER_ID,
-  customerEmail: "private@example.com",
-  payment: { method: "wallet", provider: "internal-provider" },
+  customerEmail: PRIVATE_EMAIL,
+  payment: { method: "wallet", provider: PRIVATE_PROVIDER },
   fulfillmentSummary: {
     linkedLicenseCount: 1,
     accountDeliveryCount: 0,
@@ -123,14 +126,18 @@ function panelJson(sessionState: CmAdminSession): string {
   return JSON.stringify(panel.toJSON());
 }
 
+function assertAbsentEvenIfEscaped(json: string, privateValue: string): void {
+  assert.equal(json.includes(privateValue), false);
+  assert.equal(json.includes(escapeDiscordText(privateValue)), false);
+}
+
 test("customer-safe user share has no controls or private account identifiers and uses Discord timestamps", () => {
   const state = session();
   const json = panelJson(state);
   const unix = Math.floor(Date.parse(CREATED_AT) / 1000);
 
-  assert.equal(json.includes("private@example.com"), false);
-  assert.equal(json.includes(USER_ID), false);
-  assert.equal(json.includes(`&lt;@${DISCORD_USER_ID}&gt;`), false);
+  assertAbsentEvenIfEscaped(json, PRIVATE_EMAIL);
+  assertAbsentEvenIfEscaped(json, USER_ID);
   assert.equal(json.includes(`<@${DISCORD_USER_ID}>`), true);
   assert.equal(json.includes(`<t:${unix}:f>`), true);
   assert.equal(json.includes(`<t:${unix}:R>`), true);
@@ -142,18 +149,19 @@ test("customer-safe order share omits private email, internal user id, provider,
   state.shareView = { kind: "order" };
   const json = panelJson(state);
 
-  assert.equal(json.includes("private@example.com"), false);
-  assert.equal(json.includes(USER_ID), false);
-  assert.equal(json.includes("internal-provider"), false);
+  assertAbsentEvenIfEscaped(json, PRIVATE_EMAIL);
+  assertAbsentEvenIfEscaped(json, USER_ID);
+  assertAbsentEvenIfEscaped(json, PRIVATE_PROVIDER);
   assert.equal(json.includes("CM-TEST"), true);
   assert.equal(json.includes("custom_id"), false);
 });
 
 test("customer-safe refund preview does not expose admin reason or backend identifiers", () => {
   const state = session();
+  const privateReason = "INTERNAL ONLY REASON";
   state.refundProposal = {
     orderId: ORDER_ID,
-    reason: "INTERNAL ONLY REASON",
+    reason: privateReason,
     preview: {
       status: "eligible",
       orderId: ORDER_ID,
@@ -181,8 +189,8 @@ test("customer-safe refund preview does not expose admin reason or backend ident
   state.shareView = { kind: "refund-preview" };
   const json = panelJson(state);
 
-  assert.equal(json.includes("INTERNAL ONLY REASON"), false);
-  assert.equal(json.includes(USER_ID), false);
+  assertAbsentEvenIfEscaped(json, privateReason);
+  assertAbsentEvenIfEscaped(json, USER_ID);
   assert.equal(json.includes("idempotency"), false);
   assert.equal(json.includes("custom_id"), false);
 });
