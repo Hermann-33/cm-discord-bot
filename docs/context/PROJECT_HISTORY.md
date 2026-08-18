@@ -49,16 +49,9 @@ Local verification passed 113/113 tests, typecheck, build, diff checks and focus
 
 ## 2026-08-18 — Share to Chat / Discord UX merged
 
-TASK-CM-ADMIN-004 added:
+TASK-CM-ADMIN-004 added `/cm user` by email or selected Discord user, linked Discord identity presentation, separate customer-safe Share to Chat rendering, Discord timestamps, concise mutation audit summaries and ADR-0008.
 
-- `/cm user` by email or selected Discord user;
-- linked Discord identity presentation;
-- separate customer-safe Share to Chat rendering;
-- Discord absolute + relative timestamps;
-- concise Components V2 mutation audit summaries;
-- ADR-0008 public sharing/control boundary.
-
-After repository CI became executable, final run `32142352087` passed 127/127 tests, typecheck, build and diff check. PR #2 was merged at:
+Final run `32142352087` passed 127/127 tests, typecheck, build and diff check. PR #2 was merged at:
 
 ```text
 7a41dbeefae167044091b0aaed8372c3b58acdd0
@@ -76,9 +69,9 @@ Implementation and final-documentation GitHub Actions runs passed; PR #3 was squ
 
 ## 2026-08-18 — Admin UI declutter
 
-TASK-CM-ADMIN-006 was started to remove unnecessary operational/statistical bloat after reviewing the complete User Operations, recent orders, order, fulfillment, refund, Aura/wallet and Share to Chat presentation surfaces.
+TASK-CM-ADMIN-006 reviewed the complete User Operations, recent orders, direct order, fulfillment, refund, Aura/wallet and Share to Chat presentation surfaces and removed routine operational/statistical bloat.
 
-The task intentionally changes presentation only:
+The task changes presentation only:
 
 - User Operations focuses on status, compact identity, current wallet/Aura, order count/latest order and core actions;
 - order views remove internal IDs/provider/redundant fulfillment statistics;
@@ -89,4 +82,4 @@ The task intentionally changes presentation only:
 
 No API/auth/mutation/database/config/registration/leaderboard/legacy change is part of the task.
 
-The first CI run caught two errors in new test assertion escaping only. After correcting those tests, run `32156144669` passed 131/131 tests, typecheck, build and diff check. Final documentation-head revalidation remains the last pre-merge gate for PR #4.
+The first CI run caught two errors in new test assertion escaping only. After correcting those tests, run `32156144669` passed 131/131 tests, typecheck, build and diff check. After documentation updates, run `32156801285` passed the same complete gate. PR #4 is verified for merge subject to a green GitHub Actions status on its current head.
