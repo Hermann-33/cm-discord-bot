@@ -11,6 +11,7 @@ import type { InternalApiClient } from "../api/client";
 import { isInternalApiError } from "../api/errors";
 import type { AppConfig } from "../config/env";
 import { postRefundAudit } from "../discord/adminAudit";
+import { findDiscordIdentity } from "../discord/presentation";
 import { logger, sanitizeError } from "../logger";
 import type { CmAdminSession } from "./cmSessions";
 import { refundPreviewFingerprint, rejectUnauthorized, safeApiMessage } from "./cmSupport";
@@ -94,6 +95,7 @@ export async function handleRefundModal(
       idempotencyKey: dependencies.idempotencyKey(),
       expiresAtMs: dependencies.nowMs() + REFUND_CONFIRM_TTL_MS
     };
+    session.shareView = { kind: "refund-preview" };
     await interaction.editReply(panelPayload(buildRefundPreviewPanel(session.id, preview, reason)));
   } catch (error) {
     logger.warn("CM refund preview failed", { code: isInternalApiError(error) ? error.code : "UNKNOWN" });
@@ -171,6 +173,7 @@ export async function confirmRefund(
     }
 
     session.refundProposal = undefined;
+    const discordIdentity = findDiscordIdentity(session.overview);
     let auditPosted = true;
     try {
       await dependencies.postRefundAudit({
@@ -178,10 +181,12 @@ export async function confirmRefund(
         channelId: config.botAuditLogChannelId,
         operatorId: interaction.user.id,
         orderRef: refund.publicRef ?? refund.orderId,
+        accountEmail: session.overview.identity.email,
+        customerDiscordUserId: discordIdentity?.externalUserId,
         reason: proposal.reason,
         walletCreditCents: refund.finalWalletCreditCents,
         currency: refund.currency,
-        auditEventId: refund.auditEventId,
+        completedAt: refund.refundedAt,
         idempotentReplay: refund.idempotentReplay
       });
     } catch (auditError) {
@@ -201,6 +206,7 @@ export async function confirmRefund(
       });
     }
 
+    session.shareView = { kind: "refund-success", data: refund };
     await interaction.editReply(panelPayload(buildRefundSuccessPanel(session.id, refund, auditPosted)));
   } catch (error) {
     logger.warn("CM refund execute failed", { code: isInternalApiError(error) ? error.code : "UNKNOWN" });
@@ -220,6 +226,7 @@ export async function confirmRefund(
       return;
     }
 
+    session.shareView = { kind: "refund-preview" };
     await interaction.editReply(panelPayload(buildRefundPreviewPanel(
       session.id,
       proposal.preview,
