@@ -1,94 +1,75 @@
 # Project History
 
-Updated: 2026-08-17
+Updated: 2026-08-18
 
-This file preserves important chronology without making historical architecture authoritative over current source.
+This file preserves important chronology without making historical architecture authoritative over current source/ADRs.
 
 ## 2026-05-29 — Initial standalone bot
 
-Commit `b3206c6` introduced the standalone Discord bot. The early bot read Aura data through narrow Supabase RPCs and provided a persistent leaderboard, `cm aura`, and `/refresh-leaderboard`.
+The standalone Discord bot began with leaderboard, `cm aura` and `/refresh-leaderboard`, initially using narrow Supabase RPC access.
 
-The project was deliberately separated from the Cheater's Market website codebase.
+## 2026-05-29/30 — Presentation/hosting evolution
 
-## 2026-05-29 — Leaderboard and channel-policy evolution
+Leaderboard moved toward Components V2; `cm aura` became configured-guild-wide except one blocked channel. A root `index.js` host shim was added for hosts that execute the package entry directly. Repository published as `Hermann-33/cm-discord-bot`.
 
-Commit `31ca167` updated rendering toward Discord Components V2 and changed `cm aura` from a single allowed command channel to configured-guild-wide usage except one blocked channel.
+## 2026-08-10/11 — Internal API rebuild and legacy freeze
 
-The Aura application emoji ID used by the historical/current presentation is `1509816131282669688`; it is treated as an application-owned presentation asset. The leaderboard evolved to fixed-width rank/Aura labels, username sanitization, medal suffixes, and a relative update timestamp.
-
-## 2026-05-29/30 — Hosting and repository operation
-
-A root `index.js` compatibility shim was introduced so Pterodactyl/BOHosting-style hosts that run `/home/container/index.js` can start the compiled `dist/index.js` entry.
-
-The standalone bot repository was published as `Hermann-33/cm-discord-bot`.
-
-## Website/DB integration work — external context
-
-Separate website work implemented Discord OAuth linking, encrypted OAuth grants, Support-role sync, Aura leaderboard privacy masking, and website-owned data/RPC boundaries. Those systems are not owned by this bot repo.
-
-A one-off live DB adjustment for a test/admin account occurred historically through direct administration. That is not a bot feature and must not be used as the design for Discord admin commands.
-
-## 2026-08-10 — Internal API experiment
-
-Commit `a44fbd6` added an Internal API client experiment. It proved the direction of removing direct bot/database coupling but also contained support lookup experiments that were not part of the required parity target.
-
-## 2026-08-11 — Legacy archive
-
-Commit `6dfe75f` froze the old implementation under `legacy/`. `docs/legacy-parity.md` records exact old behavior, history, and migration evidence.
-
-## 2026-08-11 — Production rebuild
-
-Commit `d7a7f4e` rebuilt active production code around the website Internal Integrations API.
-
-Key architectural change:
+Internal API experiments established the direction away from direct database coupling. Commit `6dfe75f` froze old implementation under `legacy/`. Commit `d7a7f4e` rebuilt active production code around the signed website Internal Integrations API:
 
 ```text
-Old active model: bot -> Supabase RPC
-Current model: bot -> signed Internal Integrations API -> website-owned data layer
+old active model: bot -> Supabase RPC
+current model: bot -> HMAC Internal Integrations API -> website-owned data/business layer
 ```
 
-The rebuilt bot no longer carries Supabase/Postgres credentials.
+Active bot no longer carries Supabase/Postgres credentials.
 
-## 2026-08-17 — Admin scaling/security decisions
+## 2026-08-17 — Governance/security direction
 
-Initial accepted direction established:
+Repository-resident context/workflow/audits/ADRs were installed. ADR-0005 clarified that `cm aura` intentionally remains a customer message command while staff/admin operations use slash/components/modals.
 
-- bot restricted to configured Cheater's Market server;
-- major admin/mutation commands require explicitly whitelisted Discord user IDs;
-- roles can be additive but cannot replace user whitelist;
-- Aura adjustment desired before wallet adjustment;
-- bot remains a thin Discord client with no direct DB mutation;
-- mutation operations require narrow signed backend contracts, confirmation/idempotency and immutable audit evidence.
+High-impact controls remain exact-guild, explicitly user-ID allowlisted and website/API bounded.
 
-ADR-0005 later clarified that customer `cm aura` intentionally remains a message command while admin/staff operations use guild slash commands.
+## 2026-08-17 — Private admin console
 
-## 2026-08-17 — Repository governance
+TASK-CM-ADMIN-001 implemented `/cm user`, private Components V2 user/order navigation and canonical refund preview/confirm/re-preview/execute. Local verification passed 104/104 tests, typecheck, build and diff check before mainline merge.
 
-`TASK-WF-001` installed durable project memory, workflow, ADRs, audit, codebase/data maps, roadmap and handoff inside the repository.
+## 2026-08-17 — `/cm` guild-wide for whitelisted admins
 
-## 2026-08-17 — Private admin console merged
+ADR-0006 removed the shared `/cm` command-channel restriction while retaining exact configured guild + explicit `BOT_ADMIN_USER_IDS` + per-interaction authorization/session ownership. `BOT_ADMIN_COMMAND_CHANNEL_ID` was removed; `/refresh-leaderboard` keeps its separate channel policy.
 
-`TASK-CM-ADMIN-001` implemented `/cm user email:<email>` with private Components V2 user/order navigation and canonical refund preview/confirm/execute safety.
+## 2026-08-18 — Direct order + balance controls merged
 
-After local Node verification (104/104 tests, typecheck, build and diff check), the feature fast-forwarded into `master` at:
+TASK-CM-ADMIN-003 added:
+
+- `/cm order reference:<CM-public-ref-or-UUID>`;
+- confirmed Aura adjustment;
+- confirmed wallet adjustment;
+- ADR-0007 fresh-state-bound Aura/wallet confirmation;
+- retained canonical refund and blocked manual fulfillment.
+
+Local Node `v24.11.1` verification passed 113/113 tests, typecheck, build, diff checks and focused security scans.
+
+PR #1 was squash-merged into `master` at:
 
 ```text
-47a28323fdc2c2d18d1edc3f9952f0d817f481f1
+4b10d74aa80d3fa5c5e5a27b82e4ccf109a880a8
 ```
 
-No deployment, Discord registration or live production mutation was performed as part of the merge task.
+## 2026-08-18 — Customer-safe sharing / Discord UX task
 
-## 2026-08-17 — `/cm` becomes guild-wide for whitelisted admins
+TASK-CM-ADMIN-004 began from the verified mainline above.
 
-The product owner removed the shared admin-console command-channel restriction while retaining the configured guild and explicit Discord user-ID whitelist.
+Product direction:
 
-ADR-0006 supersedes only the old admin-command-channel requirement from ADR-0004/ADR-0005:
+- authorized staff should be able to publish the current meaningful `/cm` state into the channel for customer communication;
+- customer copy must contain no admin controls/private internal fields;
+- User Operations should show linked Discord state/user;
+- `/cm user` should accept email or selected Discord user;
+- admin/share/audit times should use Discord absolute + relative timestamps;
+- Discord mutation audit should be concise and visually structured.
 
-- `/cm` may be invoked from any channel in configured guild by a whitelisted admin;
-- DMs/wrong guild/non-whitelisted users remain blocked;
-- ephemeral output remains private but is not treated as authorization;
-- `BOT_ADMIN_COMMAND_CHANNEL_ID` is removed;
-- `BOT_AUDIT_LOG_CHANNEL_ID` remains separate for mutation audit;
-- `/refresh-leaderboard` keeps its independent configured channel policy.
+Current website source already supports `users.overview.read` by `external_identity` and returns linked identity metadata, so no website/API/DB expansion is required.
 
-Implementation work is isolated on `task/cm-admin-guild-scope` pending executable verification/merge.
+ADR-0008 records the separate customer-safe renderer/disclosure policy. Implementation is isolated on `task/cm-share-discord-audit-time` / PR #2.
+
+GitHub Actions for PR #2 still fails before job steps are created because of the documented runner/account infrastructure problem. The product owner requested no additional Codex/local test run, but repository governance requires a real executable pass before merge; therefore TASK-CM-ADMIN-004 remains feature-branch/PR work until that gate is satisfied.
