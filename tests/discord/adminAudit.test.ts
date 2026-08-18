@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { MessageFlags, type Client, type MessageCreateOptions } from "discord.js";
 import { postAdjustmentAudit, postRefundAudit } from "../../src/discord/adminAudit";
+import { escapeDiscordText } from "../../src/discord/presentation";
 import { safeAllowedMentions } from "../../src/discord/safeMessages";
 
 const ADMIN_ID = "123456789012345681";
@@ -32,12 +33,14 @@ function payloadText(payload: MessageCreateOptions): string {
 
 test("refund audit uses concise Components V2 layout with customer, result, operator, and Discord timestamps", async () => {
   const { client, sends } = fakeClient();
+  const orderRef = "CM-TEST";
+  const accountEmail = "user@example.com";
   await postRefundAudit({
     client,
     channelId: "123456789012345699",
     operatorId: ADMIN_ID,
-    orderRef: "CM-TEST",
-    accountEmail: "user@example.com",
+    orderRef,
+    accountEmail,
     customerDiscordUserId: CUSTOMER_DISCORD_ID,
     reason: "Customer requested refund @everyone",
     walletCreditCents: 1250,
@@ -52,8 +55,8 @@ test("refund audit uses concise Components V2 layout with customer, result, oper
   const json = payloadText(sends[0]!);
   const unix = Math.floor(Date.parse(COMPLETED_AT) / 1000);
   assert.equal(json.includes("CM Audit · Refund"), true);
-  assert.equal(json.includes("CM-TEST"), true);
-  assert.equal(json.includes("user@example.com"), true);
+  assert.equal(json.includes(escapeDiscordText(orderRef)), true);
+  assert.equal(json.includes(escapeDiscordText(accountEmail)), true);
   assert.equal(json.includes(`<@${CUSTOMER_DISCORD_ID}>`), true);
   assert.equal(json.includes(`<@${ADMIN_ID}>`), true);
   assert.equal(json.includes("USD 12.50"), true);
@@ -63,6 +66,7 @@ test("refund audit uses concise Components V2 layout with customer, result, oper
   assert.equal(json.includes("Transaction"), false);
   assert.equal(json.includes("Idempotent replay"), false);
   assert.equal(json.includes("@everyone"), false);
+  assert.equal(json.includes(escapeDiscordText("Customer requested refund @everyone")), true);
 });
 
 test("adjustment audit keeps only useful balance-change information and flags a replay only when relevant", async () => {
