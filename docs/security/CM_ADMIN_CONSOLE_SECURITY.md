@@ -2,7 +2,7 @@
 
 Updated: 2026-08-18
 
-ADR-0005 governs customer/admin interface separation. ADR-0006 governs shared `/cm` authorization. ADR-0007 governs Aura/wallet confirmation. ADR-0008 governs customer-safe sharing and current Discord presentation policy. Refund retains its canonical backend preview/re-preview contract.
+ADR-0005 governs customer/admin interface separation. ADR-0006 governs shared `/cm` authorization. ADR-0007 governs Aura/wallet confirmation. ADR-0008 governs the separate customer-share renderer and Discord presentation policy. ADR-0009 supersedes ADR-0008 only for the previous prohibition on displaying the canonical customer account email. Refund retains its canonical backend preview/re-preview contract.
 
 ## Global `/cm` authorization
 
@@ -39,7 +39,7 @@ BOT_AUDIT_LOG_CHANNEL_ID
 - optional selected order;
 - optional refund proposal;
 - optional Aura/wallet proposal;
-- current customer-safe share-view descriptor/data;
+- current customer-share view descriptor/data;
 - 15-minute inactivity TTL;
 - bounded session count.
 
@@ -56,19 +56,22 @@ Discord lookup maps to `users.overview.read` with `external_identity/provider=di
 
 The private User Operations panel may display privileged email, wallet/Aura/order state and linked Discord metadata because the interaction remains authorized/private.
 
-## Customer-safe Share to Chat — ADR-0008
+## Share to Chat — ADR-0008 + ADR-0009
 
 A Share to Chat button is an **admin action**, not a customer control. The button click runs through the normal shared authorization and session-owner checks.
 
-The bot must never send the private admin component tree to the channel and attempt to “strip buttons” after the fact. Instead `cmShare` builds a separate public view from allowlisted customer-facing fields.
+The bot must never send the private admin component tree to the channel and attempt to “strip buttons” after the fact. Instead `cmShare` builds a separate public view from explicitly approved customer-facing fields.
 
 Public message requirements:
 
 - current text-capable guild channel only;
 - Components V2 display components only;
 - no Button/Select/Modal/action custom IDs;
-- no full account email;
+- canonical customer account email **included intentionally** from `session.overview.identity.email`;
+- email passed through `escapeDiscordText(..., 320)` before display;
+- linked Discord identity may be displayed when available;
 - no internal CM user UUID;
+- no internal purchase option IDs unless explicitly customer-facing by a later decision;
 - no admin refund/adjustment reason;
 - no backend audit/transaction/idempotency identifiers;
 - no internal provider/failure codes;
@@ -76,7 +79,9 @@ Public message requirements:
 - `safeAllowedMentions` always applied;
 - no API mutation or database action.
 
-Customer-relevant status, linked Discord identity, wallet/Aura summary, public order reference/item/status/amount, fulfillment status/messages and refund/adjustment effects may be shown.
+Customer-relevant status, wallet/Aura summary, public order reference/item/status/amount, fulfillment status/messages and refund/adjustment effects may be shown.
+
+Because Share to Chat publishes into the current channel, the authorized administrator is responsible for using an appropriate channel for disclosure of customer account information.
 
 System/error/authorization panels without an explicit customer-safe model are not shareable.
 
@@ -173,12 +178,13 @@ users.aura.adjust
 users.wallet.adjust
 ```
 
-TASK-CM-ADMIN-004 adds no API permission. Website `allowedOperations` remains an independent security boundary.
+TASK-CM-ADMIN-005 adds no API permission. Website `allowedOperations` remains an independent security boundary.
 
 ## Mention/log/secret safety
 
 - private/public/audit Components V2 output uses safe mentions where applicable;
 - public Discord identities are display-only and non-notifying;
+- customer email is intentionally visible only in Share to Chat output and remains escaped for Discord rendering;
 - reasons are sanitized/truncated before private audit display;
 - raw HMAC/signing headers/API secrets/request credentials never belong in logs/components;
 - generic backend failures are mapped to stable safe messages.
@@ -191,7 +197,7 @@ TASK-CM-ADMIN-004 adds no API permission. Website `allowedOperations` remains an
 - treating ephemeral output as authorization;
 - copying private admin panels into public chat;
 - customer-visible admin buttons/selects/modals/custom IDs;
-- private/internal fields in public share;
+- exposing fields beyond the explicit ADR-0008/ADR-0009 public disclosure set;
 - Aura/wallet execute without confirmation/final fresh-state equality;
 - refund execute without canonical fresh preview equality;
 - changing mutation idempotency body/key on retry;
