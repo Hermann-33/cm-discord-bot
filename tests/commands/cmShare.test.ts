@@ -13,14 +13,14 @@ const SESSION_ID = "550e8400-e29b-41d4-a716-446655440002";
 const ADMIN_ID = "123456789012345681";
 const DISCORD_USER_ID = "123456789012345682";
 const CREATED_AT = "2026-08-10T00:00:00.000Z";
-const PRIVATE_EMAIL = "private@example.com";
+const CUSTOMER_EMAIL = "private@example.com";
 const PRIVATE_PROVIDER = "internal-provider";
 const PRIVATE_LICENSE_OPTION = "internal-license-option-id";
 
 const overview = {
   identity: {
     userId: USER_ID,
-    email: PRIVATE_EMAIL,
+    email: CUSTOMER_EMAIL,
     createdAt: CREATED_AT,
     lastSignInAt: "2026-08-11T01:02:03.000Z",
     externalIdentities: [{
@@ -97,7 +97,7 @@ const selectedOrder = {
   status: "paid",
   createdAt: CREATED_AT,
   userId: USER_ID,
-  customerEmail: PRIVATE_EMAIL,
+  customerEmail: CUSTOMER_EMAIL,
   payment: { method: "wallet", provider: PRIVATE_PROVIDER },
   fulfillmentSummary: {
     linkedLicenseCount: 1,
@@ -141,12 +141,17 @@ function assertAbsentEvenIfEscaped(content: string, privateValue: string): void 
   assert.equal(content.includes(escapeDiscordText(privateValue)), false);
 }
 
-test("customer-safe user share has no controls or private account identifiers and uses Discord timestamps", () => {
+function assertCustomerEmailPresentAndEscaped(content: string): void {
+  assert.equal(content.includes(escapeDiscordText(CUSTOMER_EMAIL, 320)), true);
+  assert.equal(content.includes(CUSTOMER_EMAIL), false);
+}
+
+test("customer-safe user share includes customer email, omits internal user id, and uses Discord timestamps", () => {
   const state = session();
   const { content, serialized } = panelData(state);
   const unix = Math.floor(Date.parse(CREATED_AT) / 1000);
 
-  assertAbsentEvenIfEscaped(content, PRIVATE_EMAIL);
+  assertCustomerEmailPresentAndEscaped(content);
   assertAbsentEvenIfEscaped(content, USER_ID);
   assert.equal(content.includes(`<@${DISCORD_USER_ID}>`), true);
   assert.equal(content.includes(`<t:${unix}:f>`), true);
@@ -154,12 +159,23 @@ test("customer-safe user share has no controls or private account identifiers an
   assert.equal(serialized.includes("custom_id"), false);
 });
 
-test("customer-safe order share omits private identifiers, provider, option IDs, and controls", () => {
+test("customer-safe recent-orders share includes customer email and no controls", () => {
+  const state = session();
+  state.shareView = { kind: "orders", page: 0 };
+  const { content, serialized } = panelData(state);
+
+  assertCustomerEmailPresentAndEscaped(content);
+  assertAbsentEvenIfEscaped(content, USER_ID);
+  assert.equal(content.includes(escapeDiscordText("CM-TEST")), true);
+  assert.equal(serialized.includes("custom_id"), false);
+});
+
+test("customer-safe order share includes customer email but omits internal identifiers, provider, option IDs, and controls", () => {
   const state = session();
   state.shareView = { kind: "order" };
   const { content, serialized } = panelData(state);
 
-  assertAbsentEvenIfEscaped(content, PRIVATE_EMAIL);
+  assertCustomerEmailPresentAndEscaped(content);
   assertAbsentEvenIfEscaped(content, USER_ID);
   assertAbsentEvenIfEscaped(content, PRIVATE_PROVIDER);
   assertAbsentEvenIfEscaped(content, PRIVATE_LICENSE_OPTION);
@@ -167,7 +183,7 @@ test("customer-safe order share omits private identifiers, provider, option IDs,
   assert.equal(serialized.includes("custom_id"), false);
 });
 
-test("customer-safe refund preview does not expose admin reason or backend identifiers", () => {
+test("customer-safe refund preview includes customer email without exposing admin reason or backend identifiers", () => {
   const state = session();
   const privateReason = "INTERNAL ONLY REASON";
   state.refundProposal = {
@@ -200,6 +216,7 @@ test("customer-safe refund preview does not expose admin reason or backend ident
   state.shareView = { kind: "refund-preview" };
   const { content, serialized } = panelData(state);
 
+  assertCustomerEmailPresentAndEscaped(content);
   assertAbsentEvenIfEscaped(content, privateReason);
   assertAbsentEvenIfEscaped(content, USER_ID);
   assert.equal(serialized.includes("idempotency"), false);
