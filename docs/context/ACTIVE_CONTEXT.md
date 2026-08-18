@@ -2,7 +2,7 @@
 
 Updated: 2026-08-18
 
-## Mainline
+## Mainline baseline before TASK-CM-ADMIN-004 merge
 
 `master` is currently:
 
@@ -25,7 +25,7 @@ That squash-merged `TASK-CM-ADMIN-003` and contains:
 
 The bot remains a standalone Node.js/TypeScript process with no direct Supabase/Postgres client, credential, RPC fallback or database mutation path.
 
-## Current task — TASK-CM-ADMIN-004
+## Current task — TASK-CM-ADMIN-004 — VERIFIED FOR MERGE
 
 Feature branch:
 
@@ -39,7 +39,7 @@ PR:
 #2 — TASK-CM-ADMIN-004: customer-safe sharing and Discord UX
 ```
 
-Requested/implemented feature-branch scope:
+Implemented scope:
 
 - meaningful `/cm` panels gain **Share to Chat**;
 - the public copy is independently rendered, customer-safe, Components V2 and contains no controls;
@@ -86,6 +86,7 @@ The public message is rendered by a dedicated customer-safe path and intentional
 
 - full email;
 - internal CM user UUID;
+- internal option identifiers;
 - backend audit/transaction/idempotency identifiers;
 - internal provider/failure codes;
 - admin refund/adjustment reasons;
@@ -105,7 +106,7 @@ so Discord renders a locale-aware absolute date/time plus relative age.
 
 ## Discord audit presentation
 
-Refund/Aura/wallet Discord audit output now presents useful operational fields only:
+Refund/Aura/wallet Discord audit output presents useful operational fields only:
 
 - customer account/Discord identity when available;
 - action/result;
@@ -158,25 +159,27 @@ users.wallet.adjust
 
 ## Verification state
 
-Implementation + focused tests/docs are on the feature branch. GitHub Actions PR run `32138604602` failed before creating any workflow steps (`steps: null`, no logs), matching the existing Actions infrastructure/billing/spending-limit problem.
+The repository is now public, allowing the standard GitHub-hosted runner to execute. A real CI run first exposed a TypeScript narrowing issue in the new adjustment-success share renderer after the full test suite had passed. That defect was fixed narrowly.
 
-Therefore the task is **PARTIAL** until an executable Node 22+ environment actually passes:
+Final executable gate:
 
 ```text
-npm ci
-npm test
-npm run typecheck
-npm run build
-git diff --check
-git status --short --untracked-files=all
+GitHub Actions run 32142352087
+Node 22.23.2
+npm ci: PASS, 0 vulnerabilities
+npm test: PASS — 127/127
+npm run typecheck: PASS
+npm run build: PASS
+git diff --check: PASS
 ```
 
-The product owner requested no separate Codex/local run. Repository governance still forbids claiming COMPLETE or merging without an executable pass.
+Static review also confirms no direct DB/Supabase path, no new API operation, no manual-fulfillment/purchase-processing shortcut, no secret/HMAC material and no `legacy/` modification/import.
 
-## Exact next gate
+TASK-CM-ADMIN-004 is therefore **COMPLETE for implementation/verification and authorized for direct PR merge**.
 
-1. finish static diff/security/docs review;
-2. obtain an executable verification pass;
-3. merge PR #2 directly only if all applicable gates pass;
-4. deployment/restart and `npm run register:commands` remain separate operational steps after merge;
-5. no live refund/Aura/wallet mutation is part of repository verification.
+## Exact next action
+
+1. keep PR #2 documentation aligned with the successful executable gate;
+2. direct-merge PR #2 under the existing product authorization;
+3. deployment/restart and `npm run register:commands` remain separate operational steps after merge because `/cm user` registration changed;
+4. no live refund/Aura/wallet mutation is part of repository verification.
