@@ -22,15 +22,15 @@ The bot has no direct database client, service-role key, RPC/table fallback or D
 - private `/cm user` by email or linked Discord user;
 - private `/cm order` by public ref or order UUID;
 - private `/cm` navigation/refund/Aura/wallet controls;
-- authorized Share to Chat buttons that publish separate customer-safe read-only summaries.
+- authorized Share to Chat buttons that publish separate customer-facing read-only summaries.
 
-ADR-0005 governs customer/admin presentation, ADR-0006 `/cm` authorization, ADR-0007 Aura/wallet mutation confirmation and ADR-0008 public sharing/presentation.
+ADR-0005 governs customer/admin presentation, ADR-0006 `/cm` authorization, ADR-0007 Aura/wallet mutation confirmation, ADR-0008 the separate public-sharing/control boundary, and ADR-0009 the explicit customer-email disclosure exception.
 
 ## Interaction routing
 
 `src/index.ts` constructs one `CmAdminController` handling `/cm` slash commands plus `cm:*` buttons/modals before unhandled chat-input interactions proceed to `/refresh-leaderboard`. `cm aura` remains on `MessageCreate`.
 
-Manual guild registration still publishes only two top-level slash commands:
+Manual guild registration publishes only two top-level slash commands:
 
 ```text
 /refresh-leaderboard
@@ -53,7 +53,7 @@ There is no `/cm` command-channel restriction. `/refresh-leaderboard` retains it
 - optional selected order;
 - refund proposal;
 - Aura/wallet proposal;
-- current customer-safe share view;
+- current customer-share view;
 - 15-minute inactivity TTL;
 - max 100 sessions.
 
@@ -71,7 +71,7 @@ provider=discord
 externalUserId=<Discord user ID>
 ```
 
-through `users.overview.read`. User overview already returns linked external identities, so TASK-CM-ADMIN-004 adds no website route or API operation.
+through `users.overview.read`. User overview already returns linked external identities; no new website route or API operation is required.
 
 ## Customer-safe sharing
 
@@ -80,13 +80,15 @@ Private admin panels and channel-visible customer summaries are intentionally se
 ```text
 private /cm panel
   -> authorized Share to Chat click
-  -> session-owned current safe view
+  -> session-owned current share view
   -> dedicated customer-safe renderer
   -> current text-capable guild channel
   -> Components V2 display-only message
 ```
 
-The public renderer contains no action components/custom IDs and omits operator/private/internal fields such as full email, CM user UUID, provider/failure codes, admin reasons, audit/transaction/idempotency IDs and credentials. `safeAllowedMentions` prevents identity text from pinging users.
+The shared renderer contains no action components/custom IDs. Under ADR-0009 it intentionally includes the canonical customer account email from `session.overview.identity.email`, plus linked Discord identity when available. The email is escaped for Discord presentation.
+
+It continues to omit operator/internal fields such as CM user UUID, internal purchase option IDs, provider/failure codes, admin reasons, audit/transaction/idempotency IDs and credentials. `safeAllowedMentions` prevents identity text from generating notifications.
 
 Sharing is a Discord presentation action only; it does not call a mutation endpoint.
 
@@ -110,7 +112,7 @@ Website immutable audit remains authoritative. Mutation execution still fails cl
 
 ## Bot Internal Integrations API surface
 
-Unchanged by TASK-CM-ADMIN-004:
+Unchanged by TASK-CM-ADMIN-005:
 
 ```text
 aura.leaderboards.read
@@ -179,7 +181,7 @@ BOT_ADMIN_USER_IDS
 BOT_AUDIT_LOG_CHANNEL_ID
 ```
 
-No new environment variable is introduced by TASK-CM-ADMIN-004. `BOT_ADMIN_COMMAND_CHANNEL_ID` is unsupported.
+TASK-CM-ADMIN-005 introduces no environment variable and does not change command registration. `BOT_ADMIN_COMMAND_CHANNEL_ID` remains unsupported.
 
 ## Verification architecture
 
@@ -194,7 +196,7 @@ git diff --check
 git status --short --untracked-files=all
 ```
 
-PR #2 GitHub Actions currently fails before creating any job steps because of the existing runner/account infrastructure issue. Static source inspection is not a substitute for this executable gate.
+GitHub Actions is the executable source of evidence for TASK-CM-ADMIN-005.
 
 ## Fragile boundaries
 
@@ -202,7 +204,8 @@ PR #2 GitHub Actions currently fails before creating any job steps because of th
 - strict DTO mirrors and backend `allowedOperations`;
 - authorization before sensitive access;
 - operator-bound session ownership;
-- customer-safe renderer never inheriting private panel fields/controls;
+- customer-share renderer never inheriting private admin controls;
+- ADR-0009 email disclosure limited to the canonical customer email and not generalized to other internal fields;
 - safe mentions on public/audit output;
 - refund fresh-preview equality;
 - Aura/wallet fresh-balance equality + stable idempotency;
