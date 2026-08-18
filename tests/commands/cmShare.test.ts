@@ -152,7 +152,7 @@ test("customer-safe order share omits private email, internal user id, provider,
   assertAbsentEvenIfEscaped(json, PRIVATE_EMAIL);
   assertAbsentEvenIfEscaped(json, USER_ID);
   assertAbsentEvenIfEscaped(json, PRIVATE_PROVIDER);
-  assert.equal(json.includes("CM-TEST"), true);
+  assert.equal(json.includes(escapeDiscordText("CM-TEST")), true);
   assert.equal(json.includes("custom_id"), false);
 });
 
