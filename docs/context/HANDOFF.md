@@ -12,7 +12,7 @@ Updated: 2026-08-18
 - no direct Supabase/Postgres.
 - manual fulfillment blocked until website owns a dedicated mutation.
 
-## Mainline baseline
+## Mainline baseline before TASK-CM-ADMIN-004 merge
 
 ```text
 master
@@ -26,20 +26,20 @@ This is the verified/merged TASK-CM-ADMIN-003 result: `/cm order`, Aura adjustme
 ```text
 TASK-CM-ADMIN-004
 task/cm-share-discord-audit-time
-PR #2 — draft
+PR #2
+status: verified for merge
 ```
 
-Requested scope:
+Implemented scope:
 
 - share current meaningful `/cm` panel into the channel for customer communication, with no customer controls;
 - reduce Discord audit noise and make it visually consistent with User Operations;
 - show Discord link state/user in User Operations;
 - support `/cm user` lookup by Discord user as well as email;
 - use Discord absolute + relative timestamps throughout `/cm` management views;
-- thorough bug/security audit;
-- direct merge only if technical verification is clean, while skipping a separate Codex/local test run.
+- preserve mutation, authorization, data-boundary and manual-fulfillment invariants.
 
-## Implemented feature-branch behavior
+## Implemented behavior
 
 ### `/cm user`
 
@@ -65,7 +65,7 @@ Normal User/Orders/Order/Fulfillment/Refund/Adjustment panels include `cm:share:
 
 Button handling still performs shared `/cm` authorization and operator-bound session lookup before the share path runs.
 
-`src/commands/cmShare.ts` renders a separate customer-safe Components V2 view. It is never a copy of the private admin component tree. Public output contains no action components/custom IDs and omits email, CM user UUID, backend audit/transaction/idempotency IDs, internal provider/failure details and admin refund/adjustment reasons. `safeAllowedMentions` disables notifications.
+`src/commands/cmShare.ts` renders a separate customer-safe Components V2 view. It is never a copy of the private admin component tree. Public output contains no action components/custom IDs and omits email, CM user UUID, internal option IDs, backend audit/transaction/idempotency IDs, internal provider/failure details and admin refund/adjustment reasons. `safeAllowedMentions` disables notifications.
 
 System/error notices without a defined safe view intentionally do not expose a share control.
 
@@ -114,38 +114,29 @@ src/discord/adminAudit.ts
 package.json
 ```
 
-Tests/docs are updated alongside the feature.
-
 ## Verification state
 
-The PR exists specifically to obtain the executable gate without another Codex/local run.
+After the repository became public, GitHub Actions could execute on the standard hosted runner. A real run exposed a TypeScript narrowing defect in `cmShare.ts`; it was fixed by narrowing the discriminated result only after checking `adjustmentKind`.
 
-Current PR CI run:
-
-```text
-run 32138604602
-job verify: failure
-steps: null
-logs: null
-```
-
-The job failed before executing source checkout/tests, matching the previously documented GitHub Actions account/billing/spending-limit problem. This is not a test failure and not a pass.
-
-Per AGENTS/WORKFLOW, do not merge or claim COMPLETE until an executable Node 22+ environment actually passes:
+Final executable evidence:
 
 ```text
-npm ci
-npm test
-npm run typecheck
-npm run build
-git diff --check
-git status --short --untracked-files=all
+run 32142352087
+Node 22.23.2
+npm ci: PASS, 0 vulnerabilities
+npm test: PASS — 127/127
+npm run typecheck: PASS
+npm run build: PASS
+git diff --check: PASS
 ```
+
+Focused static/security review also remains clean for direct DB/Supabase, new API operations, purchase-processing/manual-fulfillment shortcuts, secrets/HMAC material, `legacy/` changes and public-control disclosure.
+
+Verdict: `COMPLETE` for implementation/verification; PR #2 is authorized for direct merge without another Codex/local run.
 
 ## Exact next action
 
-1. complete final static PR diff/security/secret/control-disclosure review;
-2. obtain an executable verification pass without changing scope;
-3. if it passes, update PR evidence, mark ready and direct-merge PR #2;
-4. after merge, deploy/restart and run `npm run register:commands` only as a separately authorized operational action because `/cm user` registration changed;
-5. do not perform live refund/Aura/wallet mutations as repository verification.
+1. keep final PR/audit evidence aligned with the successful CI result;
+2. direct-merge PR #2;
+3. after merge, deployment/restart and `npm run register:commands` remain separate operational actions because `/cm user` registration changed;
+4. do not perform live refund/Aura/wallet mutations as repository verification.
