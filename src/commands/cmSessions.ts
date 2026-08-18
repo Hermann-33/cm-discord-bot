@@ -15,12 +15,40 @@ export type RefundProposal = {
   expiresAtMs: number;
 };
 
+export type AuraAdjustmentProposal = {
+  kind: "aura";
+  targetUserId: string;
+  deltaAura: number;
+  reason: string;
+  beforeAvailableAura: number | null;
+  projectedAvailableAura: number;
+  operator: InternalIntegrationOperator;
+  idempotencyKey: string;
+  expiresAtMs: number;
+};
+
+export type WalletAdjustmentProposal = {
+  kind: "wallet";
+  targetUserId: string;
+  deltaCents: number;
+  reason: string;
+  beforeBalanceCents: number | null;
+  projectedBalanceCents: number;
+  currency: string;
+  operator: InternalIntegrationOperator;
+  idempotencyKey: string;
+  expiresAtMs: number;
+};
+
+export type UserAdjustmentProposal = AuraAdjustmentProposal | WalletAdjustmentProposal;
+
 export type CmAdminSession = {
   id: string;
   operatorId: string;
   overview: UserOverviewData;
   selectedOrder?: OrderDetailsData;
   refundProposal?: RefundProposal;
+  adjustmentProposal?: UserAdjustmentProposal;
   createdAtMs: number;
   touchedAtMs: number;
 };
