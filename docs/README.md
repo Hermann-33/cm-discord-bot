@@ -7,6 +7,7 @@ This documentation system is the durable memory and governance layer for the Che
 - `../AGENTS.md` — mandatory operating rules
 - `context/ACTIVE_CONTEXT.md` — concise present state
 - `context/PROJECT_BRIEF.md` — stable product purpose and scope
+- `context/SIDE_PROJECTS.md` — adjacent/non-runtime workstreams, including the ticket transcript corpus
 - `context/ARCHITECTURE.md` — accepted current architecture
 - `context/DATA_STATUS.md` — verified backend/data dependency posture
 - `context/CODEBASE_MAP.md` — module ownership and fragile boundaries
@@ -24,6 +25,7 @@ This documentation system is the durable memory and governance layer for the Che
 - `audits/2026-08-18-cm-admin-sharing-discord-audit.md` — `TASK-CM-ADMIN-004` customer-safe share/Discord identity/timestamp/audit implementation audit.
 - `audits/2026-08-18-cm-share-email.md` — `TASK-CM-ADMIN-005` customer-email disclosure follow-up and verification audit.
 - `audits/2026-08-18-cm-admin-ui-declutter.md` — `TASK-CM-ADMIN-006` compact User/Order/Delivery/refund/adjustment/share presentation audit.
+- `audits/2026-08-19-cm-pending-orders-fulfillment-support.md` — `TASK-CM-ADMIN-007` pending purchase lookup + optional masked fulfillment support implementation/verification audit.
 
 ## Durable decisions
 
@@ -35,14 +37,18 @@ This documentation system is the durable memory and governance layer for the Che
 - `decisions/ADR-0006-admin-console-guild-wide-channel-policy.md` — current `/cm` exact-guild/explicit-user authorization policy
 - `decisions/ADR-0007-admin-balance-adjustment-confirmation-model.md` — current Aura/wallet confirmation, fresh-state binding, idempotency and audit model
 - `decisions/ADR-0008-admin-panel-customer-safe-sharing.md` — base customer-safe public-copy/control boundary and Discord lookup/time/audit presentation policy
-- `decisions/ADR-0009-customer-email-in-shared-panels.md` — supersedes ADR-0008 only for the previous full-email prohibition; shared customer identity now includes the canonical account email
+- `decisions/ADR-0009-customer-email-in-shared-panels.md` — supersedes ADR-0008 only for the previous full-email prohibition; shared customer identity includes canonical account email
+- `decisions/ADR-0010-ticket-transcript-data-repository-boundary.md` — keeps the parallel `CM-Ticket-Transcripts` repository private, data-only and independent from production runtime
+- `decisions/ADR-0011-pending-purchase-and-fulfillment-support-view.md` — order-first pending-purchase fallback, optional private masked fulfillment support, and public-share exclusions
 
 ## Specialist references
 
 - `security/ADMIN_MUTATION_MODEL.md` — Aura/wallet/refund mutation security model
-- `security/CM_ADMIN_CONSOLE_SECURITY.md` — current `/cm` authorization/session/share/user/order/refund/balance-control security model
+- `security/CM_ADMIN_CONSOLE_SECURITY.md` — current `/cm` authorization/session/share/user/order/pending/refund/balance-control security model
 - `legacy-parity.md` — frozen behavioral/history audit for the pre-rebuild bot
 
 ## Rule
 
 Current source code and verified external state override stale chat memory. Later accepted ADRs supersede conflicting earlier ADRs. Historical audits describe their point-in-time conclusion and may be superseded. External backend facts are dependency context, never permission for the bot to bypass the website Internal Integrations API.
+
+Adjacent side projects remain outside the production bot runtime unless an explicit later architecture decision says otherwise. In particular, `CM-Ticket-Transcripts` is a private data corpus, not an executable bot/tool repository.

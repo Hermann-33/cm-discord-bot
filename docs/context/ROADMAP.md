@@ -1,6 +1,6 @@
 # Project Roadmap
 
-Updated: 2026-08-18
+Updated: 2026-08-19
 
 ## Completion rule
 
@@ -32,59 +32,62 @@ Active code/dependency audit plus current Internal Integrations API operation/se
 
 ## Phase 5 — Customer-safe sharing / Discord admin UX — COMPLETE ON MAINLINE
 
-`TASK-CM-ADMIN-004` added `/cm user` lookup by email/Discord user, linked Discord identity, Share to Chat, Discord timestamps and concise Components V2 audit summaries. It was verified with 127/127 tests and merged at:
-
-```text
-7a41dbeefae167044091b0aaed8372c3b58acdd0
-```
+`TASK-CM-ADMIN-004` added `/cm user` lookup by email/Discord user, linked Discord identity, Share to Chat, Discord timestamps and concise Components V2 audit summaries.
 
 ## Phase 5.1 — Shared customer email — COMPLETE ON MAINLINE
 
-`TASK-CM-ADMIN-005` / ADR-0009 explicitly added canonical customer account email to Share to Chat while preserving the separate read-only renderer and internal-field/control exclusions. Executable verification passed 128/128 tests, typecheck, build and diff check before merge.
+`TASK-CM-ADMIN-005` / ADR-0009 intentionally added canonical customer account email to Share to Chat while preserving the separate read-only renderer and internal-field/control exclusions.
 
-## Phase 5.2 — Admin UI declutter — TASK-CM-ADMIN-006 COMPLETE / VERIFIED FOR MERGE
+## Phase 5.2 — Admin UI declutter — COMPLETE ON MAINLINE
 
-Branch / PR:
+`TASK-CM-ADMIN-006` simplified private `/cm` and customer-share presentation without changing API, authorization or mutation behavior. Final verification passed 131/131 tests, typecheck, build and diff check and PR #4 merged at:
 
 ```text
-task/cm-admin-ui-declutter
-PR #4
+6cef7695a09c8761d395f5d530bc79b7532c9b9f
 ```
 
-Goal: make `/cm` substantially faster to scan by removing routine internal/statistical noise while retaining all useful support and mutation operations.
+## Phase 5.3 — Pending purchase + fulfillment support integration — IMPLEMENTED / VERIFIED ON PR #5
 
-Implemented:
+`TASK-CM-ADMIN-007` / ADR-0011 completes the currently available website-side order-support contract in the Discord bot.
 
-- compact User Operations summary;
-- compact recent-order list with `Latest N of total` truncation indicator;
-- order panel stripped of internal UUID/option/provider and duplicate fulfillment statistics;
-- `Fulfillment Diagnostics` renamed `Delivery Details` and reduced to meaningful status/progress/exception/message fields;
-- visible nonfunctional Manual Fulfillment button removed;
-- refund/Aura/wallet preview/success panels stripped of routine backend bookkeeping;
-- Share to Chat summaries reduced to customer-relevant current state while retaining ADR-0009 email disclosure;
-- focused presentation tests added/expanded.
+Implemented on `task/cm-order-support-details`:
 
-No API operation, website source/config, database path, mutation logic, authorization, environment variable, slash-command definition, leaderboard behavior or `legacy/` change.
+- `/cm order` remains canonical-order first;
+- stable `NOT_FOUND` falls back to `purchase-intents.lookup.read`;
+- exact pending-purchase owner resolution;
+- private Pending Purchase panel;
+- Refresh Purchase with automatic transition to canonical order;
+- no order-only refund/delivery controls while only a purchase intent exists;
+- optional private `orders.fulfillment.read.support` type/duration/masked-material/manual state;
+- optional support failure no longer blocks canonical order controls;
+- strict rejection of unexpected raw fulfillment material;
+- masked fulfillment support/provider internals excluded from Share to Chat;
+- exact API allowlist expanded only with `purchase-intents.lookup.read`;
+- `purchase-intents.process`, manual fulfillment and direct DB remain forbidden.
 
-### Executable gate
-
-The first CI attempt caught two faulty new test assertions only. After fixing those assertions, GitHub Actions run `32156144669` passed 131/131 tests, typecheck, build and diff check.
-
-After the documentation/audit updates, run `32156801285` also passed on Node `22.23.2`:
+Source implementation merge-ref verification on current concurrent mainline passed GitHub Actions run `32254272306`:
 
 ```text
-npm ci: PASS, 0 vulnerabilities
-npm test: PASS — 131/131
+Node 22.23.2
+npm ci: PASS — 0 vulnerabilities
+npm test: PASS — 153/153
 npm run typecheck: PASS
 npm run build: PASS
 git diff --check: PASS
 ```
 
-PR #4 is complete for implementation/documentation verification and may merge when its current-head GitHub Actions status is green.
+Remaining gates before production use:
+
+1. final PR/documentation-head CI;
+2. explicit merge authorization;
+3. ensure website bot integration client allows `purchase-intents.lookup.read`;
+4. normal bot deployment/restart.
+
+No slash-command definition changed, so command re-registration is not required.
 
 ## Phase 6 — Manual fulfillment — BACKEND OPERATION REQUIRED
 
-Still out of scope. The API exposes `orders.fulfillment.read` only; no purchase-processing or direct-DB substitute is allowed. TASK-CM-ADMIN-006 removes the dead visible button rather than implying this capability exists.
+Still out of scope. `orders.fulfillment.read` is read-only; `purchase-intents.process` and direct DB are not substitutes.
 
 ## Phase 7 — Production hardening / operations
 
@@ -96,4 +99,41 @@ Priorities:
 - deployment/rollback/credential-rotation runbooks;
 - controlled authenticated read/mutation smoke tests only with explicit authorization.
 
-TASK-CM-ADMIN-006 does not alter slash registration. After merge, a normal bot redeploy/restart is sufficient; no `npm run register:commands` is required solely for this task.
+## Parallel side project — CM Ticket Transcript Corpus
+
+This is not a production-bot phase. It is a separate workstream governed by ADR-0010 and `SIDE_PROJECTS.md`.
+
+Repository:
+
+```text
+Hermann-33/CM-Ticket-Transcripts
+```
+
+The repository is private and data-only. Main bot engineering may continue at the same time.
+
+### Transcript Phase T1 — Corpus acquisition — IN PROGRESS
+
+Objective: make historical Discord/Tickety ticket corpus durable and accessible for later analysis.
+
+Required sequence:
+
+```text
+Discord ticket-log channel
+  -> enumerate complete historical log messages
+  -> extract ticket metadata + exact View Transcript URLs
+  -> validate fetch/parser against a small representative sample
+  -> normalize complete transcript conversations
+  -> bulk-export all recoverable tickets
+  -> produce explicit failure/completeness manifests
+  -> persist data in CM-Ticket-Transcripts
+```
+
+Real five-ticket validation remains the next operational gate before bulk export.
+
+### Transcript Phase T2 — Corpus quality / indexing — NOT STARTED
+
+Potential follow-up only after T1: schema stabilization, deduplication/integrity, indexes/manifests, attachment inventory and missing-data reconciliation.
+
+### Transcript Phase T3 — Analysis / product use — NOT STARTED
+
+Any analytics/support intelligence or production integration built from the corpus is separately scoped. Existence of the corpus does not authorize a production bot dependency.

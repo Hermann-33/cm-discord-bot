@@ -26,9 +26,9 @@ Verdict: `COMPLETE`.
 
 ## 2026-08-17 — TASK-AUDIT-001 — Full re-baseline
 
-Audited active source/tests/config/GitHub/dependency state. Confirmed HMAC/DTO/timeout/retry/mention controls and no active direct DB. Identified CI, registration-config and generic redaction hardening gaps. Its slash-only `cm aura` conclusion was later superseded by ADR-0005.
+Audited active source/tests/config/GitHub/dependency state. Confirmed HMAC/DTO/timeout/retry/mention controls and no active direct DB. Its slash-only `cm aura` conclusion was later superseded by ADR-0005.
 
-Verdict: `COMPLETE` for audit; historical execution gap documented.
+Verdict: `COMPLETE` for audit.
 
 ---
 
@@ -42,7 +42,7 @@ Verdict: `COMPLETE`.
 
 ## 2026-08-17 — TASK-API-DOC-001 — Internal API contract re-baseline
 
-Recorded full website operation catalog, HMAC retry/idempotency rules and Aura/wallet execute contracts. Endpoint existence remained separate from client authorization.
+Recorded website operation catalog, HMAC retry/idempotency rules and mutation contracts. Endpoint existence remained separate from client authorization.
 
 Verdict: `COMPLETE` for documentation.
 
@@ -50,15 +50,15 @@ Verdict: `COMPLETE` for documentation.
 
 ## 2026-08-17 — TASK-CM-ADMIN-001 — Private admin console
 
-Implemented `/cm user`, operator-bound Components V2 session, recent orders/order details/fulfillment diagnostics and canonical refund preview/confirm/re-preview/execute. Local verification passed 104/104 tests, typecheck, build and diff check before merge.
+Implemented `/cm user`, operator-bound Components V2 session, recent orders/order details/fulfillment diagnostics and canonical refund. Local verification passed 104/104 tests, typecheck, build and diff check before merge.
 
-Verdict: `COMPLETE` for repository implementation/merge.
+Verdict: `COMPLETE`.
 
 ---
 
 ## 2026-08-17 — TASK-CM-ADMIN-002 — Guild-wide `/cm`
 
-ADR-0006 removed shared `/cm` command-channel restriction while retaining exact guild + mandatory explicit `BOT_ADMIN_USER_IDS` + per-interaction authorization. `BOT_ADMIN_COMMAND_CHANNEL_ID` removed; audit channel remains separate.
+ADR-0006 removed shared `/cm` command-channel restriction while retaining exact guild + mandatory explicit `BOT_ADMIN_USER_IDS` + per-interaction authorization. Audit channel remains separate.
 
 Verdict: `COMPLETE` on mainline.
 
@@ -66,26 +66,7 @@ Verdict: `COMPLETE` on mainline.
 
 ## 2026-08-18 — TASK-CM-ADMIN-003 — Direct order + Aura/wallet controls
 
-Implemented `/cm order`, confirmed Aura adjustment and confirmed wallet adjustment while leaving manual fulfillment blocked. Added ADR-0007 for fresh-state-bound Aura/wallet confirmation.
-
-Local Node `v24.11.1` verification passed:
-
-```text
-npm ci
-npm test — 113/113
-npm run typecheck
-npm run build
-git diff --check
-clean status / focused security scans
-```
-
-PR #1 was squash-merged into `master` at:
-
-```text
-4b10d74aa80d3fa5c5e5a27b82e4ccf109a880a8
-```
-
-No live production mutation occurred during repository verification/merge.
+Implemented `/cm order`, confirmed Aura adjustment and confirmed wallet adjustment while leaving manual fulfillment blocked. ADR-0007 established fresh-state-bound Aura/wallet confirmation. Verification passed 113/113 tests, typecheck, build/diff/security gates. PR #1 merged at `4b10d74aa80d3fa5c5e5a27b82e4ccf109a880a8`.
 
 Verdict: `COMPLETE`.
 
@@ -93,27 +74,7 @@ Verdict: `COMPLETE`.
 
 ## 2026-08-18 — TASK-CM-ADMIN-004 — Customer-safe sharing / Discord UX
 
-Implemented Share to Chat, Discord-user lookup/link presentation, Discord absolute+relative timestamps and concise Components V2 mutation audits under ADR-0008.
-
-Final CI run `32142352087` passed on Node `22.23.2`:
-
-```text
-npm ci: PASS, 0 vulnerabilities
-npm test: PASS — 127/127
-npm run typecheck: PASS
-npm run build: PASS
-git diff --check: PASS
-```
-
-Focused static/security review remained clean for direct DB/Supabase access, new API operations, purchase-processing/manual-fulfillment shortcuts, secret/HMAC material, `legacy/` changes, authorization regression and public interactive-control disclosure.
-
-No live share/refund/Aura/wallet mutation, deployment, command registration, website write or database mutation occurred during repository verification.
-
-Merged into `master` at:
-
-```text
-7a41dbeefae167044091b0aaed8372c3b58acdd0
-```
+Implemented Share to Chat, Discord-user lookup/link presentation, Discord timestamps and concise Components V2 mutation audits under ADR-0008. Final CI passed 127/127 tests, typecheck, build and diff check. Merged at `7a41dbeefae167044091b0aaed8372c3b58acdd0`.
 
 Verdict: `COMPLETE`.
 
@@ -121,19 +82,7 @@ Verdict: `COMPLETE`.
 
 ## 2026-08-18 — TASK-CM-ADMIN-005 — Shared customer email
 
-The product owner explicitly requested that Share to Chat include the canonical customer account email. ADR-0009 superseded ADR-0008 only for the previous full-email prohibition.
-
-`src/commands/cmShare.ts` renders the escaped `session.overview.identity.email` across the customer identity block while preserving no-control/internal-field exclusions.
-
-Implementation-head CI run `32145501289` passed 128/128 tests, typecheck, build and diff check. Final documentation-head run `32146028530` also passed every workflow step.
-
-No API, website, database, mutation, authorization, environment, manual-fulfillment or slash-command registration change was part of the task.
-
-PR #3 was squash-merged into `master` at:
-
-```text
-9466d6f23a6c2027b0e88c32eb4e78ddeeeb61fd
-```
+ADR-0009 superseded ADR-0008 only for the previous full-email prohibition. Shared customer identity now includes escaped canonical account email. Verification passed 128/128 tests plus typecheck/build/diff. PR #3 merged at `9466d6f23a6c2027b0e88c32eb4e78ddeeeb61fd`.
 
 Verdict: `COMPLETE`.
 
@@ -141,36 +90,79 @@ Verdict: `COMPLETE`.
 
 ## 2026-08-18 — TASK-CM-ADMIN-006 — Admin UI declutter
 
-### Scope
+Reduced private/share presentation noise without changing API/auth/mutation behavior. Final verification passed 131/131 tests, typecheck, build and diff check. PR #4 merged at `6cef7695a09c8761d395f5d530bc79b7532c9b9f`.
 
-Reduce menu/order/statistical bloat across private `/cm` panels and Share to Chat without changing operational capability, API contracts, authorization or mutation safety.
+Verdict: `COMPLETE` on mainline.
 
-### Presentation changes
+---
 
-- User Operations reduced to account status, compact Discord identity, current wallet/Aura, order count, latest order and core controls.
-- Recent Orders removed technical API-limit prose and suppresses quantity when it is one.
-- Order Operations removed internal user/option IDs, provider and redundant fulfillment counts; duplicate Order History navigation removed.
-- `Fulfillment Diagnostics` renamed `Delivery Details`; provider/record timestamps/linked-license top stats removed and exception fields render only when meaningful.
-- visible nonfunctional Manual Fulfillment button removed; capability remains unsupported.
-- refund/Aura/wallet previews and success panels remove routine backend transaction/audit/idempotency bookkeeping while keeping decision/result information and exceptional warnings.
-- Share to Chat summaries were independently compacted while retaining ADR-0009 customer email and ADR-0008 no-control/internal-field boundaries.
+## 2026-08-19 — TASK-TRANSCRIPTS-CTX-001 — Parallel ticket transcript corpus boundary
+
+ADR-0010 established `Hermann-33/CM-Ticket-Transcripts` as private/data-only with no production-bot dependency or credentials/executable exporter code in the data repository.
+
+Verdict: `COMPLETE` for context/architecture decision.
+
+---
+
+## 2026-08-19 — TASK-TRANSCRIPTS-001 — Phase T1 standalone exporter
+
+Implemented non-runtime Node.js 22 tooling under `tools/ticket-transcript-exporter/` with exact-guild history access, strict `View Transcript` targeting, Tickety URL allowlisting, bounded fetching, raw/text/normalized output, explicit manifests and a five-ticket default sample. It remains independent from `src/` and the Internal Integrations API. Real five-ticket validation remains the next acquisition gate.
+
+Verdict: exporter implementation merged to current mainline; corpus acquisition validation remains operational work.
+
+---
+
+## 2026-08-19 — TASK-CM-ADMIN-007 — Pending order lookup + fulfillment support
+
+### Root cause
+
+`/cm order` used only `orders.details.read`. Pending checkout references can exist in `purchase_intents` before a canonical order row, so valid pending references returned `NOT_FOUND`.
+
+### Decision
+
+ADR-0011 defines:
+
+```text
+orders.details.read
+  -> success: canonical order
+  -> stable NOT_FOUND only: purchase-intents.lookup.read
+```
+
+Pending owner identity must resolve exactly through `users.overview.read(user_id)`. A pending refresh can transition to the canonical order when `orderId` becomes available/resolvable. Other order errors do not trigger fallback.
+
+### Implementation
+
+- strict purchase-intent lookup schemas/client path;
+- exact pending owner validation;
+- operator-bound Pending Purchase panel;
+- Refresh Purchase -> canonical order transition;
+- no pending Refund/Delivery Details/purchase-processing/manual-fulfillment controls;
+- optional/fail-safe fulfillment support type/duration/masked-material/manual state for private canonical order views;
+- optional support failure cannot block canonical order controls;
+- missing support/masked values are not misclassified as manual fulfillment;
+- strict raw-material field rejection;
+- Pending Purchase Share to Chat uses separately approved customer-safe fields;
+- masked fulfillment support/provider internals remain private and are excluded from public share;
+- architecture allowlist adds only `purchase-intents.lookup.read`; `purchase-intents.process` remains forbidden.
 
 ### Verification
 
-Initial CI run `32155910678` passed existing product/security tests but failed two newly added presentation assertions due to incorrect JSON-string escaping expectations. No production behavior defect was found. The tests were corrected to inspect rendered component content directly.
-
-Implementation-head GitHub Actions run `32156144669` passed 131/131 tests, typecheck, build and diff check.
-
-After README/context/audit updates, documentation-head run `32156801285` also passed on Node `22.23.2`:
+Source implementation head:
 
 ```text
-npm ci: PASS, 0 vulnerabilities
-npm test: PASS — 131/131
+8e1c1ff839fdf171403219f0b881c82395d17007
+```
+
+GitHub Actions run `32254272306` checked the PR #5 merge-ref against concurrent master `087e2d431ff3ddb74e034b9d736c64f1b914abc9` on Node `22.23.2`:
+
+```text
+npm ci: PASS — 0 vulnerabilities
+npm test: PASS — 153/153
 npm run typecheck: PASS
 npm run build: PASS
 git diff --check: PASS
 ```
 
-No API/signing, authorization, mutation, environment, slash-command, website/Supabase, leaderboard or `legacy/` change is in scope.
+No website/database write, live mutation, deployment or command registration was performed. The slash-command definition is unchanged. Production pending lookup additionally requires the website bot client's `allowedOperations` to include `purchase-intents.lookup.read`.
 
-Verdict: `COMPLETE` for implementation/documentation verification; merge requires the current PR #4 head GitHub Actions status to remain green.
+Verdict: `COMPLETE` for repository implementation/source verification; merge/deployment remain separate authorized gates.

@@ -1,6 +1,6 @@
 # Data and Backend Dependency Status
 
-Verified/re-baselined: 2026-08-18
+Verified/re-baselined: 2026-08-19
 
 ## Bot-side invariant
 
@@ -8,7 +8,7 @@ The Discord bot has **no direct Supabase/Postgres access**, no service-role/data
 
 ## Website capability catalog
 
-Current read-only website source exposes these V1 operation IDs:
+Current website source exposes these V1 operation IDs:
 
 ```text
 aura.leaderboards.read
@@ -29,9 +29,9 @@ users.aura.adjust
 
 This catalog is not the bot source surface and not proof of a deployed client's permission. Website clients have explicit non-empty `allowedOperations`; there is no wildcard/master bypass.
 
-## Bot operation surface
+## Bot operation surface — TASK-CM-ADMIN-007
 
-Current bot source intentionally consumes only:
+Current feature source intentionally consumes only:
 
 ```text
 aura.leaderboards.read
@@ -39,68 +39,81 @@ aura.lookup.read
 users.overview.read
 orders.details.read
 orders.fulfillment.read
+purchase-intents.lookup.read
 orders.refund.preview
 orders.refund.execute
 users.aura.adjust
 users.wallet.adjust
 ```
 
-TASK-CM-ADMIN-005 adds **no** operation, endpoint, website config or database dependency.
+The only new bot operation is read-only `purchase-intents.lookup.read`. `purchase-intents.process` remains forbidden.
+
+Deployment must explicitly add `purchase-intents.lookup.read` to the bot integration client's website `allowedOperations`. Source support alone is not runtime authorization.
 
 ## HTTP/HMAC contract
 
-Requests are POST JSON with no query string and exact raw-body HMAC signing. Transport timestamp/nonce/signature are fresh per HTTP attempt. Mutation UUID idempotency key + logical request body remain stable across retries; same key with changed body conflicts.
+Requests remain POST JSON with no query string and exact raw-body HMAC signing. Transport timestamp/nonce/signature are fresh per HTTP attempt. Mutation UUID idempotency key + logical request body remain stable across retries; same key with changed body conflicts.
+
+TASK-CM-ADMIN-007 does not change signing, timeout, response bound or retry semantics.
 
 ## User selectors and Discord identity
 
-Current website `userLookupSelectorSchema` accepts:
+`users.overview.read` continues to accept `user_id`, `email` and `external_identity`. `/cm user discord_user:<selected Discord user>` uses `external_identity/provider=discord`.
+
+Canonical order and pending purchase flows both resolve the website-returned `userId` through `users.overview.read(user_id)` and require exact equality before opening an operator session.
+
+## Order and pending-purchase selectors
+
+Canonical order selectors:
 
 ```text
-user_id
-email
-external_identity
+order_id
+public_ref
 ```
 
-`external_identity` carries provider + external user ID. `users.overview.read` accepts that selector and its response already returns:
+Purchase-intent selectors:
 
 ```text
-identity.userId
-identity.email
-identity.externalIdentities[]
-  provider
-  externalUserId
-  username
-  displayName
-  linkedAt
+purchase_intent_id
+public_ref
 ```
 
-`/cm user discord_user:<selected Discord user>` uses the existing `external_identity/provider=discord` selector. Email lookup continues to use `email`. Both/neither input fails locally before backend access.
+`/cm order` uses canonical order first. Only stable `NOT_FOUND` permits fallback to `purchase-intents.lookup.read` with the equivalent selector.
 
-Aura/wallet execution continues against the canonical `user_id` already resolved into the private session.
+Pending purchase responses expose safe support fields including canonical user, purchase kind/item/variant, quantity, amount/currency, payment method/provider, purchase/provider status, optional `orderId`, expiry and creation time. The bot private UI deliberately displays only the subset needed for staff support.
+
+If `orderId` becomes available, the bot returns to canonical `orders.details.read`; it does not mutate/process the purchase intent.
+
+## Fulfillment support view
+
+`orders.fulfillment.read` remains read-only diagnostics. Current website contract may add optional:
+
+```text
+support.productTypeLabel
+support.productDurationDays
+support.maskedMaterials[]
+  kind = license_key | account_token
+  maskedValue
+support.manualRequired
+```
+
+Rules:
+
+- `support` is optional/fail-safe;
+- `maskedMaterials` is bounded to at most 10 values;
+- values are stored masked material only;
+- raw/decrypted license/account secrets are outside the DTO;
+- bot strict schemas reject unexpected fields;
+- missing support or empty masked material does not imply manual-required;
+- best-effort support fetch failure must not block an otherwise valid canonical order panel.
+
+No manual-fulfillment execute operation exists. The bot must not call DB functions, invent an endpoint or reuse `purchase-intents.process` as a substitute.
 
 ## Share to Chat data source
 
-Share to Chat performs no extra backend query and no mutation. It renders from the already-authorized `CmAdminSession`.
+Share to Chat performs no extra backend mutation. It renders from the already-authorized `CmAdminSession`.
 
-ADR-0009 explicitly permits and requires the canonical customer account email in shared customer identity sections. The value comes from:
-
-```text
-session.overview.identity.email
-```
-
-and is escaped for Discord presentation before display.
-
-This email disclosure does not authorize exposing other internal session/API data. Internal CM UUIDs, option IDs, provider/failure codes, admin reasons, audit/transaction/idempotency identifiers and credentials remain excluded from the public renderer.
-
-## Order selectors/history
-
-Order selectors accept `order_id` and `public_ref`. Direct `/cm order` resolves the canonical order then resolves owner with `users.overview.read(user_id)` and requires exact equality.
-
-`users.overview.read` accepts `recentOrdersLimit` only from 1–10. The bot requests 10 and paginates locally five per page; no arbitrary older-history operation is invented.
-
-## Fulfillment
-
-`orders.fulfillment.read` remains diagnostics-only. No manual-fulfillment execute operation exists. The bot must not call DB functions, invent an endpoint or reuse `purchase-intents.process` as a substitute.
+ADR-0009 permits the canonical customer email. ADR-0011 permits a separately rendered customer-safe pending-purchase summary but keeps provider/provider-status internals, purchase-intent UUIDs/internal option IDs and masked fulfillment support material private.
 
 ## Refund
 
@@ -111,49 +124,28 @@ orders.refund.preview
 orders.refund.execute
 ```
 
-The bot retains canonical preview -> explicit confirmation -> fresh exact preview equality -> execute. Caller cannot choose refund economics independently from the order.
+Refund remains available only after a canonical order exists. The bot retains canonical preview -> explicit confirmation -> fresh exact preview equality -> execute.
 
 ## Aura adjustment
 
-`users.aura.adjust` requires canonical user selector, non-zero integer `deltaAura` bounded to ±1,000,000,000, reason 1–500, UUID idempotency and optional strict operator context. Response includes resulting Aura values, transaction/audit IDs, timestamp and replay state.
-
-Backend owns target validation, non-negative result, transaction/accounting, idempotency and immutable audit.
+`users.aura.adjust` contract and ADR-0007 confirmation/state-equality/idempotency/audit model are unchanged.
 
 ## Wallet adjustment
 
-`users.wallet.adjust` requires canonical user selector, non-zero integer `deltaCents` bounded to ±100,000,000 cents, reason 1–500, UUID idempotency and optional strict operator context. Response includes resulting balance/currency, transaction/audit IDs, timestamp and replay state.
-
-Verified website behavior prepares a missing wallet as zero/USD, rejects negative result, writes canonical wallet transaction/audit state and participates in funding-state machinery. The bot never overwrites a wallet balance directly.
+`users.wallet.adjust` contract and ADR-0007 confirmation/state-equality/idempotency/audit model are unchanged. The bot never overwrites wallet balance directly.
 
 ## Stable relevant errors
 
 ```text
-INVALID_ADJUSTMENT    -> 400
-INSUFFICIENT_BALANCE  -> 409
-IDEMPOTENCY_CONFLICT  -> 409
 NOT_FOUND             -> 404
 OPERATION_FORBIDDEN   -> 403
 RATE_LIMITED          -> 429
+INVALID_ADJUSTMENT    -> 400
+INSUFFICIENT_BALANCE  -> 409
+IDEMPOTENCY_CONFLICT  -> 409
 ```
 
-Raw backend error text is not surfaced.
-
-## Mutation confirmation authority
-
-ADR-0007 permits Aura/wallet execution only through:
-
-```text
-fresh users.overview.read
-  -> private current/change/projected confirmation
-  -> explicit confirmation <= 5 minutes
-  -> fresh exact relevant-balance equality
-  -> idempotent website execute
-  -> backend + Discord audit
-```
-
-Refund keeps its backend preview/re-preview model.
-
-TASK-CM-ADMIN-005 changes only Discord share presentation and does not alter business mutation authority.
+Pending-purchase fallback is triggered only by `NOT_FOUND` from canonical order lookup. Raw backend error text is never surfaced.
 
 ## Database/migration ownership
 
@@ -161,4 +153,4 @@ Live Supabase context is upstream dependency evidence only. This repository owns
 
 ## Secret handling
 
-Never commit/log real Discord tokens, HMAC secrets, website service credentials, Supabase service-role/database credentials or production `INTERNAL_INTEGRATIONS_API_CLIENTS_JSON` key material.
+Never commit/log real Discord tokens, HMAC secrets, website service credentials, Supabase service-role/database credentials or production integration-client key material. Masked fulfillment support values are privileged staff presentation data, not reveal credentials, and must not be republished through customer-safe Share to Chat.

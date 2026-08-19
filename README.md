@@ -7,9 +7,9 @@ Current command surfaces:
 - customer message command `cm aura`;
 - staff operational slash command `/refresh-leaderboard`;
 - private admin `/cm user` lookup by exact email **or** linked Discord user;
-- private admin `/cm order reference:<CM-public-ref-or-order-UUID>`;
-- private `/cm` Aura, wallet and refund controls;
-- explicit customer-safe **Share to Chat** copies from normal `/cm` panels.
+- private admin `/cm order reference:<CM-public-ref-or-order/purchase-UUID>` for canonical orders and pending purchases;
+- private `/cm` Aura, wallet and canonical-order refund controls;
+- explicit customer-safe **Share to Chat** copies from meaningful `/cm` panels.
 
 ## Architecture and data boundary
 
@@ -29,13 +29,14 @@ aura.lookup.read
 users.overview.read
 orders.details.read
 orders.fulfillment.read
+purchase-intents.lookup.read
 orders.refund.preview
 orders.refund.execute
 users.aura.adjust
 users.wallet.adjust
 ```
 
-Backend per-client `allowedOperations` remains an independent deployment authorization boundary. Manual fulfillment is not implemented.
+Backend per-client `allowedOperations` remains an independent deployment authorization boundary. `purchase-intents.process` and manual fulfillment are not bot operations.
 
 ## Requirements
 
@@ -98,36 +99,65 @@ or select:
 /cm user discord_user:<Discord user>
 ```
 
-Discord lookup reuses `users.overview.read` with the canonical `external_identity` selector; no new backend operation is needed.
+Discord lookup reuses `users.overview.read` with the canonical `external_identity` selector.
 
-The User Operations panel is intentionally compact: email, account status, linked Discord state, current wallet, available/pending Aura, order count and latest order. Routine login/update/lifetime/license statistics are not displayed there. Adjust Aura, Adjust Wallet, recent-order access, Order History and Share to Chat remain available.
+The User Operations panel shows canonical email, account state, linked Discord state, current wallet, available/lifetime Aura, pending Aura when non-zero, order/license/account counts and the latest order. Adjust Aura, Adjust Wallet, recent-order access, Order History and Share to Chat remain available.
 
-## Customer-safe sharing
-
-Meaningful private `/cm` panels include **Share to Chat**. The click itself reauthorizes the admin and session owner, then posts a separate read-only Components V2 summary into the current channel.
-
-The shared copy contains **no buttons or other interactive components**. It is rendered independently from the private panel and includes the canonical customer account email plus linked Discord identity when available. It continues to omit internal CM user UUIDs, internal purchase option IDs, mutation/refund reasons, provider/failure internals, backend audit/transaction IDs and idempotency data. Mentions are disabled with `safeAllowedMentions`.
-
-Shared summaries are intentionally concise: current customer-relevant state and outcomes are preferred over historical/update/statistical noise. ADR-0008 defines the separate read-only sharing boundary; ADR-0009 supersedes only its previous prohibition on displaying the customer account email.
-
-## `/cm order`
+## `/cm order` — canonical and pending
 
 ```text
 /cm order reference:CM-...
-/cm order reference:<order UUID>
+/cm order reference:<order-or-purchase UUID>
 ```
 
-The bot resolves the canonical order and owner, verifies target consistency and opens a compact order panel with customer-facing item/status/amount/payment/delivery information plus Refund, Delivery Details, Refresh Order, User Operations and Share to Chat.
+The lookup is intentionally order-first:
 
-`Delivery Details` keeps useful delivery status/progress and only shows failure/manual-review/message fields when present. Internal provider/timestamp diagnostics and the nonfunctional Manual Fulfillment button are not shown. Manual fulfillment remains unsupported because no website-owned execute operation exists.
+```text
+orders.details.read
+  -> success: resolve exact owner and open canonical order
+  -> NOT_FOUND only: purchase-intents.lookup.read
+       -> resolve exact owner
+       -> pending purchase panel
+       -> Refresh Purchase
+       -> transition automatically to canonical order when created
+```
+
+Authentication/authorization/rate-limit/service failures never trigger the purchase-intent fallback.
+
+A pending purchase is read-only support state. It has no refund or delivery controls until the website creates the canonical order. The bot does not call `purchase-intents.process`.
+
+## Fulfillment support view
+
+For canonical orders, the bot consumes the website's optional `orders.fulfillment.read.support` metadata. The private staff panel can show:
+
+- human-readable product/account type;
+- finite duration when known;
+- useful provider context;
+- delivery progress;
+- at most 10 stored **masked** license/account values;
+- canonical manual-required state.
+
+Raw/decrypted fulfillment secrets are not part of the API DTO and unexpected raw-material fields are rejected by strict validation.
+
+Support enrichment is optional. If it is absent/unavailable, the canonical order still opens and existing order/refund navigation remains usable. Missing masked material does **not** mean manual fulfillment is required.
+
+`Delivery Details` remains read-only diagnostics. No manual-fulfillment execute operation exists.
+
+## Customer-safe sharing
+
+Meaningful private `/cm` panels include **Share to Chat**. The click reauthorizes the admin and owning session, then posts a separately rendered read-only Components V2 summary into the current channel.
+
+The shared copy contains no buttons or other interactive components. It includes the canonical customer account email plus linked Discord identity when available, but omits internal CM user UUIDs, internal purchase/purchase-intent option IDs, provider/provider-status internals, admin reasons, backend audit/transaction/idempotency identifiers and credentials.
+
+**Masked fulfillment support material is private staff data and is never copied into Share to Chat.** Mentions are disabled with `safeAllowedMentions`.
+
+ADR-0008 defines the separate public renderer; ADR-0009 permits canonical customer email; ADR-0011 defines pending-purchase and fulfillment-support disclosure rules.
 
 ## Mutations
 
 Aura and wallet adjustments retain the ADR-0007 model: signed bounded delta, reason, fresh overview, current/change/projected preview, explicit five-minute confirmation, second fresh relevant-balance equality check, stable UUID idempotency/body, website-owned execution and backend + Discord audit.
 
-Private mutation panels show decision/result information rather than routine backend transaction/audit bookkeeping. Exceptional replay or Discord-audit-post-failure warnings remain visible when they occur.
-
-Refund retains:
+Refund remains canonical-order-only:
 
 ```text
 orders.refund.preview
@@ -136,7 +166,7 @@ orders.refund.preview
   -> orders.refund.execute
 ```
 
-Discord audit output is a concise Components V2 summary of customer, action/result, reason, operator and completion time. Website audit records remain authoritative.
+Pending purchase intents do not expose refund execution.
 
 ## Develop and validate
 
@@ -158,7 +188,21 @@ Registration is explicit and never happens on startup:
 npm run register:commands
 ```
 
-Top-level commands remain `/refresh-leaderboard` and `/cm`; `user` and `order` are `/cm` subcommands. Re-run registration after deploying any `/cm` definition change. Pure presentation changes such as TASK-CM-ADMIN-006 do not require registration.
+Top-level commands remain `/refresh-leaderboard` and `/cm`; `user` and `order` remain `/cm` subcommands. TASK-CM-ADMIN-007 changes lookup behavior only, not command JSON, so command re-registration is not required for this task.
+
+## Deployment note for pending lookup
+
+The deployed website integration client used by the bot must include:
+
+```text
+purchase-intents.lookup.read
+```
+
+in its exact `allowedOperations` list. Endpoint existence does not grant that permission. No new bot environment variable is required.
+
+## Non-production transcript tooling
+
+The parallel `CM-Ticket-Transcripts` side project remains governed by ADR-0010. Export tooling lives under `tools/ticket-transcript-exporter/`, is not imported by `src/`, and is not a production bot dependency.
 
 ## Production notes
 
