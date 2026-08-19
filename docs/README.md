@@ -7,6 +7,7 @@ This documentation system is the durable memory and governance layer for the Che
 - `../AGENTS.md` — mandatory operating rules
 - `context/ACTIVE_CONTEXT.md` — concise present state
 - `context/PROJECT_BRIEF.md` — stable product purpose and scope
+- `context/SIDE_PROJECTS.md` — adjacent/non-runtime workstreams, including the ticket transcript corpus
 - `context/ARCHITECTURE.md` — accepted current architecture
 - `context/DATA_STATUS.md` — verified backend/data dependency posture
 - `context/CODEBASE_MAP.md` — module ownership and fragile boundaries
@@ -36,6 +37,7 @@ This documentation system is the durable memory and governance layer for the Che
 - `decisions/ADR-0007-admin-balance-adjustment-confirmation-model.md` — current Aura/wallet confirmation, fresh-state binding, idempotency and audit model
 - `decisions/ADR-0008-admin-panel-customer-safe-sharing.md` — base customer-safe public-copy/control boundary and Discord lookup/time/audit presentation policy
 - `decisions/ADR-0009-customer-email-in-shared-panels.md` — supersedes ADR-0008 only for the previous full-email prohibition; shared customer identity now includes the canonical account email
+- `decisions/ADR-0010-ticket-transcript-data-repository-boundary.md` — keeps the parallel `CM-Ticket-Transcripts` repository private, data-only and independent from the production bot runtime
 
 ## Specialist references
 
@@ -46,3 +48,5 @@ This documentation system is the durable memory and governance layer for the Che
 ## Rule
 
 Current source code and verified external state override stale chat memory. Later accepted ADRs supersede conflicting earlier ADRs. Historical audits describe their point-in-time conclusion and may be superseded. External backend facts are dependency context, never permission for the bot to bypass the website Internal Integrations API.
+
+Adjacent side projects remain outside the production bot runtime unless an explicit later architecture decision says otherwise. In particular, `CM-Ticket-Transcripts` is a private data corpus, not an executable bot/tool repository.
