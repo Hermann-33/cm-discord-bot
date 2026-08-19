@@ -1,6 +1,6 @@
 # Project Roadmap
 
-Updated: 2026-08-18
+Updated: 2026-08-19
 
 ## Completion rule
 
@@ -42,16 +42,9 @@ Active code/dependency audit plus current Internal Integrations API operation/se
 
 `TASK-CM-ADMIN-005` / ADR-0009 explicitly added canonical customer account email to Share to Chat while preserving the separate read-only renderer and internal-field/control exclusions. Executable verification passed 128/128 tests, typecheck, build and diff check before merge.
 
-## Phase 5.2 — Admin UI declutter — TASK-CM-ADMIN-006 COMPLETE / VERIFIED FOR MERGE
+## Phase 5.2 — Admin UI declutter — COMPLETE ON MAINLINE
 
-Branch / PR:
-
-```text
-task/cm-admin-ui-declutter
-PR #4
-```
-
-Goal: make `/cm` substantially faster to scan by removing routine internal/statistical noise while retaining all useful support and mutation operations.
+`TASK-CM-ADMIN-006` simplified private `/cm` and customer-share presentation without changing API, authorization or mutation behavior.
 
 Implemented:
 
@@ -64,13 +57,7 @@ Implemented:
 - Share to Chat summaries reduced to customer-relevant current state while retaining ADR-0009 email disclosure;
 - focused presentation tests added/expanded.
 
-No API operation, website source/config, database path, mutation logic, authorization, environment variable, slash-command definition, leaderboard behavior or `legacy/` change.
-
-### Executable gate
-
-The first CI attempt caught two faulty new test assertions only. After fixing those assertions, GitHub Actions run `32156144669` passed 131/131 tests, typecheck, build and diff check.
-
-After the documentation/audit updates, run `32156801285` also passed on Node `22.23.2`:
+Final verification passed on Node `22.23.2`:
 
 ```text
 npm ci: PASS, 0 vulnerabilities
@@ -80,11 +67,15 @@ npm run build: PASS
 git diff --check: PASS
 ```
 
-PR #4 is complete for implementation/documentation verification and may merge when its current-head GitHub Actions status is green.
+PR #4 was squash-merged into `master` at:
+
+```text
+6cef7695a09c8761d395f5d530bc79b7532c9b9f
+```
 
 ## Phase 6 — Manual fulfillment — BACKEND OPERATION REQUIRED
 
-Still out of scope. The API exposes `orders.fulfillment.read` only; no purchase-processing or direct-DB substitute is allowed. TASK-CM-ADMIN-006 removes the dead visible button rather than implying this capability exists.
+Still out of scope. The API exposes `orders.fulfillment.read` only; no purchase-processing or direct-DB substitute is allowed.
 
 ## Phase 7 — Production hardening / operations
 
@@ -96,4 +87,55 @@ Priorities:
 - deployment/rollback/credential-rotation runbooks;
 - controlled authenticated read/mutation smoke tests only with explicit authorization.
 
-TASK-CM-ADMIN-006 does not alter slash registration. After merge, a normal bot redeploy/restart is sufficient; no `npm run register:commands` is required solely for this task.
+## Parallel side project — CM Ticket Transcript Corpus
+
+This is not a production-bot phase. It is a separate workstream governed by ADR-0010 and `SIDE_PROJECTS.md`.
+
+Repository:
+
+```text
+Hermann-33/CM-Ticket-Transcripts
+```
+
+The repository is private and data-only. Main bot engineering may continue at the same time.
+
+### Transcript Phase T1 — Corpus acquisition — IN PROGRESS
+
+Objective: make the historical Discord/Tickety ticket corpus durable and accessible for later analysis.
+
+Required sequence:
+
+```text
+Discord ticket-log channel
+  -> enumerate complete historical log messages
+  -> extract ticket metadata + Tickety transcript URLs
+  -> validate fetch/parser against a small representative sample
+  -> normalize complete transcript conversations
+  -> bulk-export all recoverable tickets
+  -> produce explicit failure/completeness manifests
+  -> persist data in CM-Ticket-Transcripts
+```
+
+Completion gate:
+
+- complete Discord channel history enumerated;
+- every discovered transcript URL accounted for;
+- normalized schema proven against representative samples;
+- bulk export completed without silently dropping failures;
+- raw evidence retained where required for parser recovery;
+- no executable extraction code or credentials committed to the data repository;
+- corpus is queryable for downstream analysis.
+
+### Transcript Phase T2 — Corpus quality / indexing — NOT STARTED
+
+Potential follow-up only after T1:
+
+- schema/version stabilization;
+- deduplication and integrity checks;
+- searchable indexes/derived manifests;
+- attachment inventory;
+- quality statistics and missing-data reconciliation.
+
+### Transcript Phase T3 — Analysis / product use — NOT STARTED
+
+Any analytics, support intelligence or integration built from the corpus is separately scoped. Existence of the corpus does not authorize the production bot to depend on it.
