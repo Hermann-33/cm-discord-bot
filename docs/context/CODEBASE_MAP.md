@@ -78,20 +78,31 @@ users.wallet.adjust
 
 ### Ticket transcript exporter
 
-- `tools/ticket-transcript-exporter/export-ticket-transcripts.mjs` — Phase T1 standalone Discord/Tickety corpus exporter.
-- `tools/ticket-transcript-exporter/README.md` — local execution/sample/bulk workflow.
-- `tests/tools/ticketTranscriptExporter.test.mjs` — URL allowlisting, Discord-log parsing, HTML text extraction, attachment candidates, message-count heuristics and sample/bulk CLI safety tests.
+- `tools/ticket-transcript-exporter/run-ticket-transcript-export.mjs` — strict Discord-history wrapper that allows only exact `View Transcript` link buttons through discovery.
+- `tools/ticket-transcript-exporter/export-ticket-transcripts.mjs` — original Discord discovery + HTML/Chrome acquisition module; retained for source-log discovery and historical raw-shell evidence.
+- `tools/ticket-transcript-exporter/export-ticket-payloads.mjs` — schema-v2 structured extractor that reads `source-logs.jsonl`, calls Tickety's fixed `/api/ticketTranscript?id=<id>` endpoint, decodes `application/vnd.msgpack`, resolves message authors, and writes real message-level JSON/text/raw Msgpack artifacts.
+- `tools/ticket-transcript-exporter/README.md` — discovery + structured extraction workflow.
+- `tests/tools/ticketTranscriptExporter.test.mjs` — strict button discovery, URL restrictions, Discord-log parsing and legacy HTML helper tests.
+- `tests/tools/ticketTranscriptPayloadExporter.test.mjs` — structured-export CLI, payload validation, user resolution and text-projection tests.
 
 Boundary:
 
 ```text
-tools/ticket-transcript-exporter
-  -> Discord REST read-only history
-  -> Tickety transcript HTTPS read
-  -> local CM-Ticket-Transcripts checkout
+Stage 1
+Discord REST read-only history
+  -> exact View Transcript button
+  -> CM-Ticket-Transcripts/source-logs.jsonl
+
+Stage 2
+source-logs.jsonl
+  -> https://tickety.top/api/ticketTranscript?id=<id>
+  -> application/vnd.msgpack
+  -> schema-v2 local corpus files
 ```
 
-It is not imported by `src/`, is not included in `tsconfig.build.json`, is not started by the bot and does not call the Internal Integrations API or database.
+The structured stage does not rescan Discord and does not use the Discord bot token. It uses a local no-save `msgpackr` installation rather than adding a production dependency.
+
+No transcript tool is imported by `src/`, included in `tsconfig.build.json`, started by the bot, or connected to the Internal Integrations API/database.
 
 ## Root test inventory
 
@@ -132,6 +143,7 @@ Lifecycle/leaderboard/logging:
 Side-project tooling:
 
 - `tests/tools/ticketTranscriptExporter.test.mjs`
+- `tests/tools/ticketTranscriptPayloadExporter.test.mjs`
 
 ## External ownership
 
