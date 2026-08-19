@@ -10,6 +10,7 @@ const ORDER_ID = "550e8400-e29b-41d4-a716-446655440002";
 const TX_ID = "550e8400-e29b-41d4-a716-446655440003";
 const AUDIT_ID = "550e8400-e29b-41d4-a716-446655440004";
 const IDEMPOTENCY_ID = "550e8400-e29b-41d4-a716-446655440005";
+const PURCHASE_INTENT_ID = "550e8400-e29b-41d4-a716-446655440010";
 
 const config: InternalApiConfig = {
   origin: "https://example.test",
@@ -125,6 +126,34 @@ function fulfillmentData() {
   };
 }
 
+function purchaseIntentData() {
+  return {
+    purchaseIntent: {
+      purchaseIntentId: PURCHASE_INTENT_ID,
+      publicRef: "CM-PENDING",
+      userId: USER_ID,
+      purchaseKind: "product",
+      productSlug: "product",
+      licenseOptionId: "7-day",
+      accountSlug: null,
+      accountVariantId: null,
+      accountName: null,
+      accountVariantLabel: null,
+      accountGameName: null,
+      quantity: 1,
+      amountCents: 1000,
+      currency: "USD",
+      paymentMethod: "crypto",
+      paymentProvider: "oxapay",
+      status: "pending",
+      providerStatus: "waiting",
+      orderId: null,
+      expiresAt: "2026-08-10T01:00:00.000Z",
+      createdAt: "2026-08-10T00:00:00.000Z"
+    }
+  };
+}
+
 function refundResult() {
   return {
     refund: {
@@ -222,6 +251,24 @@ test("order details accepts a public CM reference selector", async () => {
   assert.equal(order.userId, USER_ID);
 });
 
+test("purchase intent lookup uses the documented pending-purchase path and selector", async () => {
+  let capturedUrl = "";
+  let capturedBody = "";
+  const fetchMock = (async (url: unknown, init?: RequestInit) => {
+    capturedUrl = String(url);
+    capturedBody = String(init?.body);
+    return success(purchaseIntentData());
+  }) as typeof fetch;
+
+  const client = new InternalApiClient(config, dependencies(fetchMock));
+  const purchase = await client.fetchPurchaseIntent({ kind: "public_ref", value: "CM-PENDING" });
+  assert.equal(capturedUrl, `https://example.test${INTERNAL_API_PATHS.purchaseIntentLookup}`);
+  assert.deepEqual(JSON.parse(capturedBody), { selector: { kind: "public_ref", value: "CM-PENDING" } });
+  assert.equal(purchase.purchaseIntentId, PURCHASE_INTENT_ID);
+  assert.equal(purchase.status, "pending");
+  assert.equal(purchase.orderId, null);
+});
+
 test("order fulfillment accepts human-readable type and masked support material", async () => {
   let capturedUrl = "";
   const fetchMock = (async (url: unknown) => {
@@ -236,6 +283,17 @@ test("order fulfillment accepts human-readable type and masked support material"
   assert.deepEqual(fulfillment.support?.maskedMaterials, [
     { kind: "license_key", maskedValue: "ABCD-****-WXYZ" }
   ]);
+});
+
+test("order fulfillment remains compatible when website support enrichment is absent", async () => {
+  const base = fulfillmentData();
+  const { support: _support, ...withoutSupport } = base;
+  const fetchMock = (async () => success(withoutSupport)) as typeof fetch;
+  const client = new InternalApiClient(config, dependencies(fetchMock));
+
+  const fulfillment = await client.fetchOrderFulfillment(ORDER_ID);
+  assert.equal(fulfillment.support, undefined);
+  assert.equal(fulfillment.fulfillments.length, 1);
 });
 
 test("order fulfillment rejects unexpected raw fulfillment material fields", async () => {
