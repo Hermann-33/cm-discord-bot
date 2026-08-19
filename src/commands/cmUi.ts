@@ -255,7 +255,7 @@ export function buildPurchaseIntentPanel(
     ))
     .addTextDisplayComponents(text(`### Purchase\n${purchaseLines.join("\n")}`))
     .addTextDisplayComponents(text(`### Payment\n${paymentLines.join("\n")}`))
-    .addTextDisplayComponents(text("> No completed order exists yet. Refund and delivery controls remain unavailable until CM creates the canonical order."))
+    .addTextDisplayComponents(text("> No completed order exists yet. Order-only controls remain unavailable until CM creates the canonical order."))
     .addActionRowComponents(
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         button(`cm:purchase:refresh:${sessionId}`, "Refresh Purchase", ButtonStyle.Primary),
