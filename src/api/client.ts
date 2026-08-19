@@ -3,6 +3,12 @@ import type { z } from "zod";
 import type { InternalApiConfig } from "../config/env";
 import { InternalApiClientError } from "./errors";
 import {
+  purchaseIntentLookupRequestSchema,
+  purchaseIntentLookupResponseSchema,
+  type PurchaseIntentData,
+  type PurchaseIntentLookupSelector
+} from "./purchaseIntents";
+import {
   auraAdjustmentRequestSchema,
   auraAdjustmentResponseSchema,
   auraLookupRequestSchema,
@@ -45,6 +51,7 @@ export const INTERNAL_API_PATHS = {
   userOverview: "/api/internal/integrations/v1/users/overview",
   orderDetails: "/api/internal/integrations/v1/orders/details",
   orderFulfillment: "/api/internal/integrations/v1/orders/fulfillment",
+  purchaseIntentLookup: "/api/internal/integrations/v1/purchase-intents/lookup",
   orderRefundPreview: "/api/internal/integrations/v1/orders/refund/preview",
   orderRefundExecute: "/api/internal/integrations/v1/orders/refund/execute",
   userWalletAdjust: "/api/internal/integrations/v1/users/wallet/adjust",
@@ -188,6 +195,16 @@ export class InternalApiClient {
       { selector: { kind: "order_id", value: orderId } },
       orderFulfillmentResponseSchema
     );
+  }
+
+  async fetchPurchaseIntent(selector: PurchaseIntentLookupSelector): Promise<PurchaseIntentData> {
+    const data = await this.request(
+      INTERNAL_API_PATHS.purchaseIntentLookup,
+      purchaseIntentLookupRequestSchema,
+      { selector },
+      purchaseIntentLookupResponseSchema
+    );
+    return data.purchaseIntent;
   }
 
   async previewOrderRefund(orderId: string): Promise<OrderRefundPreviewData> {
