@@ -10,22 +10,21 @@ Updated: 2026-08-19
 - ADR-0008 — separate customer-facing Share to Chat renderer, no public admin controls, Discord identity/time/audit presentation policy.
 - ADR-0009 — canonical CM account email is intentionally shared; all other ADR-0008 field/control exclusions remain.
 - ADR-0010 — `CM-Ticket-Transcripts` is a separate private data-only repository with no executable extraction/runtime code and no production-bot dependency.
-- `BOT_AUDIT_LOG_CHANNEL_ID` required before refund/Aura/wallet execute.
 - no direct Supabase/Postgres.
-- manual fulfillment blocked until website owns a dedicated mutation.
+- manual fulfillment remains blocked until website owns a dedicated mutation.
 
 ## Current mainline baseline
 
 ```text
 master
-6cef7695a09c8761d395f5d530bc79b7532c9b9f
+087e2d431ff3ddb74e034b9d736c64f1b914abc9
 ```
 
-TASK-CM-ADMIN-006 / PR #4 is merged.
+TASK-TRANSCRIPTS-001 is merged on mainline. The production bot remains unchanged by transcript tooling.
 
 ## Current production bot state
 
-The current bot includes customer `cm aura`, `/refresh-leaderboard`, `/cm user`, `/cm order`, compact operational panels, canonical refund, confirmed Aura/wallet adjustment, Share to Chat, Discord timestamps and concise mutation audits.
+The bot includes customer `cm aura`, `/refresh-leaderboard`, `/cm user`, `/cm order`, compact operational panels, canonical refund, confirmed Aura/wallet adjustment, Share to Chat, Discord timestamps and concise mutation audits.
 
 No direct database path exists. The bot remains HMAC Internal Integrations API bounded.
 
@@ -37,89 +36,114 @@ Repository:
 Hermann-33/CM-Ticket-Transcripts
 ```
 
-Status:
+Boundary:
 
 ```text
 private
 data-only
-Phase T1 corpus acquisition
-exporter implemented
-real five-ticket validation pending
+no executable exporter code
+no credentials
+not a production-bot runtime dependency
 ```
 
-The exporter is intentionally non-runtime tooling under:
+### Discovery status
+
+The strict Discord discovery path is complete enough for the current corpus:
 
 ```text
-tools/ticket-transcript-exporter/
+Discord ticket-log channel
+  -> exact View Transcript buttons only
+  -> 1,578 unique transcript records
+  -> CM-Ticket-Transcripts/source-logs.jsonl
 ```
 
-Supported execution goes through:
+`View Ticket`, other buttons and transcript-like fallback URLs outside the exact `View Transcript` button are ignored.
+
+### Proven transcript-content path
+
+The original Tickety transcript page returns only a JavaScript application shell; HTML/Chrome DOM capture did not contain the conversation.
+
+A real HAR from a working transcript proved the browser calls:
 
 ```text
-npm run export:ticket-transcripts
-  -> run-ticket-transcript-export.mjs
-  -> strict Discord message/button filter
-  -> export-ticket-transcripts.mjs core acquisition/parser
+GET https://tickety.top/api/ticketTranscript?id=<transcriptId>
+Content-Type: application/vnd.msgpack
 ```
 
-The strict filter is required because the ticket-log channel can contain multiple controls such as `View Ticket` and `View Transcript`.
+The one-ticket HAR payload was decoded successfully and contained real users/messages plus timestamps, content, attachments, embeds, reactions, components and reply references.
 
-A transcript candidate is accepted only when Discord returns a link button with:
+Tickety's browser bundle decodes the payload with Msgpackr semantics:
 
 ```text
-type  = 2
-style = 5
-label = View Transcript   (case/whitespace normalized)
-url   = https://tickety.top/transcripts/<id>
+useRecords: true
+mapsAsObjects: true
+int64AsType: string
+custom extension type 7: identity wrapper
 ```
 
-`View Ticket`, other button labels, transcript-like URLs in ordinary message content, and transcript-like URLs in unrelated embeds are not eligible discovery sources through the supported npm command.
+### TASK-TRANSCRIPTS-002 implementation
 
-The tool:
+Feature branch:
 
-- validates the supplied channel belongs to `DISCORD_GUILD_ID`;
-- paginates Discord history 100 messages at a time through the REST API;
-- preserves pagination while neutralizing non-`View Transcript` messages before the core parser sees them;
-- extracts the Tickety transcript URL and ticket metadata only from eligible log messages;
-- restricts fetches to canonical `https://tickety.top/transcripts/<id>` URLs;
-- saves raw HTML, conservative visible text and normalized JSON into a separately checked-out `CM-Ticket-Transcripts` directory;
-- records run/failure manifests;
-- defaults to five transcripts and requires explicit `--all` for bulk export;
-- supports direct HTTPS plus optional local Chrome headless fallback;
-- uses no Internal Integrations API, HMAC, Supabase/Postgres or mutation path.
+```text
+task/ticket-transcript-msgpack-bulk
+```
 
-Focused exporter tests now cover URL restrictions, screenshot-shaped ticket metadata parsing, strict `View Transcript` versus `View Ticket` targeting, suppression of transcript-like fallback URLs outside the target button, HTML text conversion, attachment candidates, message-count heuristics and sample/bulk CLI safety.
+New tooling:
 
-## Transcript T1 exact next action
+```text
+tools/ticket-transcript-exporter/export-ticket-payloads.mjs
+```
 
-Run the exporter against the **real ticket-log channel with a five-ticket sample only**:
+The structured exporter:
+
+- reads IDs from `source-logs.jsonl`; it does not rescan Discord;
+- uses no Discord bot token;
+- calls only the fixed Tickety transcript API endpoint;
+- requires `application/vnd.msgpack`;
+- decodes the real structured payload;
+- resolves message authors from the decoded user table;
+- preserves messages, attachments, embeds, reactions, components and message references;
+- writes raw binary payloads to `raw-msgpack/`;
+- overwrites old shell-derived `transcripts/<id>.json` and `text/<id>.txt` as each structured record succeeds;
+- treats only schema-v2 `tickety-msgpack-api` records as resumable successes;
+- defaults to five records; full corpus requires explicit `--all`;
+- runs sequentially with 1250 ms pacing and handles 429/transient failures;
+- records private/restricted 401/403 transcripts as failures rather than bypassing controls.
+
+The production package dependency graph remains unchanged. Before a local structured run, install Msgpackr without saving it:
 
 ```powershell
-npm run export:ticket-transcripts -- `
-  --env-file .\.env `
-  --channel-id <REAL_TICKET_LOG_CHANNEL_ID> `
-  --output-dir ..\CM-Ticket-Transcripts `
-  --limit 5
+npm.cmd install --no-save --package-lock=false --omit=optional msgpackr@2.0.4
 ```
 
-Do not start the production bot merely to perform the export. The exporter is a separate one-shot CLI process that reuses the existing bot token for authorized read-only Discord REST access.
+### Exact next local gate
 
-Then inspect the generated `raw/`, `text/` and `transcripts/` records.
+After TASK-TRANSCRIPTS-002 is merged and pulled locally, from the root of `cm-discord-bot`:
 
-The sample gate must prove:
+```powershell
+npm.cmd install --no-save --package-lock=false --omit=optional msgpackr@2.0.4
+npm.cmd run export:ticket-transcript-payloads -- --output-dir ..\CM-Ticket-Transcripts --limit 5 --no-resume
+```
 
-1. real Discord ticket-log messages are discovered only through `View Transcript` buttons and ignore `View Ticket`/other controls;
-2. source ticket metadata matches the Discord close-log embed;
-3. Tickety pages are fetchable from the authorized execution environment;
-4. raw HTML actually contains the complete ticket conversation;
-5. visible-text output retains authors, timestamps, message content and attachment references well enough for analysis;
-6. any Tickety DOM structure needed for message-level JSON is learned from the real HTML rather than guessed;
-7. failures are explicit and no credentials are written to the data repository.
+A successful run should print a real message count for each ticket, for example:
 
-Do **not** run `--all` until this sample is inspected and parser completeness is accepted.
+```text
+<id>: saved 74 messages (... bytes).
+```
+
+Inspect at least one generated `transcripts/<id>.json` and verify `transcript.messages` contains the actual conversation.
+
+Then process the full discovered corpus:
+
+```powershell
+npm.cmd run export:ticket-transcript-payloads -- --output-dir ..\CM-Ticket-Transcripts --all --resume
+```
+
+`--resume` is safe because old HTML-shell records do not qualify as schema-v2 structured successes and will therefore be replaced. If the bulk run is interrupted, rerunning the same command skips successful structured records.
+
+Do not delete `source-logs.jsonl`; it is the durable 1,578-ID discovery manifest required by the structured stage.
 
 ## Main-bot next engineering track
 
-The main bot roadmap may proceed independently with production-hardening work such as branch protection/status checks, registration-specific config loading, stronger generic redaction and deployment/rollback/credential-rotation runbooks.
-
-Manual fulfillment remains blocked on a dedicated website-owned operation.
+The main bot roadmap proceeds independently. Manual fulfillment remains blocked on a dedicated website-owned operation.
