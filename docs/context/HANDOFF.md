@@ -1,6 +1,6 @@
 # Latest Handoff
 
-Updated: 2026-08-19
+Updated: 2026-08-20
 
 ## Authority
 
@@ -15,107 +15,120 @@ Updated: 2026-08-19
 - no direct Supabase/Postgres.
 - manual fulfillment blocked until website owns a dedicated mutation.
 
-## Current remote mainline observed during TASK-CM-ADMIN-007
+## Current mainline
 
 ```text
 master
-087e2d431ff3ddb74e034b9d736c64f1b914abc9
+405a71fa2fe2eca467e7f4b7f8b5437e067895ef
 ```
 
-This includes TASK-CM-ADMIN-006 plus the parallel ticket transcript exporter/context changes.
+TASK-CM-ADMIN-007 is merged on mainline. Current production-source behavior includes canonical-order-first `/cm order`, `NOT_FOUND`-only pending purchase fallback, optional fulfillment support enrichment, pending purchase refresh/transition, and customer-safe pending sharing.
 
-## Current main-bot feature branch
-
-```text
-PR #5
-task/cm-order-support-details
-source implementation head: 8e1c1ff839fdf171403219f0b881c82395d17007
-```
-
-TASK-CM-ADMIN-007 is implemented and executable source verification is green. It is **not merged or deployed** yet.
-
-## TASK-CM-ADMIN-007 behavior
-
-### Pending order lookup fixed
-
-```text
-/cm order reference:<CM ref or UUID>
- -> orders.details.read first
- -> only on stable NOT_FOUND: purchase-intents.lookup.read
- -> exact users.overview.read(user_id) owner equality
- -> Pending Purchase panel if no canonical order yet
- -> Refresh Purchase
- -> automatic transition to Order panel when canonical order appears
-```
-
-Do not broaden fallback to authorization/service/rate errors.
-
-Pending purchase state is read-only. Before a canonical order exists there is no Refund, Delivery Details, purchase-processing or manual-fulfillment control.
-
-### Fulfillment support completed
-
-Canonical order UI now consumes the website's optional `orders.fulfillment.read.support` fields:
-
-- human-readable type;
-- finite duration;
-- bounded masked license/account material;
-- canonical manual-required state.
-
-The private Order Operations panel may show provider support context. `Delivery Details` remains read-only.
-
-Support enrichment is optional/best-effort. If it fails, the canonical order still opens and existing refund/navigation controls remain usable. Missing support/masked values never imply manual fulfillment.
-
-### Share boundary
-
-A new Pending Purchase customer-safe renderer exists. It omits internal purchase/user IDs, internal option IDs, provider/provider status and controls.
-
-Masked fulfillment support material and provider internals are explicitly excluded from Share to Chat.
-
-## API permission required for rollout
-
-The bot's exact operation set adds:
+The bot operation set now includes:
 
 ```text
 purchase-intents.lookup.read
 ```
 
-The website integration client used by this bot must include it in `allowedOperations` before pending lookup works in production. Endpoint existence does not grant permission.
-
-No new bot environment variable was added.
-
-## Command registration
-
-TASK-CM-ADMIN-007 does not change slash-command JSON. `/cm user` and `/cm order` remain the same registered subcommands, so `npm run register:commands` is **not required** for this rollout.
-
-## Verification evidence
-
-GitHub Actions run:
-
-```text
-32254272306
-```
-
-checked PR #5 merge-ref against concurrent `master` `087e2d431ff3ddb74e034b9d736c64f1b914abc9` on Node `22.23.2`:
-
-```text
-npm ci: PASS — 0 vulnerabilities
-npm test: PASS — 153/153
-npm run typecheck: PASS
-npm run build: PASS
-git diff --check: PASS
-```
-
-Focused coverage proves pending lookup, NOT_FOUND-only fallback, owner equality, pending-to-order transition, optional support failure behavior, strict masked DTO/no-raw-material acceptance, no false manual inference, no pending mutation controls, no masked support/provider public leakage, unchanged command registration and no direct DB/purchase-processing/manual-fulfillment shortcut.
-
-## Exact next main-bot action
-
-1. verify PR #5 after the documentation/ADR/audit commit;
-2. inspect current remote `master` again for concurrent changes and confirm PR mergeability;
-3. update PR #5 description with final verification/rollout requirements;
-4. wait for explicit user authorization before merge;
-5. after merge, ensure website `cm-discord-bot` client has `purchase-intents.lookup.read`, then deploy/restart bot normally;
-6. do not run real refund/Aura/wallet mutation without explicit controlled-target authorization.
+The website integration client used by the bot must include that operation in `allowedOperations` for pending lookup to work in production. No new bot environment variable or slash-command registration change was introduced by TASK-CM-ADMIN-007.
 
 ## Parallel workstream — Ticket Transcript Corpus
 
-`Hermann-33/CM-Ticket-Transcripts` remains private/data-only and independent. Its current T1 next gate remains a real five-ticket sample through the supported exporter before any `--all` run. Do not conflate that side-project rollout with PR #5 or the production bot deployment.
+Repository:
+
+```text
+Hermann-33/CM-Ticket-Transcripts
+```
+
+Boundary remains:
+
+```text
+private
+data-only
+no executable extraction code
+no production-bot runtime dependency
+```
+
+The strict Discord discovery stage has already identified 1,578 unique `View Transcript` records and stored the durable discovery set in:
+
+```text
+CM-Ticket-Transcripts/source-logs.jsonl
+```
+
+A real Chrome HAR from a working Tickety transcript proved that the actual conversation is loaded from:
+
+```text
+GET https://tickety.top/api/ticketTranscript?id=<transcriptId>
+Content-Type: application/vnd.msgpack
+```
+
+The captured Msgpack payload was successfully decoded and contained real `users[]` and `messages[]` data, including timestamps, content, attachments, embeds, reactions, components and message references. The earlier repeated 14,956-byte HTTP files are only HTML application shells and are not complete transcript records.
+
+## Structured transcript extractor
+
+The structured extractor lives only under non-production tooling:
+
+```text
+tools/ticket-transcript-exporter/export-ticket-payloads.mjs
+```
+
+Supported npm command:
+
+```text
+npm run export:ticket-transcript-payloads
+```
+
+Behavior:
+
+```text
+CM-Ticket-Transcripts/source-logs.jsonl
+  -> transcript IDs
+  -> https://tickety.top/api/ticketTranscript?id=<id>
+  -> application/vnd.msgpack
+  -> Msgpackr decode
+  -> users/messages validation
+  -> author resolution
+  -> schema-v2 transcript JSON
+  -> plain-text projection
+  -> raw Msgpack evidence
+```
+
+The structured stage does not rescan Discord and does not use the Discord bot token. It uses a local no-save `msgpackr` installation so production dependencies remain unchanged:
+
+```powershell
+npm.cmd install --no-save --package-lock=false --omit=optional msgpackr@2.0.4
+```
+
+The exporter defaults to five transcripts, requires explicit `--all` for full-corpus processing, uses conservative sequential pacing, honors `Retry-After`, retries transient failures, records failures explicitly, and does not bypass private/restricted 401/403 transcripts.
+
+`--resume` skips only already-valid schema-v2 `tickety-msgpack-api` records. Old HTML-shell records are therefore replaced rather than incorrectly treated as complete.
+
+## Structured extraction workflow
+
+First validate five real structured transcripts:
+
+```powershell
+npm.cmd run export:ticket-transcript-payloads -- --output-dir ..\CM-Ticket-Transcripts --limit 5 --no-resume
+```
+
+Acceptance gate:
+
+1. output reports real message counts rather than HTML byte-only success;
+2. generated `transcripts/<id>.json` contains populated `users` and `messages`;
+3. `text/<id>.txt` contains the actual support conversation;
+4. attachments/replies/embeds are preserved when present;
+5. failures are explicit and no credentials are written to the data repository.
+
+After that sample is accepted, bulk extraction is:
+
+```powershell
+npm.cmd run export:ticket-transcript-payloads -- --output-dir ..\CM-Ticket-Transcripts --all --resume
+```
+
+If interrupted, rerun the same command; valid schema-v2 records are skipped.
+
+## Production separation
+
+No transcript tooling is imported by `src/`, emitted by the production TypeScript build, started with the bot, or connected to the Internal Integrations API/database. Generated transcript artifacts belong only in the private `CM-Ticket-Transcripts` repository.
+
+Normal Discord bot work can continue independently from the transcript corpus acquisition workstream.
