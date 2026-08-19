@@ -21,22 +21,11 @@ master
 6cef7695a09c8761d395f5d530bc79b7532c9b9f
 ```
 
-TASK-CM-ADMIN-006 / PR #4 is merged. Older handoff/context text that says PR #4 is still waiting for merge is obsolete.
+TASK-CM-ADMIN-006 / PR #4 is merged.
 
 ## Current production bot state
 
-The current bot includes:
-
-- customer `cm aura`;
-- `/refresh-leaderboard`;
-- `/cm user` by email or Discord user;
-- `/cm order`;
-- compact User/Orders/Order/Delivery Details panels;
-- canonical refund;
-- confirmed Aura/wallet adjustment;
-- Share to Chat;
-- Discord timestamps;
-- concise mutation audits.
+The current bot includes customer `cm aura`, `/refresh-leaderboard`, `/cm user`, `/cm order`, compact operational panels, canonical refund, confirmed Aura/wallet adjustment, Share to Chat, Discord timestamps and concise mutation audits.
 
 No direct database path exists. The bot remains HMAC Internal Integrations API bounded.
 
@@ -53,34 +42,81 @@ Status:
 ```text
 private
 data-only
-Phase T1 corpus acquisition starting
+Phase T1 corpus acquisition
+exporter implemented
+real five-ticket validation pending
 ```
 
-Purpose: collect and normalize the historical Discord ticket logs and linked Tickety transcripts so the corpus can be queried/analyzed later.
+The exporter is intentionally non-runtime tooling under:
 
-Boundary:
+```text
+tools/ticket-transcript-exporter/
+```
 
-- main bot development continues independently;
-- no scraper/exporter/runtime code belongs in `CM-Ticket-Transcripts`;
-- no tokens, HMAC secrets, database credentials or `.env` content belong there;
-- extraction code runs elsewhere;
-- the production bot is not modified merely to perform the export;
-- any future bot/runtime dependency on the corpus requires separate architecture review.
+Supported execution goes through:
+
+```text
+npm run export:ticket-transcripts
+  -> run-ticket-transcript-export.mjs
+  -> strict Discord message/button filter
+  -> export-ticket-transcripts.mjs core acquisition/parser
+```
+
+The strict filter is required because the ticket-log channel can contain multiple controls such as `View Ticket` and `View Transcript`.
+
+A transcript candidate is accepted only when Discord returns a link button with:
+
+```text
+type  = 2
+style = 5
+label = View Transcript   (case/whitespace normalized)
+url   = https://tickety.top/transcripts/<id>
+```
+
+`View Ticket`, other button labels, transcript-like URLs in ordinary message content, and transcript-like URLs in unrelated embeds are not eligible discovery sources through the supported npm command.
+
+The tool:
+
+- validates the supplied channel belongs to `DISCORD_GUILD_ID`;
+- paginates Discord history 100 messages at a time through the REST API;
+- preserves pagination while neutralizing non-`View Transcript` messages before the core parser sees them;
+- extracts the Tickety transcript URL and ticket metadata only from eligible log messages;
+- restricts fetches to canonical `https://tickety.top/transcripts/<id>` URLs;
+- saves raw HTML, conservative visible text and normalized JSON into a separately checked-out `CM-Ticket-Transcripts` directory;
+- records run/failure manifests;
+- defaults to five transcripts and requires explicit `--all` for bulk export;
+- supports direct HTTPS plus optional local Chrome headless fallback;
+- uses no Internal Integrations API, HMAC, Supabase/Postgres or mutation path.
+
+Focused exporter tests now cover URL restrictions, screenshot-shaped ticket metadata parsing, strict `View Transcript` versus `View Ticket` targeting, suppression of transcript-like fallback URLs outside the target button, HTML text conversion, attachment candidates, message-count heuristics and sample/bulk CLI safety.
 
 ## Transcript T1 exact next action
 
-Build and validate the extraction process outside the data repository against a small representative sample before bulk processing.
+Run the exporter against the **real ticket-log channel with a five-ticket sample only**:
+
+```powershell
+npm run export:ticket-transcripts -- `
+  --env-file .\.env `
+  --channel-id <REAL_TICKET_LOG_CHANNEL_ID> `
+  --output-dir ..\CM-Ticket-Transcripts `
+  --limit 5
+```
+
+Do not start the production bot merely to perform the export. The exporter is a separate one-shot CLI process that reuses the existing bot token for authorized read-only Discord REST access.
+
+Then inspect the generated `raw/`, `text/` and `transcripts/` records.
 
 The sample gate must prove:
 
-1. Discord ticket-log messages can be enumerated and their ticket metadata recovered;
-2. `View Transcript` URLs can be extracted without clicking buttons manually;
-3. Tickety transcript pages can be fetched from the authorized execution environment;
-4. complete message content, authors, timestamps and attachment metadata can be normalized reliably;
-5. failed or malformed tickets are explicitly recorded rather than silently skipped;
-6. only resulting data artifacts are written to `CM-Ticket-Transcripts`.
+1. real Discord ticket-log messages are discovered only through `View Transcript` buttons and ignore `View Ticket`/other controls;
+2. source ticket metadata matches the Discord close-log embed;
+3. Tickety pages are fetchable from the authorized execution environment;
+4. raw HTML actually contains the complete ticket conversation;
+5. visible-text output retains authors, timestamps, message content and attachment references well enough for analysis;
+6. any Tickety DOM structure needed for message-level JSON is learned from the real HTML rather than guessed;
+7. failures are explicit and no credentials are written to the data repository.
 
-After the sample passes, scale the same validated pipeline to the full 1,000+ ticket history.
+Do **not** run `--all` until this sample is inspected and parser completeness is accepted.
 
 ## Main-bot next engineering track
 
