@@ -8,6 +8,7 @@ import {
   type MessageCreateOptions,
   type TextBasedChannel
 } from "discord.js";
+import type { PurchaseIntentData } from "../api/purchaseIntents";
 import type { OrderDetailsData, RecentOrderData } from "../api/schemas";
 import {
   discordUserMention,
@@ -60,6 +61,16 @@ function orderLabel(order: RecentOrderData | OrderDetailsData): string {
       ?? order.productSlug
       ?? order.accountSlug
       ?? "Order"
+  );
+}
+
+function purchaseIntentLabel(purchase: PurchaseIntentData): string {
+  return escapeDiscordText(
+    purchase.accountName
+      ?? purchase.accountGameName
+      ?? purchase.productSlug
+      ?? purchase.accountSlug
+      ?? "Purchase"
   );
 }
 
@@ -150,6 +161,26 @@ function buildOrderShare(session: CmAdminSession): ContainerBuilder | null {
     .addTextDisplayComponents(text(`### Delivery\n${deliveryLines.join("\n")}`));
 }
 
+function buildPurchaseIntentShare(session: CmAdminSession): ContainerBuilder | null {
+  const purchase = session.selectedPurchaseIntent;
+  if (!purchase) return null;
+  const reference = purchase.publicRef ? ` ${escapeDiscordText(purchase.publicRef)}` : "";
+  const purchaseLines = [
+    `Item: **${purchaseIntentLabel(purchase)}**`,
+    ...(purchase.accountVariantLabel ? [`Variant: ${escapeDiscordText(purchase.accountVariantLabel)}`] : []),
+    ...(purchase.accountGameName ? [`Game: ${escapeDiscordText(purchase.accountGameName)}`] : []),
+    ...(purchase.quantity > 1 ? [`Quantity: ${purchase.quantity}`] : [])
+  ];
+
+  return new ContainerBuilder()
+    .addTextDisplayComponents(text(`# Pending Purchase${reference}\nStatus: **${escapeDiscordText(purchase.status)}**`))
+    .addSeparatorComponents(separator())
+    .addTextDisplayComponents(text(`### Customer\n${customerIdentityBlock(session)}`))
+    .addTextDisplayComponents(text(
+      `### Purchase\n${purchaseLines.join("\n")}\nAmount: **${formatMoney(purchase.amountCents, purchase.currency)}**\nPayment: ${escapeDiscordText(purchase.paymentMethod ?? "—")}\nCreated: ${formatDiscordTimestampPair(purchase.createdAt)}${purchase.expiresAt ? `\nExpires: ${formatDiscordTimestampPair(purchase.expiresAt)}` : ""}`
+    ));
+}
+
 function buildAdjustmentPreviewShare(session: CmAdminSession, proposal: UserAdjustmentProposal): ContainerBuilder {
   const container = new ContainerBuilder()
     .addTextDisplayComponents(text(`# ${proposal.kind === "aura" ? "Aura" : "Wallet"} Adjustment Preview`))
@@ -172,6 +203,7 @@ export function buildPublicSharePanel(session: CmAdminSession): ContainerBuilder
   if (view.kind === "user") return buildUserShare(session);
   if (view.kind === "orders") return buildOrdersShare(session, view.page);
   if (view.kind === "order") return buildOrderShare(session);
+  if (view.kind === "purchase-intent") return buildPurchaseIntentShare(session);
 
   if (view.kind === "fulfillment") {
     const data = view.data;

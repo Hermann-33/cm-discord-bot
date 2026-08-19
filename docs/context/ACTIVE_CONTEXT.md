@@ -4,15 +4,17 @@ Updated: 2026-08-19
 
 ## Mainline baseline
 
-Current remote `master`:
+Current remote `master` observed during TASK-CM-ADMIN-007:
 
 ```text
-6cef7695a09c8761d395f5d530bc79b7532c9b9f
+087e2d431ff3ddb74e034b9d736c64f1b914abc9
 ```
 
-TASK-CM-ADMIN-006 was verified and squash-merged through PR #4. The previous context that described PR #4 as waiting for merge is stale.
+This mainline includes TASK-CM-ADMIN-006 and the parallel transcript-exporter context/tooling work governed by ADR-0010.
 
-Current production behavior includes:
+TASK-CM-ADMIN-007 is implemented and source-verified on draft PR #5 / branch `task/cm-order-support-details`; it is not yet merged or deployed.
+
+## Current mainline production behavior
 
 - customer `cm aura` message command;
 - `/refresh-leaderboard`;
@@ -28,52 +30,58 @@ Current production behavior includes:
 
 The bot remains a standalone Node.js/TypeScript process with no direct Supabase/Postgres client, credential, RPC fallback or database mutation path.
 
-## Current private admin presentation
+## TASK-CM-ADMIN-007 feature state
 
-### User Operations
+ADR-0011 defines the pending-purchase and fulfillment-support boundary.
 
-The private user home prioritizes:
+### Pending `/cm order` lookup
 
-- canonical email;
-- Active/BANNED state;
-- compact linked Discord identity;
-- current wallet;
-- available Aura plus pending Aura only when non-zero;
-- order count;
-- latest order;
-- Adjust Aura / Adjust Wallet / Open Recent Order / Order History / Share to Chat.
+The feature branch fixes valid pending checkout references by using:
 
-Routine account/login timestamps, verbose Discord profile metadata, wallet/Aura update timestamps, lifetime Aura totals and license/account-delivery counters are intentionally omitted.
+```text
+/cm order
+  -> orders.details.read
+  -> only on stable NOT_FOUND: purchase-intents.lookup.read
+  -> exact users.overview.read(user_id) owner equality
+  -> private Pending Purchase panel
+  -> Refresh Purchase
+  -> canonical Order panel once orderId/order becomes available
+```
 
-### Orders and delivery
+The fallback is intentionally **NOT_FOUND-only**. Authentication, operation-permission, validation, rate-limit and service errors are not hidden behind a second lookup.
 
-Recent Orders keeps reference, item, status, amount, meaningful quantity and date. If the overview is truncated, the UI uses a compact `Latest N of total` indicator.
+Pending purchase state is read-only. Before a canonical order exists it exposes no Refund, Delivery Details, purchase-processing or manual-fulfillment control.
 
-Order Operations keeps customer email, order status, customer-facing item information, amount, payment method, placed time, delivered/required quantity, exceptional manual-review state, Refund, Delivery Details, Refresh Order, User Operations and Share to Chat.
+### Canonical order support details
 
-The `Delivery Details` view shows meaningful fulfillment status/progress/exception/message information while suppressing provider codes, record bookkeeping and empty fields. No manual-fulfillment mutation exists.
+The feature branch consumes the website's optional `orders.fulfillment.read.support` extension:
 
-### Refund / adjustments
+- human-readable product/account type;
+- finite duration when known;
+- at most 10 stored masked license/account materials;
+- canonical manual-required state.
 
-Preview panels retain decision-relevant values and reason. Success panels retain result and completion time while hiding routine transaction/audit/idempotency bookkeeping. Exceptional replay or Discord-audit-post-failure warnings remain visible when relevant.
+Private Order Operations may also show useful fulfillment provider context. Raw/decrypted fulfillment secrets are not accepted by the strict DTO.
 
-The underlying refund/Aura/wallet mutation flows are unchanged.
+Support enrichment is best-effort for the order panel. If support cannot be fetched, the canonical order remains usable. Missing support/masked material is not interpreted as manual fulfillment.
 
-## Share to Chat disclosure policy
+### Share to Chat
 
-ADR-0008 + ADR-0009 remain authoritative. Shared messages are separately rendered, buttonless Components V2 messages.
+ADR-0008 + ADR-0009 remain authoritative, extended by ADR-0011.
 
-Customer email remains intentionally included. Still prohibited from public share:
+The new Pending Purchase public copy is separately rendered and buttonless. It can include canonical customer email, linked Discord identity, public purchase reference, safe item/variant/game, amount, payment method, status and dates.
 
-- internal CM user UUID;
-- internal purchase option IDs;
-- backend audit/transaction/idempotency identifiers;
-- internal provider/failure codes;
-- admin refund/adjustment reasons;
-- session/custom IDs or interactive controls;
-- HMAC/API/credential material.
+It omits:
 
-`safeAllowedMentions` remains applied.
+- purchase-intent UUID;
+- CM user UUID;
+- internal option IDs;
+- payment provider/provider status;
+- admin/operator internals;
+- credentials;
+- interactive controls.
+
+Masked fulfillment support material and provider internals remain **private staff data** and are never copied by Share to Chat.
 
 ## Authorization / mutation invariants
 
@@ -81,9 +89,9 @@ ADR-0006 remains authoritative for `/cm`: exact configured guild, non-empty expl
 
 Aura/wallet retain ADR-0007 fresh-overview -> private confirmation -> fresh relevant-balance equality -> website execute -> audit. Refund retains canonical preview -> confirmation -> fresh exact re-preview -> execute.
 
-Manual fulfillment remains unsupported. No API, website, Supabase, environment, command-registration or legacy boundary changed by TASK-CM-ADMIN-006.
+No manual fulfillment exists. `purchase-intents.process` is forbidden to the bot. No website, Supabase, environment or command-registration boundary is changed by TASK-CM-ADMIN-007.
 
-## Bot API surface
+## Bot API surface on TASK-CM-ADMIN-007
 
 ```text
 aura.leaderboards.read
@@ -91,49 +99,41 @@ aura.lookup.read
 users.overview.read
 orders.details.read
 orders.fulfillment.read
+purchase-intents.lookup.read
 orders.refund.preview
 orders.refund.execute
 users.aura.adjust
 users.wallet.adjust
 ```
 
+Deployment must explicitly add `purchase-intents.lookup.read` to the bot website integration client's `allowedOperations`; endpoint existence is not permission.
+
 ## Parallel side project — CM Ticket Transcript Corpus
 
-ADR-0010 and `SIDE_PROJECTS.md` establish a parallel, non-runtime workstream:
+ADR-0010 and `SIDE_PROJECTS.md` remain unchanged by TASK-CM-ADMIN-007.
 
 ```text
 Hermann-33/CM-Ticket-Transcripts
 ```
 
-The repository is private and data-only. It exists to hold the historical Discord/Tickety support-ticket corpus for analysis.
+The repository is private/data-only; exporter code stays under this bot repo's `tools/ticket-transcript-exporter/`; no production bot dependency exists. Main bot engineering and transcript acquisition remain independent.
 
-Key boundary:
+## Verification evidence
 
-- main bot work continues independently;
-- no executable exporter/scraper code belongs in the transcript repository;
-- no production credentials belong in the transcript repository;
-- the production bot does not import, read or depend on the corpus;
-- extraction tooling runs outside the data repository and is separately scoped;
-- any later runtime integration requires a separate architecture task.
-
-Current transcript side-project phase:
+TASK-CM-ADMIN-007 source implementation head:
 
 ```text
-Phase 1 — corpus acquisition
-Status: implementation starting
-First gate: validate a small representative sample end-to-end before bulk export
+8e1c1ff839fdf171403219f0b881c82395d17007
 ```
 
-## Verification baseline
-
-TASK-CM-ADMIN-006 final GitHub Actions verification passed on Node `22.23.2` with:
+GitHub Actions run `32254272306` verified the PR merge-ref against concurrent master `087e2d431ff3ddb74e034b9d736c64f1b914abc9` on Node `22.23.2`:
 
 ```text
-npm ci: PASS, 0 vulnerabilities
-npm test: PASS — 131/131
+npm ci: PASS — 0 vulnerabilities
+npm test: PASS — 153/153
 npm run typecheck: PASS
 npm run build: PASS
 git diff --check: PASS
 ```
 
-No slash-command definition changed in TASK-CM-ADMIN-006, so that task required only normal redeploy/restart after merge, not command re-registration.
+No slash-command JSON changed, so TASK-CM-ADMIN-007 does not require Discord command re-registration after merge. Normal deployment/restart and the website client permission update remain operational rollout requirements.
