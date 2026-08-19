@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { MessageFlags, type Interaction } from "discord.js";
 import type { InternalApiClient } from "../../src/api/client";
+import { InternalApiClientError } from "../../src/api/errors";
+import type { PurchaseIntentData } from "../../src/api/purchaseIntents";
 import type { OrderDetailsData, OrderFulfillmentData, UserOverviewData } from "../../src/api/schemas";
 import { buildCmCommand, CmAdminController } from "../../src/commands/cm";
 import type { AppConfig } from "../../src/config/env";
@@ -13,6 +15,7 @@ const ADMIN_ID = "123456789012345681";
 const DISCORD_CUSTOMER_ID = "123456789012345682";
 const USER_ID = "550e8400-e29b-41d4-a716-446655440000";
 const ORDER_ID = "550e8400-e29b-41d4-a716-446655440001";
+const PURCHASE_INTENT_ID = "550e8400-e29b-41d4-a716-446655440010";
 
 const config = {
   discordGuildId: GUILD_ID,
@@ -107,6 +110,30 @@ const fulfillment = {
     manualRequired: false
   }
 } satisfies OrderFulfillmentData;
+
+const pendingPurchase = {
+  purchaseIntentId: PURCHASE_INTENT_ID,
+  publicRef: "CM-PENDING",
+  userId: USER_ID,
+  purchaseKind: "product",
+  productSlug: "pending-product",
+  licenseOptionId: "7-day",
+  accountSlug: null,
+  accountVariantId: null,
+  accountName: null,
+  accountVariantLabel: null,
+  accountGameName: null,
+  quantity: 1,
+  amountCents: 1200,
+  currency: "USD",
+  paymentMethod: "crypto",
+  paymentProvider: "oxapay",
+  status: "pending",
+  providerStatus: "waiting",
+  orderId: null,
+  expiresAt: "2026-08-10T01:00:00.000Z",
+  createdAt: "2026-08-10T00:00:00.000Z"
+} satisfies PurchaseIntentData;
 
 type FakeCommandOptions = {
   userId?: string;
@@ -242,7 +269,7 @@ test("authorized /cm user works from another channel in the configured guild", a
   assert.deepEqual(context.defers, [{ flags: MessageFlags.Ephemeral }]);
 });
 
-test("authorized /cm order resolves public ref, owner, and fulfillment support before rendering", async () => {
+test("authorized /cm order resolves a canonical order and enriches it when fulfillment support is available", async () => {
   const calls: unknown[] = [];
   const api = {
     fetchOrderDetails: async (selector: unknown) => { calls.push(["order", selector]); return order; },
@@ -259,4 +286,87 @@ test("authorized /cm order resolves public ref, owner, and fulfillment support b
   ]);
   assert.deepEqual(context.defers, [{ flags: MessageFlags.Ephemeral }]);
   assert.equal((context.edits[0] as { flags: number }).flags, MessageFlags.IsComponentsV2);
+});
+
+test("canonical /cm order remains usable when optional fulfillment support is unavailable", async () => {
+  let purchaseFallbacks = 0;
+  const api = {
+    fetchOrderDetails: async () => order,
+    fetchUserOverview: async () => overview,
+    fetchOrderFulfillment: async () => { throw new InternalApiClientError("DEPENDENCY_UNAVAILABLE", 503); },
+    fetchPurchaseIntent: async () => { purchaseFallbacks += 1; return pendingPurchase; }
+  } as unknown as InternalApiClient;
+  const controller = new CmAdminController(config, api);
+  const context = fakeCommand({ subcommand: "order", email: null, reference: "CM-TEST" });
+  assert.equal(await controller.handle(context.interaction), true);
+  assert.equal(purchaseFallbacks, 0);
+  assert.equal((context.edits[0] as { flags: number }).flags, MessageFlags.IsComponentsV2);
+});
+
+test("/cm order falls back to purchase-intents.lookup.read only when the canonical order is not found", async () => {
+  const calls: unknown[] = [];
+  const api = {
+    fetchOrderDetails: async (selector: unknown) => {
+      calls.push(["order", selector]);
+      throw new InternalApiClientError("NOT_FOUND", 404);
+    },
+    fetchPurchaseIntent: async (selector: unknown) => {
+      calls.push(["purchase", selector]);
+      return pendingPurchase;
+    },
+    fetchUserOverview: async (selector: unknown) => {
+      calls.push(["user", selector]);
+      return overview;
+    }
+  } as unknown as InternalApiClient;
+  const controller = new CmAdminController(config, api);
+  const context = fakeCommand({ subcommand: "order", email: null, reference: "cm-pending" });
+  assert.equal(await controller.handle(context.interaction), true);
+  assert.deepEqual(calls, [
+    ["order", { kind: "public_ref", value: "CM-PENDING" }],
+    ["purchase", { kind: "public_ref", value: "CM-PENDING" }],
+    ["user", { kind: "user_id", value: USER_ID }]
+  ]);
+  assert.deepEqual(context.defers, [{ flags: MessageFlags.Ephemeral }]);
+  const serialized = JSON.stringify(context.edits[0]);
+  assert.equal(serialized.includes("Pending Purchase"), true);
+  assert.equal(serialized.includes("Refresh Purchase"), true);
+  assert.equal(serialized.includes("Refund"), false);
+  assert.equal(serialized.includes("Delivery Details"), false);
+});
+
+test("/cm order does not use purchase-intent fallback for authorization or service errors", async () => {
+  let purchaseCalls = 0;
+  const api = {
+    fetchOrderDetails: async () => { throw new InternalApiClientError("OPERATION_FORBIDDEN", 403); },
+    fetchPurchaseIntent: async () => { purchaseCalls += 1; return pendingPurchase; }
+  } as unknown as InternalApiClient;
+  const controller = new CmAdminController(config, api);
+  const context = fakeCommand({ subcommand: "order", email: null, reference: "CM-PENDING" });
+  assert.equal(await controller.handle(context.interaction), true);
+  assert.equal(purchaseCalls, 0);
+  assert.equal(JSON.stringify(context.edits[0]).includes("Order Lookup Failed"), true);
+});
+
+test("/cm order follows a purchase intent's canonical order when it appears during lookup", async () => {
+  const linkedPurchase = { ...pendingPurchase, orderId: ORDER_ID } satisfies PurchaseIntentData;
+  let orderCalls = 0;
+  const api = {
+    fetchOrderDetails: async (selector: unknown) => {
+      orderCalls += 1;
+      if (orderCalls === 1) throw new InternalApiClientError("NOT_FOUND", 404);
+      assert.equal(selector, ORDER_ID);
+      return order;
+    },
+    fetchPurchaseIntent: async () => linkedPurchase,
+    fetchUserOverview: async () => overview,
+    fetchOrderFulfillment: async () => fulfillment
+  } as unknown as InternalApiClient;
+  const controller = new CmAdminController(config, api);
+  const context = fakeCommand({ subcommand: "order", email: null, reference: "CM-PENDING" });
+  assert.equal(await controller.handle(context.interaction), true);
+  assert.equal(orderCalls, 2);
+  const serialized = JSON.stringify(context.edits[0]);
+  assert.equal(serialized.includes("# Order"), true);
+  assert.equal(serialized.includes("Pending Purchase"), false);
 });
