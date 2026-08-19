@@ -1,5 +1,6 @@
 import type { ButtonInteraction } from "discord.js";
 import type { InternalApiClient } from "../api/client";
+import { fetchOptionalOrderFulfillment } from "./cmOrderSupport";
 import type { CmAdminSession } from "./cmSessions";
 import { safeApiMessage } from "./cmSupport";
 import {
@@ -21,6 +22,7 @@ export async function refreshUserPanel(
       { kind: "user_id", value: session.overview.identity.userId },
       10
     );
+    session.selectedPurchaseIntent = undefined;
     session.shareView = { kind: "user" };
     await interaction.editReply(panelPayload(buildUserPanel(session.id, session.overview)));
   } catch (error) {
@@ -54,9 +56,9 @@ export async function openOrder(
   try {
     const order = await api.fetchOrderDetails(summary.orderId);
     if (order.userId !== session.overview.identity.userId) throw new Error("Order target mismatch");
-    const fulfillment = await api.fetchOrderFulfillment(order.orderId);
-    if (fulfillment.order.orderId !== order.orderId) throw new Error("Fulfillment target mismatch");
+    const fulfillment = await fetchOptionalOrderFulfillment(api, order.orderId);
     session.selectedOrder = order;
+    session.selectedPurchaseIntent = undefined;
     session.refundProposal = undefined;
     session.shareView = { kind: "order" };
     await interaction.editReply(panelPayload(buildOrderPanel(
@@ -94,9 +96,9 @@ export async function refreshSelectedOrder(
   try {
     const order = await api.fetchOrderDetails(session.selectedOrder.orderId);
     if (order.userId !== session.overview.identity.userId) throw new Error("Order target mismatch");
-    const fulfillment = await api.fetchOrderFulfillment(order.orderId);
-    if (fulfillment.order.orderId !== order.orderId) throw new Error("Fulfillment target mismatch");
+    const fulfillment = await fetchOptionalOrderFulfillment(api, order.orderId);
     session.selectedOrder = order;
+    session.selectedPurchaseIntent = undefined;
     session.refundProposal = undefined;
     session.shareView = { kind: "order" };
     await interaction.editReply(panelPayload(buildOrderPanel(
