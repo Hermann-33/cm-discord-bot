@@ -1,33 +1,38 @@
 # Active Context
 
-Updated: 2026-08-18
+Updated: 2026-08-19
 
 ## Mainline baseline
 
-TASK-CM-ADMIN-005 was verified and merged into `master`; the task-start baseline for the current work is:
+Current remote `master`:
 
 ```text
-c5a38d80e89934431b74a4a078577cd9ef19694f
+6cef7695a09c8761d395f5d530bc79b7532c9b9f
 ```
 
-Current mainline behavior includes customer `cm aura`, `/refresh-leaderboard`, private `/cm user` by email/Discord user, direct `/cm order`, order/delivery navigation, canonical refund, confirmed Aura/wallet adjustment, Share to Chat, Discord timestamps and concise Components V2 mutation audit.
+TASK-CM-ADMIN-006 was verified and squash-merged through PR #4. The previous context that described PR #4 as waiting for merge is stale.
+
+Current production behavior includes:
+
+- customer `cm aura` message command;
+- `/refresh-leaderboard`;
+- private `/cm user` by exact email or linked Discord user;
+- direct `/cm order` by public reference or order UUID;
+- compact user/order/delivery navigation;
+- canonical refund preview/confirm/re-preview/execute;
+- confirmed Aura adjustment;
+- confirmed wallet adjustment;
+- Share to Chat customer-safe copies;
+- Discord timestamps;
+- concise Components V2 mutation audit.
 
 The bot remains a standalone Node.js/TypeScript process with no direct Supabase/Postgres client, credential, RPC fallback or database mutation path.
 
-## Current task — TASK-CM-ADMIN-006
-
-Feature branch / PR:
-
-```text
-task/cm-admin-ui-declutter
-PR #4 — TASK-CM-ADMIN-006: declutter admin and order panels
-```
-
-Objective: remove routine UI/statistical noise while preserving all operational controls and security/business behavior.
+## Current private admin presentation
 
 ### User Operations
 
-The private user home now prioritizes:
+The private user home prioritizes:
 
 - canonical email;
 - Active/BANNED state;
@@ -38,31 +43,27 @@ The private user home now prioritizes:
 - latest order;
 - Adjust Aura / Adjust Wallet / Open Recent Order / Order History / Share to Chat.
 
-Routine account/login timestamps, verbose Discord profile metadata, wallet/Aura update timestamps, lifetime Aura totals and license/account-delivery counters are no longer displayed there.
+Routine account/login timestamps, verbose Discord profile metadata, wallet/Aura update timestamps, lifetime Aura totals and license/account-delivery counters are intentionally omitted.
 
 ### Orders and delivery
 
-Recent Orders keeps reference, item, status, amount, meaningful quantity and date. If the overview is truncated, the UI uses a compact `Latest N of total` indicator instead of API-implementation prose.
+Recent Orders keeps reference, item, status, amount, meaningful quantity and date. If the overview is truncated, the UI uses a compact `Latest N of total` indicator.
 
 Order Operations keeps customer email, order status, customer-facing item information, amount, payment method, placed time, delivered/required quantity, exceptional manual-review state, Refund, Delivery Details, Refresh Order, User Operations and Share to Chat.
 
-It no longer routinely displays internal user UUID, option IDs, payment provider, redundant delivery sub-counts, purchase-type labels or a duplicate Order History button.
-
-The previous `Fulfillment Diagnostics` panel is now `Delivery Details`. Provider codes, created/updated timestamps, linked-license top count and empty diagnostic fields are removed. Failure/manual-review/message lines appear only when meaningful. The visible nonfunctional Manual Fulfillment button is removed; no manual-fulfillment mutation exists.
+The `Delivery Details` view shows meaningful fulfillment status/progress/exception/message information while suppressing provider codes, record bookkeeping and empty fields. No manual-fulfillment mutation exists.
 
 ### Refund / adjustments
 
-Preview panels retain decision-relevant values and reason. Success panels retain result and completion time while hiding routine transaction/audit/idempotency bookkeeping. Exceptional idempotent-replay or Discord-audit-post-failure warnings remain visible when they actually occur.
+Preview panels retain decision-relevant values and reason. Success panels retain result and completion time while hiding routine transaction/audit/idempotency bookkeeping. Exceptional replay or Discord-audit-post-failure warnings remain visible when relevant.
 
 The underlying refund/Aura/wallet mutation flows are unchanged.
 
 ## Share to Chat disclosure policy
 
-ADR-0008 + ADR-0009 remain authoritative. The shared message is still a separately rendered, buttonless Components V2 message.
+ADR-0008 + ADR-0009 remain authoritative. Shared messages are separately rendered, buttonless Components V2 messages.
 
-Customer email remains intentionally included. Shared views are also decluttered to customer-relevant current state and outcomes; routine login/update/lifetime/activity statistics are removed.
-
-Still prohibited from public share:
+Customer email remains intentionally included. Still prohibited from public share:
 
 - internal CM user UUID;
 - internal purchase option IDs;
@@ -80,7 +81,7 @@ ADR-0006 remains authoritative for `/cm`: exact configured guild, non-empty expl
 
 Aura/wallet retain ADR-0007 fresh-overview -> private confirmation -> fresh relevant-balance equality -> website execute -> audit. Refund retains canonical preview -> confirmation -> fresh exact re-preview -> execute.
 
-Manual fulfillment remains unsupported. No API, website, Supabase, environment, command-registration or legacy boundary changed.
+Manual fulfillment remains unsupported. No API, website, Supabase, environment, command-registration or legacy boundary changed by TASK-CM-ADMIN-006.
 
 ## Bot API surface
 
@@ -96,11 +97,36 @@ users.aura.adjust
 users.wallet.adjust
 ```
 
-## Verification
+## Parallel side project — CM Ticket Transcript Corpus
 
-Implementation-head GitHub Actions run `32156144669` passed on Node `22.23.2` with 131/131 tests, typecheck, build and diff check. The first CI attempt had caught two faulty new test assertions only; those assertions were corrected.
+ADR-0010 and `SIDE_PROJECTS.md` establish a parallel, non-runtime workstream:
 
-After README/context/audit updates, documentation-head run `32156801285` also passed the full Node 22 gate:
+```text
+Hermann-33/CM-Ticket-Transcripts
+```
+
+The repository is private and data-only. It exists to hold the historical Discord/Tickety support-ticket corpus for analysis.
+
+Key boundary:
+
+- main bot work continues independently;
+- no executable exporter/scraper code belongs in the transcript repository;
+- no production credentials belong in the transcript repository;
+- the production bot does not import, read or depend on the corpus;
+- extraction tooling runs outside the data repository and is separately scoped;
+- any later runtime integration requires a separate architecture task.
+
+Current transcript side-project phase:
+
+```text
+Phase 1 — corpus acquisition
+Status: implementation starting
+First gate: validate a small representative sample end-to-end before bulk export
+```
+
+## Verification baseline
+
+TASK-CM-ADMIN-006 final GitHub Actions verification passed on Node `22.23.2` with:
 
 ```text
 npm ci: PASS, 0 vulnerabilities
@@ -110,6 +136,4 @@ npm run build: PASS
 git diff --check: PASS
 ```
 
-TASK-CM-ADMIN-006 is `COMPLETE` for implementation/documentation verification. PR #4 may merge once the GitHub Actions check is green on its current head.
-
-No slash-command definition changed, so TASK-CM-ADMIN-006 does not require `npm run register:commands` solely for this change.
+No slash-command definition changed in TASK-CM-ADMIN-006, so that task required only normal redeploy/restart after merge, not command re-registration.
