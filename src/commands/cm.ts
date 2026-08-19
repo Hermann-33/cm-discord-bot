@@ -9,7 +9,8 @@ import {
 } from "discord.js";
 import { InternalApiClient } from "../api/client";
 import { isInternalApiError } from "../api/errors";
-import type { OrderLookupSelector, UserLookupSelector } from "../api/schemas";
+import type { PurchaseIntentLookupSelector } from "../api/purchaseIntents";
+import type { OrderDetailsData, OrderLookupSelector, UserLookupSelector } from "../api/schemas";
 import type { AppConfig } from "../config/env";
 import { postAdjustmentAudit, postRefundAudit } from "../discord/adminAudit";
 import { logger } from "../logger";
@@ -19,6 +20,8 @@ import {
   showAdjustmentModal,
   type AdjustmentDependencies
 } from "./cmAdjustments";
+import { fetchOptionalOrderFulfillment } from "./cmOrderSupport";
+import { refreshSelectedPurchaseIntent } from "./cmPurchaseIntents";
 import { confirmRefund, handleRefundModal, showRefundModal, type RefundDependencies } from "./cmRefund";
 import { shareCurrentPanel } from "./cmShare";
 import { CmSessionStore } from "./cmSessions";
@@ -28,6 +31,7 @@ import {
   buildNoticePanel,
   buildOrderPanel,
   buildOrdersPanel,
+  buildPurchaseIntentPanel,
   buildUserPanel,
   panelPayload
 } from "./cmUi";
@@ -52,6 +56,12 @@ function parseOrderSelector(value: string): OrderLookupSelector | null {
     return { kind: "public_ref", value: publicRef };
   }
   return null;
+}
+
+function toPurchaseIntentSelector(selector: OrderLookupSelector): PurchaseIntentLookupSelector {
+  return selector.kind === "order_id"
+    ? { kind: "purchase_intent_id", value: selector.value }
+    : { kind: "public_ref", value: selector.value };
 }
 
 function parseUserSelector(interaction: ChatInputCommandInteraction): UserLookupSelector | null {
@@ -118,6 +128,25 @@ export class CmAdminController {
     return false;
   }
 
+  private async renderCanonicalOrder(
+    interaction: ChatInputCommandInteraction,
+    order: OrderDetailsData
+  ): Promise<void> {
+    const overview = await this.api.fetchUserOverview({ kind: "user_id", value: order.userId }, 10);
+    if (overview.identity.userId !== order.userId) throw new Error("Order target mismatch");
+    const fulfillment = await fetchOptionalOrderFulfillment(this.api, order.orderId);
+    const session = this.sessions.create(interaction.user.id, overview);
+    session.selectedOrder = order;
+    session.selectedPurchaseIntent = undefined;
+    session.shareView = { kind: "order" };
+    await interaction.editReply(panelPayload(buildOrderPanel(
+      session.id,
+      order,
+      overview,
+      fulfillment
+    )));
+  }
+
   private async handleCommand(interaction: ChatInputCommandInteraction): Promise<void> {
     const authorization = authorize(interaction, this.config);
     if (!authorization.ok) {
@@ -148,28 +177,39 @@ export class CmAdminController {
     if (subcommand === "order") {
       const selector = parseOrderSelector(interaction.options.getString("reference", true));
       if (!selector) {
-        await rejectUnauthorized(interaction, "Order reference must be a CM public reference or a valid order UUID.");
+        await rejectUnauthorized(interaction, "Reference must be a CM public reference or a valid order/purchase UUID.");
         return;
       }
 
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       try {
-        const order = await this.api.fetchOrderDetails(selector);
-        const [overview, fulfillment] = await Promise.all([
-          this.api.fetchUserOverview({ kind: "user_id", value: order.userId }, 10),
-          this.api.fetchOrderFulfillment(order.orderId)
-        ]);
-        if (overview.identity.userId !== order.userId) throw new Error("Order target mismatch");
-        if (fulfillment.order.orderId !== order.orderId) throw new Error("Fulfillment target mismatch");
+        try {
+          const order = await this.api.fetchOrderDetails(selector);
+          await this.renderCanonicalOrder(interaction, order);
+          return;
+        } catch (error) {
+          if (!isInternalApiError(error, "NOT_FOUND")) throw error;
+        }
+
+        const purchase = await this.api.fetchPurchaseIntent(toPurchaseIntentSelector(selector));
+        if (purchase.orderId) {
+          try {
+            const order = await this.api.fetchOrderDetails(purchase.orderId);
+            if (order.userId !== purchase.userId) throw new Error("Purchase/order target mismatch");
+            await this.renderCanonicalOrder(interaction, order);
+            return;
+          } catch (error) {
+            if (!isInternalApiError(error, "NOT_FOUND")) throw error;
+          }
+        }
+
+        const overview = await this.api.fetchUserOverview({ kind: "user_id", value: purchase.userId }, 10);
+        if (overview.identity.userId !== purchase.userId) throw new Error("Purchase target mismatch");
         const session = this.sessions.create(interaction.user.id, overview);
-        session.selectedOrder = order;
-        session.shareView = { kind: "order" };
-        await interaction.editReply(panelPayload(buildOrderPanel(
-          session.id,
-          order,
-          overview,
-          fulfillment
-        )));
+        session.selectedOrder = undefined;
+        session.selectedPurchaseIntent = purchase;
+        session.shareView = { kind: "purchase-intent" };
+        await interaction.editReply(panelPayload(buildPurchaseIntentPanel(session.id, purchase, overview)));
       } catch (error) {
         logger.warn("CM admin order lookup failed", { code: isInternalApiError(error) ? error.code : "UNKNOWN" });
         await interaction.editReply(panelPayload(buildNoticePanel(null, "Order Lookup Failed", safeApiMessage(error))));
@@ -220,6 +260,10 @@ export class CmAdminController {
     }
     if (domain === "order" && action === "fulfillment") {
       await openFulfillment(interaction, session, this.api);
+      return;
+    }
+    if (domain === "purchase" && action === "refresh") {
+      await refreshSelectedPurchaseIntent(interaction, session, this.api);
       return;
     }
     if (domain === "adjust" && (action === "aura" || action === "wallet")) {
