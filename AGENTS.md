@@ -9,15 +9,16 @@ Before implementation, audit, refactor, cleanup, deployment work, or workflow de
 1. `docs/README.md`
 2. `docs/context/ACTIVE_CONTEXT.md`
 3. `docs/context/PROJECT_BRIEF.md`
-4. `docs/context/ARCHITECTURE.md`
-5. `docs/context/DATA_STATUS.md`
-6. `docs/context/CODEBASE_MAP.md`
-7. `docs/context/COMMANDS.md`
-8. `docs/context/ROADMAP.md`
-9. `docs/context/WORKFLOW.md`
-10. `docs/context/HANDOFF.md`
-11. relevant `docs/decisions/ADR-*.md`
-12. relevant specialist documents such as `docs/security/ADMIN_MUTATION_MODEL.md` and `docs/security/CM_ADMIN_CONSOLE_SECURITY.md`
+4. `docs/context/SIDE_PROJECTS.md`
+5. `docs/context/ARCHITECTURE.md`
+6. `docs/context/DATA_STATUS.md`
+7. `docs/context/CODEBASE_MAP.md`
+8. `docs/context/COMMANDS.md`
+9. `docs/context/ROADMAP.md`
+10. `docs/context/WORKFLOW.md`
+11. `docs/context/HANDOFF.md`
+12. relevant `docs/decisions/ADR-*.md`
+13. relevant specialist documents such as `docs/security/ADMIN_MUTATION_MODEL.md` and `docs/security/CM_ADMIN_CONSOLE_SECURITY.md`
 
 If repository context conflicts with the requested task, stop and report the conflict before changing files.
 
@@ -30,10 +31,11 @@ When sources conflict, use this order:
 3. `ARCHITECTURE.md`
 4. verified `DATA_STATUS.md`
 5. `PROJECT_BRIEF.md`
-6. `CODEBASE_MAP.md` and `COMMANDS.md`
-7. `ROADMAP.md`
-8. current task instruction
-9. chat history or old handovers
+6. `SIDE_PROJECTS.md` for explicitly adjacent/non-runtime workstreams
+7. `CODEBASE_MAP.md` and `COMMANDS.md`
+8. `ROADMAP.md`
+9. current task instruction
+10. chat history or old handovers
 
 Do not silently reconcile contradictions.
 
@@ -52,6 +54,7 @@ Before modifying files, summarize:
 
 - This repository owns only the standalone Discord bot.
 - The Cheater's Market website repository is a separate system and must not be edited unless explicitly scoped in a separate task.
+- `Hermann-33/CM-Ticket-Transcripts` is a separate private data-only side project governed by ADR-0010. Do not put executable extraction/runtime code or credentials there, and do not make this bot depend on that corpus without a separate explicit architecture task.
 - Production code lives under `src/`. `legacy/` is a frozen archive and must never be imported into production code.
 - The bot does not directly access Supabase or Postgres and must not gain database credentials or a direct database fallback.
 - Website-owned business/data access goes through the HMAC-authenticated Internal Integrations API.
