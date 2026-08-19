@@ -1,6 +1,6 @@
 # Codebase Map
 
-Updated: 2026-08-18
+Updated: 2026-08-19
 
 ## Repository boundaries
 
@@ -8,6 +8,7 @@ Updated: 2026-08-18
 | --- | --- |
 | `src/` | active production TypeScript |
 | `tests/` | active Node test suite |
+| `tools/` | explicitly scoped non-production utilities; never imported by `src/` |
 | `legacy/` | frozen historical implementation; never import/execute from active source |
 | `docs/context/` | canonical current state/workflow/handoff |
 | `docs/decisions/` | durable ADRs |
@@ -15,9 +16,9 @@ Updated: 2026-08-18
 | `.env.example` | non-secret deployment variable names only |
 | `.github/workflows/ci.yml` | Node 22 verification gate |
 
-Never commit `.env`, `dist/`, `node_modules/`, logs, archives or real credentials.
+Never commit `.env`, `dist/`, `node_modules`, logs, archives, generated transcript data or real credentials.
 
-## Active source
+## Active production source
 
 ### Runtime/API
 
@@ -51,17 +52,17 @@ users.wallet.adjust
 - `src/commands/cmUserActions.ts` — refresh user/order and delivery-detail navigation; updates share state.
 - `src/commands/cmRefund.ts` — canonical refund preview/re-preview/execute/audit and share-success state.
 - `src/commands/cmAdjustments.ts` — Aura/wallet parsing, confirmation, fresh-state equality, execute/audit and share-success state.
-- `src/commands/cmUi.ts` — **compact private Components V2 presentation** for user/order/delivery/refund/adjustment workflows; keeps action-relevant state and controls while suppressing routine internal/statistical bookkeeping.
-- `src/commands/cmShare.ts` — **compact dedicated customer-facing renderer**; no admin controls/internal-only fields, canonical customer email disclosure governed by ADR-0009.
+- `src/commands/cmUi.ts` — compact private Components V2 presentation.
+- `src/commands/cmShare.ts` — compact dedicated customer-facing renderer governed by ADR-0008/ADR-0009.
 - `src/commands/cmSupport.ts` — safe messages, parsing, authorization wrapper and session retrieval.
 
 ### Discord boundaries
 
 - `src/discord/adminAuthorization.ts` — ADR-0006 exact-guild + explicit-user `/cm` authorization.
 - `src/discord/adminAudit.ts` — concise mention-safe Components V2 refund/Aura/wallet audit panels.
-- `src/discord/presentation.ts` — shared Discord-safe text, linked Discord identity and `<t:...:f> · <t:...:R>` timestamp helpers.
+- `src/discord/presentation.ts` — shared Discord-safe text, identity and timestamp helpers.
 - `src/discord/registerCommands.ts` — manual guild bulk overwrite for `/refresh-leaderboard` + `/cm`.
-- `src/discord/safeMessages.ts` — `safeAllowedMentions` and safe leaderboard channel/message helpers.
+- `src/discord/safeMessages.ts` — safe mention/channel/message helpers.
 - `src/discord/client.ts` — intents; Message Content remains intentional while `cm aura` is text-based.
 
 ### Leaderboard/lifecycle/logging
@@ -72,6 +73,25 @@ users.wallet.adjust
 - `src/scheduler/leaderboardSchedule.ts` — bootstrap/immediate/five-minute refresh.
 - `src/scheduler/shutdown.ts` — idempotent shutdown.
 - `src/logger/index.ts` — structured sanitized logging.
+
+## Non-production tooling
+
+### Ticket transcript exporter
+
+- `tools/ticket-transcript-exporter/export-ticket-transcripts.mjs` — Phase T1 standalone Discord/Tickety corpus exporter.
+- `tools/ticket-transcript-exporter/README.md` — local execution/sample/bulk workflow.
+- `tests/tools/ticketTranscriptExporter.test.mjs` — URL allowlisting, Discord-log parsing, HTML text extraction, attachment candidates, message-count heuristics and sample/bulk CLI safety tests.
+
+Boundary:
+
+```text
+tools/ticket-transcript-exporter
+  -> Discord REST read-only history
+  -> Tickety transcript HTTPS read
+  -> local CM-Ticket-Transcripts checkout
+```
+
+It is not imported by `src/`, is not included in `tsconfig.build.json`, is not started by the bot and does not call the Internal Integrations API or database.
 
 ## Root test inventory
 
@@ -93,13 +113,13 @@ Commands/admin presentation:
 
 - `tests/commands/aura.test.ts`
 - `tests/commands/refreshLeaderboard.test.ts`
-- `tests/commands/cm.test.ts` — email/Discord user/order routing and pre-backend validation.
-- `tests/commands/cmSessions.test.ts` — ownership/expiry/default share view.
-- `tests/commands/cmAdjustments.test.ts` — adjustment confirmation/audit/share state.
-- `tests/commands/cmShare.test.ts` — customer-email inclusion plus retained internal-field/control exclusions and channel publish behavior.
-- `tests/commands/cmShareAuthorization.test.ts` — Share to Chat reauthorization and operator ownership.
-- `tests/commands/cmUi.test.ts` — compact user/order/delivery/result presentation plus internal/bookkeeping omission assertions.
-- `tests/discord/adminAudit.test.ts` — concise Components V2 audit + mention safety/time presentation.
+- `tests/commands/cm.test.ts`
+- `tests/commands/cmSessions.test.ts`
+- `tests/commands/cmAdjustments.test.ts`
+- `tests/commands/cmShare.test.ts`
+- `tests/commands/cmShareAuthorization.test.ts`
+- `tests/commands/cmUi.test.ts`
+- `tests/discord/adminAudit.test.ts`
 
 Lifecycle/leaderboard/logging:
 
@@ -109,6 +129,12 @@ Lifecycle/leaderboard/logging:
 - `tests/scheduler/shutdown.test.ts`
 - `tests/logger/redaction.test.ts`
 
+Side-project tooling:
+
+- `tests/tools/ticketTranscriptExporter.test.mjs`
+
 ## External ownership
 
-This repo does not own website routes, Supabase migrations/RLS/grants/functions, wallet/order/payment/fulfillment accounting, OAuth/Support-role systems or production website integration-client environment values. Read-only website source can verify contracts; cross-repo writes require separate scope.
+This repo does not own website routes, Supabase migrations/RLS/grants/functions, wallet/order/payment/fulfillment accounting, OAuth/Support-role systems or production website integration-client environment values.
+
+`Hermann-33/CM-Ticket-Transcripts` owns the generated historical transcript corpus only. The production bot has no runtime dependency on that repository.

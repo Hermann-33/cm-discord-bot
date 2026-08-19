@@ -221,3 +221,33 @@ Ticket transcripts may contain customer PII, Discord identities, emails, order/s
 No production source, API operation, authorization rule, environment value, website/Supabase behavior, deployment or command registration changed.
 
 Verdict: `COMPLETE` for context/architecture decision; extraction implementation remains the next side-project task.
+
+---
+
+## 2026-08-19 — TASK-TRANSCRIPTS-001 — Phase T1 standalone exporter
+
+Implemented non-runtime, dependency-free Node.js 22 tooling under `tools/ticket-transcript-exporter/`.
+
+Behavior:
+
+- exact-guild verification before Discord history access;
+- REST pagination at 100 messages/page;
+- supported execution through `npm run export:ticket-transcripts`;
+- strict Discord discovery filter accepts only link buttons with `type=2`, `style=5`, normalized label `View Transcript`, and a canonical Tickety transcript URL;
+- `View Ticket` and all other button labels are ignored;
+- transcript-like URLs in ordinary message content or unrelated embeds are not eligible discovery sources;
+- strict canonical Tickety URL allowlist and redirect validation;
+- direct HTTP acquisition with bounded retries and optional Chrome headless fallback;
+- sequential transcript fetches with default delay;
+- raw HTML + plain text + normalized JSON output into an external `CM-Ticket-Transcripts` checkout;
+- run/failure manifests and resumable records;
+- five-ticket default sample; bulk export requires explicit `--all`;
+- no HMAC/Internal Integrations API, website, Supabase/Postgres or mutation usage.
+
+The strict targeting requirement was added after review of the real ticket-log workflow, where `View Ticket` can appear alongside `View Transcript`. The supported npm command now routes through `run-ticket-transcript-export.mjs`, which preserves message-history pagination while neutralizing non-target messages before the core parser sees them.
+
+Initial repository CI before the strict-target follow-up passed 137/137 tests, typecheck, build and diff check on Node `22.23.2`. The strict-target follow-up adds focused tests proving `View Ticket` is rejected, `View Transcript` is selected when both controls exist, and fallback transcript URLs outside the target button cannot cause discovery. A fresh CI run on the updated head is required before merge.
+
+No live Discord/Tickety export was performed by the agent because production credentials/channel ID are not available in the execution environment. The mandatory real five-ticket sample remains the next gate before `--all`.
+
+Verdict: `PARTIAL` — implementation is complete, but updated-head CI and real-source five-ticket validation must pass before Phase T1 acquisition can be considered validated.
