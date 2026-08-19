@@ -1,6 +1,6 @@
 # Latest Handoff
 
-Updated: 2026-08-18
+Updated: 2026-08-19
 
 ## Authority
 
@@ -9,102 +9,81 @@ Updated: 2026-08-18
 - ADR-0007 — Aura/wallet five-minute fresh-state-bound confirmation + stable idempotency/audit.
 - ADR-0008 — separate customer-facing Share to Chat renderer, no public admin controls, Discord identity/time/audit presentation policy.
 - ADR-0009 — canonical CM account email is intentionally shared; all other ADR-0008 field/control exclusions remain.
+- ADR-0010 — `CM-Ticket-Transcripts` is a separate private data-only repository with no executable extraction/runtime code and no production-bot dependency.
 - `BOT_AUDIT_LOG_CHANNEL_ID` required before refund/Aura/wallet execute.
 - no direct Supabase/Postgres.
 - manual fulfillment blocked until website owns a dedicated mutation.
 
-## Mainline baseline at task start
+## Current mainline baseline
 
 ```text
 master
-c5a38d80e89934431b74a4a078577cd9ef19694f
+6cef7695a09c8761d395f5d530bc79b7532c9b9f
 ```
 
-TASK-CM-ADMIN-005 customer-email sharing is already merged on this lineage.
+TASK-CM-ADMIN-006 / PR #4 is merged. Older handoff/context text that says PR #4 is still waiting for merge is obsolete.
 
-## Current task
+## Current production bot state
+
+The current bot includes:
+
+- customer `cm aura`;
+- `/refresh-leaderboard`;
+- `/cm user` by email or Discord user;
+- `/cm order`;
+- compact User/Orders/Order/Delivery Details panels;
+- canonical refund;
+- confirmed Aura/wallet adjustment;
+- Share to Chat;
+- Discord timestamps;
+- concise mutation audits.
+
+No direct database path exists. The bot remains HMAC Internal Integrations API bounded.
+
+## Parallel workstream — Ticket Transcript Corpus
+
+Repository:
 
 ```text
-TASK-CM-ADMIN-006
-task/cm-admin-ui-declutter
-PR #4
-status: COMPLETE / verified for merge when current-head CI is green
+Hermann-33/CM-Ticket-Transcripts
 ```
 
-Objective: remove unnecessary menu/order/statistical clutter without changing any business operation or security boundary.
-
-## Implemented UI
-
-### User Operations
-
-Shows only:
-
-- email;
-- Active/BANNED;
-- compact linked Discord identity;
-- current wallet;
-- available Aura + pending when non-zero;
-- total order count;
-- latest order;
-- Adjust Aura / Adjust Wallet / Open Recent Order / Order History / Share to Chat.
-
-Removed routine profile/login/update/lifetime/license/delivery statistics.
-
-### Orders
-
-Recent order entries retain reference, item, status, amount, meaningful quantity and date. The verbose API-limit note is replaced by a compact truncation indicator only when needed.
-
-Direct Order keeps customer email, customer-facing item, status, amount, payment method, placed time, delivery progress and core controls. Internal user UUID, option IDs, payment provider, duplicate fulfillment sub-counts and redundant navigation are hidden.
-
-### Delivery Details
-
-The previous Fulfillment Diagnostics view is renamed `Delivery Details` and displays status/progress plus failure/manual-review/message only when present. Provider codes, record timestamps, linked-license top count and empty fields are removed.
-
-The visible nonfunctional Manual Fulfillment button is removed. No manual-fulfillment mutation was added; the API remains diagnostics-only.
-
-### Refund / Aura / Wallet
-
-Preview/success panels retain decision/result information but hide internal target UUIDs, routine transaction/audit IDs and routine idempotency/audit-success flags. Exceptional replay or audit-post-failure warnings remain visible when applicable.
-
-### Share to Chat
-
-Public summaries are also compacted. ADR-0009 customer email remains present; no customer controls/custom IDs or additional internal fields are exposed.
-
-## Unchanged boundaries
-
-No change to:
-
-- Internal Integrations API paths/signing/retry behavior;
-- `/cm` authorization/session ownership;
-- `/refresh-leaderboard` policy;
-- refund preview/re-preview/execute;
-- Aura/wallet confirmation/fresh-state/idempotency;
-- Discord mutation audit authority;
-- website/Supabase;
-- environment variables;
-- slash-command definition/registration;
-- leaderboard logic;
-- `legacy/`.
-
-## Verification
-
-Initial run `32155910678` failed only two newly written UI test assertions because the tests guessed JSON escaping incorrectly. No production defect was identified. The tests were corrected to inspect rendered component content directly.
-
-Implementation-head run `32156144669` passed 131/131 tests, typecheck, build and diff check.
-
-After README/context/audit updates, documentation-head run `32156801285` also passed on Node `22.23.2`:
+Status:
 
 ```text
-npm ci: PASS, 0 vulnerabilities
-npm test: PASS — 131/131
-npm run typecheck: PASS
-npm run build: PASS
-git diff --check: PASS
+private
+data-only
+Phase T1 corpus acquisition starting
 ```
 
-## Exact next action
+Purpose: collect and normalize the historical Discord ticket logs and linked Tickety transcripts so the corpus can be queried/analyzed later.
 
-1. require GitHub Actions to remain green on the current PR #4 head;
-2. mark PR #4 ready and squash-merge under the existing product authorization;
-3. verify new `master` ref;
-4. normal Northflank redeploy/restart is sufficient; no `npm run register:commands` is required solely for TASK-CM-ADMIN-006.
+Boundary:
+
+- main bot development continues independently;
+- no scraper/exporter/runtime code belongs in `CM-Ticket-Transcripts`;
+- no tokens, HMAC secrets, database credentials or `.env` content belong there;
+- extraction code runs elsewhere;
+- the production bot is not modified merely to perform the export;
+- any future bot/runtime dependency on the corpus requires separate architecture review.
+
+## Transcript T1 exact next action
+
+Build and validate the extraction process outside the data repository against a small representative sample before bulk processing.
+
+The sample gate must prove:
+
+1. Discord ticket-log messages can be enumerated and their ticket metadata recovered;
+2. `View Transcript` URLs can be extracted without clicking buttons manually;
+3. Tickety transcript pages can be fetched from the authorized execution environment;
+4. complete message content, authors, timestamps and attachment metadata can be normalized reliably;
+5. failed or malformed tickets are explicitly recorded rather than silently skipped;
+6. only resulting data artifacts are written to `CM-Ticket-Transcripts`.
+
+After the sample passes, scale the same validated pipeline to the full 1,000+ ticket history.
+
+## Main-bot next engineering track
+
+The main bot roadmap may proceed independently with production-hardening work such as branch protection/status checks, registration-specific config loading, stronger generic redaction and deployment/rollback/credential-rotation runbooks.
+
+Manual fulfillment remains blocked on a dedicated website-owned operation.
