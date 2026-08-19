@@ -238,6 +238,18 @@ const accountFulfillmentSchema = z.object({
   updatedAt: timestampSchema
 }).strict();
 
+const maskedFulfillmentMaterialSchema = z.object({
+  kind: z.enum(["license_key", "account_token"]),
+  maskedValue: z.string().min(1).max(256)
+}).strict();
+
+const orderFulfillmentSupportSchema = z.object({
+  productTypeLabel: z.string().min(1).max(200).nullable(),
+  productDurationDays: z.number().int().positive().nullable(),
+  maskedMaterials: z.array(maskedFulfillmentMaterialSchema).max(10),
+  manualRequired: z.boolean()
+}).strict();
+
 export const orderFulfillmentResponseSchema = z.object({
   order: z.object({
     orderId: uuidSchema,
@@ -249,7 +261,8 @@ export const orderFulfillmentResponseSchema = z.object({
   fulfillments: z.array(z.discriminatedUnion("kind", [
     productFulfillmentSchema,
     accountFulfillmentSchema
-  ])).max(10)
+  ])).max(10),
+  support: orderFulfillmentSupportSchema.optional()
 }).strict();
 
 export const orderRefundPreviewResponseSchema = z.object({

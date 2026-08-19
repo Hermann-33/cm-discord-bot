@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { PurchaseIntentData } from "../../src/api/purchaseIntents";
 import type {
   AuraAdjustmentData,
   OrderDetailsData,
@@ -11,6 +12,7 @@ import {
   buildAdjustmentSuccessPanel,
   buildFulfillmentPanel,
   buildOrderPanel,
+  buildPurchaseIntentPanel,
   buildRefundSuccessPanel,
   buildUserPanel
 } from "../../src/commands/cmUi";
@@ -19,6 +21,7 @@ import { escapeDiscordText } from "../../src/discord/presentation";
 const SESSION_ID = "550e8400-e29b-41d4-a716-446655440002";
 const USER_ID = "550e8400-e29b-41d4-a716-446655440000";
 const ORDER_ID = "550e8400-e29b-41d4-a716-446655440001";
+const PURCHASE_INTENT_ID = "550e8400-e29b-41d4-a716-446655440010";
 const DISCORD_USER_ID = "123456789012345682";
 const CREATED_AT = "2026-08-10T00:00:00.000Z";
 const TRANSACTION_ID = "550e8400-e29b-41d4-a716-446655440003";
@@ -138,8 +141,38 @@ const fulfillment = {
     manualRequiredAt: null,
     createdAt: CREATED_AT,
     updatedAt: "2026-08-11T00:00:00.000Z"
-  }]
+  }],
+  support: {
+    productTypeLabel: "7 Days",
+    productDurationDays: 7,
+    maskedMaterials: [{ kind: "license_key", maskedValue: "ABCD-****-WXYZ" }],
+    manualRequired: false
+  }
 } satisfies OrderFulfillmentData;
+
+const pendingPurchase = {
+  purchaseIntentId: PURCHASE_INTENT_ID,
+  publicRef: "CM-PENDING",
+  userId: USER_ID,
+  purchaseKind: "product",
+  productSlug: "pending-product",
+  licenseOptionId: "internal-license-option-id",
+  accountSlug: null,
+  accountVariantId: null,
+  accountName: null,
+  accountVariantLabel: null,
+  accountGameName: null,
+  quantity: 1,
+  amountCents: 1200,
+  currency: "USD",
+  paymentMethod: "crypto",
+  paymentProvider: "private-provider",
+  status: "pending",
+  providerStatus: "waiting",
+  orderId: null,
+  expiresAt: "2026-08-10T01:00:00.000Z",
+  createdAt: CREATED_AT
+} satisfies PurchaseIntentData;
 
 const refund = {
   status: "refunded",
@@ -201,27 +234,27 @@ function assertAbsentEvenIfEscaped(content: string, value: string): void {
   assert.equal(content.includes(escapeDiscordText(value)), false);
 }
 
-test("User Operations keeps actionable state while removing profile/stat noise", () => {
+test("User Operations shows useful Aura and commerce totals", () => {
   const { content, serialized } = panelData(buildUserPanel(SESSION_ID, overview(true)));
   const unix = Math.floor(Date.parse(CREATED_AT) / 1000);
 
   assert.equal(content.includes(escapeDiscordText("user@example.com")), true);
   assert.equal(content.includes(`<@${DISCORD_USER_ID}>`), true);
   assert.equal(content.includes("Wallet: **USD 25.00**"), true);
-  assert.equal(content.includes("500 available"), true);
-  assert.equal(content.includes("25 pending"), true);
+  assert.equal(content.includes("Available Aura: **500**"), true);
+  assert.equal(content.includes("Lifetime Aura: **1,000**"), true);
+  assert.equal(content.includes("Pending Aura: **25**"), true);
   assert.equal(content.includes("Orders: **1**"), true);
+  assert.equal(content.includes("Licenses: **1**"), true);
+  assert.equal(content.includes("Accounts: **0**"), true);
   assert.equal(content.includes(escapeDiscordText("CM-TEST")), true);
   assert.equal(content.includes(`<t:${unix}:f>`), true);
   assert.equal(content.includes(`<t:${unix}:R>`), true);
   assert.equal(serialized.includes("Share to Chat"), true);
 
   assert.equal(content.includes("Last sign-in"), false);
-  assert.equal(content.includes("Lifetime earned"), false);
   assert.equal(content.includes("Lifetime redeemed"), false);
   assert.equal(content.includes("Updated:"), false);
-  assert.equal(content.includes("Licenses:"), false);
-  assert.equal(content.includes("Account deliveries:"), false);
   assert.equal(content.includes("Customer Name"), false);
   assert.equal(content.includes("Username:"), false);
 });
@@ -232,14 +265,46 @@ test("User Operations clearly shows when Discord is not linked", () => {
   assert.equal(serialized.includes("Share to Chat"), true);
 });
 
-test("Order Operations removes internal IDs and duplicate fulfillment statistics", () => {
-  const { content, serialized } = panelData(buildOrderPanel(SESSION_ID, order));
+test("Pending Purchase shows safe support state without exposing mutation controls", () => {
+  const { content, serialized } = panelData(buildPurchaseIntentPanel(
+    SESSION_ID,
+    pendingPurchase,
+    overview(true)
+  ));
 
-  assert.equal(content.includes(escapeDiscordText("user@example.com")), true);
+  assert.equal(content.includes("Pending Purchase"), true);
+  assert.equal(content.includes(escapeDiscordText("CM-PENDING")), true);
+  assert.equal(content.includes("Status: **pending**"), true);
+  assert.equal(content.includes("Payment status: **waiting**"), true);
+  assert.equal(content.includes(`Discord: <@${DISCORD_USER_ID}>`), true);
+  assert.equal(serialized.includes("Refresh Purchase"), true);
+  assert.equal(serialized.includes("User Operations"), true);
+  assert.equal(serialized.includes("Share to Chat"), true);
+  assert.equal(serialized.includes("Refund"), false);
+  assert.equal(serialized.includes("Delivery Details"), false);
+  assertAbsentEvenIfEscaped(content, PURCHASE_INTENT_ID);
+  assertAbsentEvenIfEscaped(content, "internal-license-option-id");
+  assertAbsentEvenIfEscaped(content, "private-provider");
+});
+
+test("Order Operations shows Discord, product type, duration, provider and masked delivery material", () => {
+  const { content, serialized } = panelData(buildOrderPanel(
+    SESSION_ID,
+    order,
+    overview(true),
+    fulfillment
+  ));
+
+  assert.equal(content.includes(`Email: ${escapeDiscordText("user@example.com")}`), true);
+  assert.equal(content.includes(`Discord: <@${DISCORD_USER_ID}>`), true);
   assert.equal(content.includes(escapeDiscordText("example-product")), true);
+  assert.equal(content.includes("Type: **7 Days**"), true);
+  assert.equal(content.includes("Duration: **7 days**"), true);
   assert.equal(content.includes("USD 10.00"), true);
   assert.equal(content.includes("Payment: wallet"), true);
+  assert.equal(content.includes("Provider: **internal\\-provider**"), true);
   assert.equal(content.includes("Delivered: **1/1**"), true);
+  assert.equal(content.includes("License key: **ABCD\\-\\*\\*\\*\\*\\-WXYZ**"), true);
   assert.equal(serialized.includes("Delivery Details"), true);
   assert.equal(serialized.includes("Refund"), true);
   assert.equal(serialized.includes("Refresh Order"), true);
@@ -248,19 +313,68 @@ test("Order Operations removes internal IDs and duplicate fulfillment statistics
 
   assertAbsentEvenIfEscaped(content, USER_ID);
   assertAbsentEvenIfEscaped(content, "internal-license-option-id");
-  assertAbsentEvenIfEscaped(content, "internal-provider");
-  assert.equal(content.includes("Type:"), false);
-  assert.equal(content.includes("Licenses:"), false);
-  assert.equal(content.includes("Account deliveries:"), false);
   assert.equal(content.includes("Product deliveries:"), false);
-  assert.equal(content.includes("Manual review required"), false);
   assert.equal(serialized.includes("Order History"), false);
 });
 
-test("Delivery Details keeps useful status/message and drops diagnostic clutter", () => {
+test("Order Operations does not mislabel missing optional support data as manual fulfillment", () => {
+  const { support: _support, ...baseFulfillment } = fulfillment;
+  const { content } = panelData(buildOrderPanel(
+    SESSION_ID,
+    order,
+    overview(true),
+    baseFulfillment
+  ));
+  assert.equal(content.includes("Manual fulfillment required"), false);
+  assert.equal(content.includes("No masked material returned"), false);
+});
+
+test("Order Operations stays usable when the optional fulfillment request itself is unavailable", () => {
+  const { content, serialized } = panelData(buildOrderPanel(
+    SESSION_ID,
+    order,
+    overview(true),
+    null
+  ));
+  assert.equal(content.includes("Support details: **Unavailable**"), true);
+  assert.equal(serialized.includes("Refund"), true);
+  assert.equal(serialized.includes("Refresh Order"), true);
+});
+
+test("Order Operations shows Discord not linked and manual fulfillment only from canonical manual state", () => {
+  const manualFulfillment = {
+    ...fulfillment,
+    support: {
+      productTypeLabel: "7 Days",
+      productDurationDays: 7,
+      maskedMaterials: [],
+      manualRequired: true
+    }
+  } satisfies OrderFulfillmentData;
+  const manualOrder = {
+    ...order,
+    fulfillmentSummary: { ...order.fulfillmentSummary, manualRequired: true, quantityDelivered: 0 }
+  } satisfies OrderDetailsData;
+
+  const { content } = panelData(buildOrderPanel(
+    SESSION_ID,
+    manualOrder,
+    overview(false),
+    manualFulfillment
+  ));
+  assert.equal(content.includes("Discord: **Not linked**"), true);
+  assert.equal(content.includes("Delivery material: **Manual fulfillment required**"), true);
+  assert.equal(content.includes("Manual review required: **Yes**"), true);
+});
+
+test("Delivery Details shows private masked support metadata but not provider clutter", () => {
   const { content, serialized } = panelData(buildFulfillmentPanel(SESSION_ID, fulfillment));
 
   assert.equal(content.includes("Delivery Details"), true);
+  assert.equal(content.includes("Support Details"), true);
+  assert.equal(content.includes("Type: **7 Days**"), true);
+  assert.equal(content.includes("Duration: **7 days**"), true);
+  assert.equal(content.includes("License key: **ABCD\\-\\*\\*\\*\\*\\-WXYZ**"), true);
   assert.equal(content.includes("Status: **delivered**"), true);
   assert.equal(content.includes("Delivered: 1/1"), true);
   assert.equal(content.includes("Delivered successfully"), true);

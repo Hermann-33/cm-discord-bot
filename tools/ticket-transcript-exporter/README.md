@@ -1,155 +1,154 @@
 # CM Ticket Transcript Exporter
 
-Non-production Node.js 22+ tooling for the Cheater's Market Tickety transcript side project.
+Standalone, dependency-free Node.js 22+ extraction utility for the Cheater's Market Tickety transcript side project.
 
-This tooling lives under `tools/` only. It is not imported by `src/`, not emitted into `dist/`, and not part of bot startup/runtime. `CM-Ticket-Transcripts` remains a separate private **data-only** repository.
+This tool is non-production tooling under `tools/`. It is not imported by `src/`, not emitted into `dist/`, and not part of the bot startup/runtime path.
 
-## Current architecture
+The data repository remains separate:
 
-Phase T1 now has two distinct stages:
+- `cm-discord-bot` owns production bot code plus this explicitly scoped offline/support extraction tool;
+- `CM-Ticket-Transcripts` remains private **data only** and receives only generated corpus artifacts.
 
-```text
-Discord ticket-log channel
-  -> strict View Transcript discovery
-  -> source-logs.jsonl
-  -> Tickety /api/ticketTranscript?id=<id>
-  -> application/vnd.msgpack
-  -> Msgpackr decode
-  -> structured messages/users/attachments/replies
-  -> CM-Ticket-Transcripts
-```
+The exporter reads the authorized Discord ticket-log channel through Discord's REST API, targets only Tickety **View Transcript** link buttons, extracts the corresponding transcript URL and ticket metadata, fetches each transcript page, and writes durable raw HTML + visible text + normalized JSON into a local checkout of `CM-Ticket-Transcripts`.
 
-The earlier HTML/Chrome approach is retained only as historical acquisition evidence. Real Tickety message content is delivered through the structured transcript API, not the initial transcript-page HTML shell.
+Other ticket-log controls such as **View Ticket** are intentionally ignored. A candidate must be a Discord link button (`type=2`, `style=5`) whose normalized label is exactly `View Transcript` and whose URL matches `https://tickety.top/transcripts/<id>`.
 
-## Stage 1 — discover transcript IDs
+## Requirements
 
-The Discord discovery command targets only link buttons whose normalized label is exactly `View Transcript`. `View Ticket` and all other ticket-log controls are ignored.
+- Node.js 22+
+- Existing Cheater's Market Discord bot token
+- `DISCORD_GUILD_ID`
+- Bot permissions in the ticket-log channel:
+  - View Channel
+  - Read Message History
+- Discord Message Content privileged intent enabled for the bot application so message embeds/components are returned
 
-```powershell
-npm.cmd run export:ticket-transcripts -- --env-file .\.env --channel-id YOUR_TICKET_LOG_CHANNEL_ID --output-dir ..\CM-Ticket-Transcripts --all --dry-run
-```
+No HMAC/Internal Integrations API key, Supabase credential, database credential, or website credential is used.
 
-This creates/updates `source-logs.jsonl`. It uses the existing bot token only for authorized read-only Discord history access.
-
-## Stage 2 — extract actual transcript content
-
-The HAR validation proved that Tickety's page requests:
-
-```text
-GET https://tickety.top/api/ticketTranscript?id=<transcriptId>
-Content-Type: application/vnd.msgpack
-```
-
-Tickety's browser decoder uses Msgpackr-compatible records with:
-
-```text
-useRecords: true
-mapsAsObjects: true
-int64AsType: string
-custom extension type 7: identity wrapper
-```
-
-The structured exporter mirrors that decoder configuration.
-
-### Install the local decoder
-
-`msgpackr` is intentionally not added to the production bot dependency graph. Install it locally without changing `package.json` or `package-lock.json`:
+## 1. Run focused tests
 
 ```powershell
-npm.cmd install --no-save --package-lock=false --omit=optional msgpackr@2.0.4
+node --test .\tests\tools\ticketTranscriptExporter.test.mjs
 ```
 
-This is a local tooling dependency only. A later `npm ci` may remove it; reinstall it before structured extraction if necessary.
+## 2. Validate a five-ticket sample first
 
-### Five-ticket structured test
+From the `cm-discord-bot` repository, with the private data repository checked out beside it:
 
 ```powershell
-npm.cmd run export:ticket-transcript-payloads -- --output-dir ..\CM-Ticket-Transcripts --limit 5 --no-resume
+npm run export:ticket-transcripts -- `
+  --env-file .\.env `
+  --channel-id YOUR_TICKET_LOG_CHANNEL_ID `
+  --output-dir ..\CM-Ticket-Transcripts `
+  --limit 5
 ```
 
-Expected progress resembles:
+Use the npm script above rather than invoking the core exporter module directly. The npm script runs the strict Discord-message filter that permits only `View Transcript` link buttons before the core parser sees the channel history.
 
-```text
-[transcripts] 1/5 <id>: fetching structured payload...
-[transcripts] <id>: saved 74 messages (14828 bytes).
-```
+The exporter reads only `DISCORD_BOT_TOKEN` and `DISCORD_GUILD_ID` from the specified `.env` file. It never copies the `.env` or prints the token.
 
-A successful record must contain a real `transcript.messages` array, not `plainTextChars: 0` HTML-shell output.
+The default is already `--limit 5`; the explicit limit above makes the Phase T1 sample gate obvious.
 
-### Full corpus
+## 3. Inspect the sample
 
-Once the structured test succeeds:
-
-```powershell
-npm.cmd run export:ticket-transcript-payloads -- --output-dir ..\CM-Ticket-Transcripts --all --resume
-```
-
-The command reads all IDs from the existing `source-logs.jsonl`; it does **not** rescan Discord.
-
-Default pacing is one request every 1250 ms. The HAR showed an API rate-limit value of 8, so the exporter runs sequentially, handles `429` with `Retry-After`, retries transient server/network errors, and records any remaining failures explicitly.
-
-## Structured output
-
-For each successful transcript:
+Expected data-only output:
 
 ```text
 CM-Ticket-Transcripts/
-├── source-logs.jsonl
-├── index.jsonl
 ├── manifest.json
+├── index.jsonl
+├── source-logs.jsonl
 ├── transcripts/
 │   └── <transcriptId>.json
 ├── text/
 │   └── <transcriptId>.txt
-├── raw-msgpack/
-│   └── <transcriptId>.msgpack
+├── raw/
+│   └── <transcriptId>.html
 ├── runs/
-│   └── msgpack-<runId>.json
+│   └── <runId>.json
 └── failures/
-    └── msgpack-<runId>.jsonl
+    └── <runId>.jsonl
 ```
 
-The normalized JSON preserves:
+For Phase T1, inspect several `text/*.txt` and `raw/*.html` files and confirm that usernames, timestamps, message content and attachment references are actually present before bulk export.
 
-- ticket/log metadata from Discord discovery;
-- decoded Tickety users;
-- every decoded message;
-- resolved author identity per message;
-- timestamps and edited timestamps;
-- message content;
-- attachments and Discord CDN URLs;
-- embeds;
-- reactions;
-- components;
-- reply/message references;
-- roles/channels/guild/channel IDs;
-- raw Msgpack acquisition checksum and byte count.
+## 4. Bulk export only after the sample is verified
 
-The text projection includes author, timestamp, content, embed text, attachment URLs, and reply references for search/analysis.
+```powershell
+npm run export:ticket-transcripts -- `
+  --env-file .\.env `
+  --channel-id YOUR_TICKET_LOG_CHANNEL_ID `
+  --output-dir ..\CM-Ticket-Transcripts `
+  --all `
+  --resume
+```
 
-## Resume behavior
+`--all` is required explicitly. The tool will not accidentally treat an omitted limit as permission to crawl the entire channel.
 
-`--resume` skips only records already proven to be schema-v2 `tickety-msgpack-api` records.
+## Fetch modes
 
-The old HTML-shell JSON files are **not** treated as complete and will be replaced automatically as their structured payloads are fetched.
+Default:
 
-This allows an interrupted 1,578-ticket run to be restarted safely without re-fetching successful structured records.
+```text
+--fetch-mode auto
+```
 
-## Private/restricted transcripts
+`auto` tries normal HTTPS first. If that fails, it attempts Chrome/Chromium headless DOM capture.
 
-The validated sample was public and required no cookie or authorization header. Some other transcripts may be private. `401` and `403` responses are recorded as failures; the exporter does not bypass Tickety access controls.
+Force HTTP:
 
-## Safety boundaries
+```powershell
+--fetch-mode http
+```
 
-- no production bot startup;
-- no Discord write/mutation;
-- no Internal Integrations API call;
-- no HMAC/Supabase/Postgres credential;
-- no direct database access;
-- no arbitrary URL fetching;
-- transcript IDs come only from the existing data corpus;
-- endpoint is fixed to `https://tickety.top/api/ticketTranscript`;
-- bounded payload size;
-- sequential, rate-limited requests;
-- explicit failure records;
-- raw binary retained for decoder/parser repair.
+Force Chrome:
+
+```powershell
+--fetch-mode chrome --chrome-path "C:\Program Files\Google\Chrome\Application\chrome.exe"
+```
+
+The browser fallback uses Chrome's `--headless=new --dump-dom` mode and does not require Playwright or Puppeteer.
+
+## Discovery-only test
+
+To verify Discord access and strict `View Transcript` extraction without requesting Tickety pages:
+
+```powershell
+npm run export:ticket-transcripts -- `
+  --env-file .\.env `
+  --channel-id YOUR_TICKET_LOG_CHANNEL_ID `
+  --output-dir ..\CM-Ticket-Transcripts `
+  --limit 5 `
+  --dry-run
+```
+
+This writes only source discovery/run data.
+
+## Safety properties
+
+- Exact configured guild is checked before scanning messages.
+- Only Discord link buttons labelled `View Transcript` are eligible for discovery.
+- `View Ticket` and other channel buttons are ignored even if they contain URLs.
+- Only `https://tickety.top/transcripts/<id>` URLs are fetchable.
+- Redirects outside that origin/path are rejected.
+- Discord API rate limits are respected.
+- Transcript requests are sequential by default with a delay.
+- Per-transcript HTML is size-capped.
+- Existing records are skipped by default (`--resume`).
+- Failures are explicit and run-scoped.
+- Raw HTML is retained so parsing can be repaired without re-downloading the corpus.
+- No production bot mutation or Internal Integrations API call exists in this tool.
+
+## Current parser status
+
+The first parser deliberately preserves source fidelity rather than pretending the unknown Tickety DOM has already been proven.
+
+For every successfully fetched transcript it stores:
+
+1. exact raw HTML;
+2. conservative visible-text extraction;
+3. normalized source/ticket metadata;
+4. likely attachment URLs;
+5. an estimated message count when common transcript markers exist.
+
+After the first real five-ticket sample is generated, inspect the raw HTML and upgrade the parser to message-level structured JSON against Tickety's actual DOM rather than guessed selectors.

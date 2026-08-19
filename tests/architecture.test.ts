@@ -39,6 +39,7 @@ test("API client exposes only explicitly approved bot operations", () => {
     "/api/internal/integrations/v1/users/overview",
     "/api/internal/integrations/v1/orders/details",
     "/api/internal/integrations/v1/orders/fulfillment",
+    "/api/internal/integrations/v1/purchase-intents/lookup",
     "/api/internal/integrations/v1/orders/refund/preview",
     "/api/internal/integrations/v1/orders/refund/execute",
     "/api/internal/integrations/v1/users/aura/adjust",

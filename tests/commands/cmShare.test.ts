@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { MessageFlags, type ButtonInteraction, type MessageCreateOptions } from "discord.js";
-import type { OrderDetailsData, UserOverviewData } from "../../src/api/schemas";
+import type { PurchaseIntentData } from "../../src/api/purchaseIntents";
+import type { OrderDetailsData, OrderFulfillmentData, UserOverviewData } from "../../src/api/schemas";
 import { buildPublicSharePanel, shareCurrentPanel } from "../../src/commands/cmShare";
 import type { CmAdminSession } from "../../src/commands/cmSessions";
 import { escapeDiscordText } from "../../src/discord/presentation";
@@ -10,12 +11,14 @@ import { safeAllowedMentions } from "../../src/discord/safeMessages";
 const USER_ID = "550e8400-e29b-41d4-a716-446655440000";
 const ORDER_ID = "550e8400-e29b-41d4-a716-446655440001";
 const SESSION_ID = "550e8400-e29b-41d4-a716-446655440002";
+const PURCHASE_INTENT_ID = "550e8400-e29b-41d4-a716-446655440010";
 const ADMIN_ID = "123456789012345681";
 const DISCORD_USER_ID = "123456789012345682";
 const CREATED_AT = "2026-08-10T00:00:00.000Z";
 const CUSTOMER_EMAIL = "private@example.com";
 const PRIVATE_PROVIDER = "internal-provider";
 const PRIVATE_LICENSE_OPTION = "internal-license-option-id";
+const MASKED_MATERIAL = "ABCD-****-WXYZ";
 
 const overview = {
   identity: {
@@ -109,6 +112,59 @@ const selectedOrder = {
   }
 } satisfies OrderDetailsData;
 
+const selectedPurchaseIntent = {
+  purchaseIntentId: PURCHASE_INTENT_ID,
+  publicRef: "CM-PENDING",
+  userId: USER_ID,
+  purchaseKind: "product",
+  productSlug: "pending-product",
+  licenseOptionId: PRIVATE_LICENSE_OPTION,
+  accountSlug: null,
+  accountVariantId: null,
+  accountName: null,
+  accountVariantLabel: null,
+  accountGameName: null,
+  quantity: 1,
+  amountCents: 1200,
+  currency: "USD",
+  paymentMethod: "crypto",
+  paymentProvider: PRIVATE_PROVIDER,
+  status: "pending",
+  providerStatus: "private-provider-state",
+  orderId: null,
+  expiresAt: "2026-08-10T01:00:00.000Z",
+  createdAt: CREATED_AT
+} satisfies PurchaseIntentData;
+
+const fulfillmentWithSupport = {
+  order: {
+    orderId: ORDER_ID,
+    publicRef: "CM-TEST",
+    purchaseKind: "product",
+    status: "paid"
+  },
+  linkedLicenseCount: 1,
+  fulfillments: [{
+    kind: "product",
+    deliveryId: "550e8400-e29b-41d4-a716-446655440005",
+    providerCode: PRIVATE_PROVIDER,
+    status: "delivered",
+    quantityRequested: 1,
+    quantityDelivered: 1,
+    failureCode: null,
+    userMessage: "Delivered successfully",
+    manualRequiredAt: null,
+    createdAt: CREATED_AT,
+    updatedAt: CREATED_AT
+  }],
+  support: {
+    productTypeLabel: "7 Days",
+    productDurationDays: 7,
+    maskedMaterials: [{ kind: "license_key", maskedValue: MASKED_MATERIAL }],
+    manualRequired: false
+  }
+} satisfies OrderFulfillmentData;
+
 function session(): CmAdminSession {
   return {
     id: SESSION_ID,
@@ -180,6 +236,36 @@ test("customer-safe order share includes customer email but omits internal ident
   assertAbsentEvenIfEscaped(content, PRIVATE_PROVIDER);
   assertAbsentEvenIfEscaped(content, PRIVATE_LICENSE_OPTION);
   assert.equal(content.includes(escapeDiscordText("CM-TEST")), true);
+  assert.equal(serialized.includes("custom_id"), false);
+});
+
+test("customer-safe pending-purchase share omits purchase/provider internals", () => {
+  const state = session();
+  state.selectedPurchaseIntent = selectedPurchaseIntent;
+  state.shareView = { kind: "purchase-intent" };
+  const { content, serialized } = panelData(state);
+
+  assertCustomerEmailPresentAndEscaped(content);
+  assert.equal(content.includes("Pending Purchase"), true);
+  assert.equal(content.includes(escapeDiscordText("CM-PENDING")), true);
+  assertAbsentEvenIfEscaped(content, PURCHASE_INTENT_ID);
+  assertAbsentEvenIfEscaped(content, USER_ID);
+  assertAbsentEvenIfEscaped(content, PRIVATE_PROVIDER);
+  assertAbsentEvenIfEscaped(content, PRIVATE_LICENSE_OPTION);
+  assertAbsentEvenIfEscaped(content, "private-provider-state");
+  assert.equal(serialized.includes("custom_id"), false);
+});
+
+test("customer-safe fulfillment share never exposes masked support material or provider internals", () => {
+  const state = session();
+  state.shareView = { kind: "fulfillment", data: fulfillmentWithSupport };
+  const { content, serialized } = panelData(state);
+
+  assertCustomerEmailPresentAndEscaped(content);
+  assertAbsentEvenIfEscaped(content, MASKED_MATERIAL);
+  assertAbsentEvenIfEscaped(content, PRIVATE_PROVIDER);
+  assert.equal(content.includes("7 Days"), false);
+  assert.equal(content.includes("Delivered successfully"), true);
   assert.equal(serialized.includes("custom_id"), false);
 });
 

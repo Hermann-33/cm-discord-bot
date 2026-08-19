@@ -1,6 +1,6 @@
 # Codebase Map
 
-Updated: 2026-08-19
+Updated: 2026-08-20
 
 ## Repository boundaries
 
@@ -24,12 +24,13 @@ Never commit `.env`, `dist/`, `node_modules`, logs, archives, generated transcri
 
 - `src/index.ts` — composition root; Discord/API/services/controller/schedule/shutdown wiring.
 - `src/api/signing.ts` — fragile canonical HMAC request signing.
-- `src/api/client.ts` — strict Internal Integrations API transport and typed operation methods.
-- `src/api/schemas.ts` — strict Zod DTO mirrors/selectors/errors.
+- `src/api/client.ts` — strict Internal Integrations API transport and typed operation methods, including pending purchase lookup.
+- `src/api/schemas.ts` — strict core DTO mirrors/selectors/errors, including optional fulfillment support schema.
+- `src/api/purchaseIntents.ts` — strict `purchase-intents.lookup.read` request/response DTO mirror for pending `/cm order` support.
 - `src/api/errors.ts` — stable safe API errors.
 - `src/config/env.ts` — Discord/API/admin environment validation.
 
-Approved active API paths remain:
+Approved active API operations:
 
 ```text
 aura.leaderboards.read
@@ -37,6 +38,7 @@ aura.lookup.read
 users.overview.read
 orders.details.read
 orders.fulfillment.read
+purchase-intents.lookup.read
 orders.refund.preview
 orders.refund.execute
 users.aura.adjust
@@ -47,21 +49,23 @@ users.wallet.adjust
 
 - `src/commands/aura.ts` — customer `cm aura`.
 - `src/commands/refreshLeaderboard.ts` — operational `/refresh-leaderboard`.
-- `src/commands/cm.ts` — central `/cm` slash/button/modal controller; email/Discord user lookup; direct order entry; share dispatch; navigation/refund/adjustment routing.
-- `src/commands/cmSessions.ts` — operator-bound bounded session plus selected order, mutation proposals and current share view.
-- `src/commands/cmUserActions.ts` — refresh user/order and delivery-detail navigation; updates share state.
+- `src/commands/cm.ts` — central `/cm` slash/button/modal controller; user lookup; canonical order-first + pending fallback; navigation/refund/adjustment/share routing.
+- `src/commands/cmSessions.ts` — operator-bound bounded session with selected canonical order or pending purchase, mutation proposals and share view.
+- `src/commands/cmOrderSupport.ts` — best-effort optional canonical-order fulfillment support enrichment; never blocks core order panel.
+- `src/commands/cmPurchaseIntents.ts` — pending purchase refresh/owner validation and automatic transition to canonical order.
+- `src/commands/cmUserActions.ts` — refresh user/order and explicit delivery-detail navigation.
 - `src/commands/cmRefund.ts` — canonical refund preview/re-preview/execute/audit and share-success state.
 - `src/commands/cmAdjustments.ts` — Aura/wallet parsing, confirmation, fresh-state equality, execute/audit and share-success state.
-- `src/commands/cmUi.ts` — compact private Components V2 presentation.
-- `src/commands/cmShare.ts` — compact dedicated customer-facing renderer governed by ADR-0008/ADR-0009.
+- `src/commands/cmUi.ts` — private Components V2 user/order/pending/delivery/refund/adjustment presentation.
+- `src/commands/cmShare.ts` — dedicated customer-facing renderer governed by ADR-0008/0009/0011; masked support material excluded.
 - `src/commands/cmSupport.ts` — safe messages, parsing, authorization wrapper and session retrieval.
 
 ### Discord boundaries
 
 - `src/discord/adminAuthorization.ts` — ADR-0006 exact-guild + explicit-user `/cm` authorization.
 - `src/discord/adminAudit.ts` — concise mention-safe Components V2 refund/Aura/wallet audit panels.
-- `src/discord/presentation.ts` — shared Discord-safe text, identity and timestamp helpers.
-- `src/discord/registerCommands.ts` — manual guild bulk overwrite for `/refresh-leaderboard` + `/cm`.
+- `src/discord/presentation.ts` — Discord-safe text, identity and timestamp helpers.
+- `src/discord/registerCommands.ts` — manual guild bulk overwrite for `/refresh-leaderboard` + `/cm`; TASK-CM-ADMIN-007 does not change command JSON.
 - `src/discord/safeMessages.ts` — safe mention/channel/message helpers.
 - `src/discord/client.ts` — intents; Message Content remains intentional while `cm aura` is text-based.
 
@@ -104,49 +108,24 @@ The structured stage does not rescan Discord and does not use the Discord bot to
 
 No transcript tool is imported by `src/`, included in `tsconfig.build.json`, started by the bot, or connected to the Internal Integrations API/database.
 
-## Root test inventory
+## Root test inventory relevant to TASK-CM-ADMIN-007
 
-API/security:
+- `tests/api/admin-client.test.ts` — pending lookup contract, optional fulfillment support, raw-field rejection, existing mutation retry contracts.
+- `tests/commands/cm.test.ts` — order-first pending fallback, exact owner resolution, canonical transition, non-NOT_FOUND no-fallback.
+- `tests/commands/cmUi.test.ts` — pending controls/private support rendering/manual inference safeguards.
+- `tests/commands/cmShare.test.ts` — pending public field boundary; masked support/provider leakage prevention.
+- `tests/architecture.test.ts` — exact API allowlist/no DB/no purchase-processing/manual-fulfillment shortcuts.
+- `tests/discord/registerCommands.test.ts` — unchanged `/cm user` + `/cm order` command registration.
 
-- `tests/api/signing.test.ts`
-- `tests/api/client.test.ts`
-- `tests/api/admin-client.test.ts`
-- `tests/architecture.test.ts`
-
-Config/auth/registration:
-
-- `tests/config/env.test.ts`
-- `tests/config/admin-env.test.ts`
-- `tests/discord/adminAuthorization.test.ts`
-- `tests/discord/registerCommands.test.ts`
-
-Commands/admin presentation:
-
-- `tests/commands/aura.test.ts`
-- `tests/commands/refreshLeaderboard.test.ts`
-- `tests/commands/cm.test.ts`
-- `tests/commands/cmSessions.test.ts`
-- `tests/commands/cmAdjustments.test.ts`
-- `tests/commands/cmShare.test.ts`
-- `tests/commands/cmShareAuthorization.test.ts`
-- `tests/commands/cmUi.test.ts`
-- `tests/discord/adminAudit.test.ts`
-
-Lifecycle/leaderboard/logging:
-
-- `tests/leaderboard/format.test.ts`
-- `tests/leaderboard/service.test.ts`
-- `tests/scheduler/leaderboardSchedule.test.ts`
-- `tests/scheduler/shutdown.test.ts`
-- `tests/logger/redaction.test.ts`
-
-Side-project tooling:
+Side-project tooling coverage:
 
 - `tests/tools/ticketTranscriptExporter.test.mjs`
 - `tests/tools/ticketTranscriptPayloadExporter.test.mjs`
+
+All prior config/auth/refund/Aura/wallet/leaderboard/lifecycle/logging tests remain part of the root `npm test` gate.
 
 ## External ownership
 
 This repo does not own website routes, Supabase migrations/RLS/grants/functions, wallet/order/payment/fulfillment accounting, OAuth/Support-role systems or production website integration-client environment values.
 
-`Hermann-33/CM-Ticket-Transcripts` owns the generated historical transcript corpus only. The production bot has no runtime dependency on that repository.
+`Hermann-33/CM-Ticket-Transcripts` owns generated historical transcript corpus only. The production bot has no runtime dependency on that repository.

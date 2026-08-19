@@ -7,6 +7,7 @@ import {
   SeparatorBuilder,
   TextDisplayBuilder
 } from "discord.js";
+import type { PurchaseIntentData } from "../api/purchaseIntents";
 import type {
   AuraAdjustmentData,
   OrderDetailsData,
@@ -70,6 +71,16 @@ function orderLabel(order: RecentOrderData | OrderDetailsData): string {
   );
 }
 
+function purchaseIntentLabel(purchase: PurchaseIntentData): string {
+  return escapeDiscordText(
+    purchase.accountName
+      ?? purchase.accountGameName
+      ?? purchase.productSlug
+      ?? purchase.accountSlug
+      ?? "Purchase"
+  );
+}
+
 function orderRef(order: { publicRef: string | null; orderId: string }): string {
   return escapeDiscordText(order.publicRef ?? order.orderId);
 }
@@ -81,6 +92,37 @@ function compactDiscordIdentity(overview: UserOverviewData): string {
 
 function quantitySuffix(quantity: number): string {
   return quantity > 1 ? ` · Qty ${quantity}` : "";
+}
+
+function fulfillmentTypeLabel(
+  order: OrderDetailsData,
+  fulfillment: OrderFulfillmentData | null
+): string | null {
+  const support = fulfillment?.support;
+  if (support?.productTypeLabel) return escapeDiscordText(support.productTypeLabel);
+  if (order.purchaseKind === "account" && order.accountVariantLabel) {
+    return escapeDiscordText(order.accountVariantLabel);
+  }
+  if (support?.productDurationDays) {
+    const days = support.productDurationDays;
+    return `${days} ${days === 1 ? "Day" : "Days"}`;
+  }
+  return null;
+}
+
+function fulfillmentProviders(data: OrderFulfillmentData | null): string[] {
+  if (!data) return [];
+  return [...new Set(data.fulfillments.map((item) => item.providerCode.trim()).filter(Boolean))]
+    .map((provider) => escapeDiscordText(provider));
+}
+
+function maskedMaterialLines(data: OrderFulfillmentData | null): string[] {
+  const materials = data?.support?.maskedMaterials ?? [];
+  return materials.map((material, index) => {
+    const label = material.kind === "license_key" ? "License key" : "Account token";
+    const suffix = materials.length > 1 ? ` ${index + 1}` : "";
+    return `${label}${suffix}: **${escapeDiscordText(material.maskedValue)}**`;
+  });
 }
 
 export type CmPanelPayload = {
@@ -102,9 +144,15 @@ export function buildUserPanel(sessionId: string, overview: UserOverviewData): C
   const wallet = overview.wallet
     ? formatMoney(overview.wallet.balanceCents, overview.wallet.currency)
     : "—";
-  const aura = overview.aura
-    ? `${overview.aura.availableAura.toLocaleString()} available${overview.aura.pendingAura > 0 ? ` · ${overview.aura.pendingAura.toLocaleString()} pending` : ""}`
-    : "—";
+  const auraLines = overview.aura
+    ? [
+        `Available Aura: **${overview.aura.availableAura.toLocaleString()}**`,
+        `Lifetime Aura: **${overview.aura.lifetimeEarnedAura.toLocaleString()}**`,
+        ...(overview.aura.pendingAura > 0
+          ? [`Pending Aura: **${overview.aura.pendingAura.toLocaleString()}**`]
+          : [])
+      ]
+    : ["Available Aura: **—**", "Lifetime Aura: **—**"];
   const latestText = latest
     ? `**${orderRef(latest)}** — ${orderLabel(latest)}\n${escapeDiscordText(latest.status)} · ${formatMoney(latest.amountCents, latest.currency)}${quantitySuffix(latest.quantity)}\n${formatDiscordTimestampPair(latest.createdAt)}`
     : "No recent orders";
@@ -120,7 +168,7 @@ export function buildUserPanel(sessionId: string, overview: UserOverviewData): C
     .addTextDisplayComponents(text(`# CM User Operations\n**${escapeDiscordText(overview.identity.email ?? overview.identity.userId)}**`))
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(text(
-      `Status: **${overview.accountControl.isBanned ? "BANNED" : "Active"}** · Discord: ${compactDiscordIdentity(overview)}\nWallet: **${wallet}** · Aura: **${aura}**\nOrders: **${overview.counts.orders}**`
+      `Status: **${overview.accountControl.isBanned ? "BANNED" : "Active"}** · Discord: ${compactDiscordIdentity(overview)}\nWallet: **${wallet}**\n${auraLines.join("\n")}\nOrders: **${overview.counts.orders}** · Licenses: **${overview.counts.licenses}** · Accounts: **${overview.counts.accountDeliveries}**`
     ))
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(text(`### Latest Order\n${latestText}`))
@@ -179,20 +227,84 @@ export function buildOrdersPanel(
     .addActionRowComponents(shareRow(sessionId));
 }
 
-export function buildOrderPanel(sessionId: string, order: OrderDetailsData): ContainerBuilder {
+export function buildPurchaseIntentPanel(
+  sessionId: string,
+  purchase: PurchaseIntentData,
+  overview: UserOverviewData
+): ContainerBuilder {
+  const reference = purchase.publicRef ? escapeDiscordText(purchase.publicRef) : "Pending purchase";
+  const purchaseLines = [
+    `Item: **${purchaseIntentLabel(purchase)}**`,
+    ...(purchase.accountVariantLabel ? [`Type: **${escapeDiscordText(purchase.accountVariantLabel)}**`] : []),
+    ...(purchase.accountGameName ? [`Game: ${escapeDiscordText(purchase.accountGameName)}`] : []),
+    ...(purchase.quantity > 1 ? [`Quantity: ${purchase.quantity}`] : [])
+  ];
+  const paymentLines = [
+    `Amount: **${formatMoney(purchase.amountCents, purchase.currency)}**`,
+    `Payment: ${escapeDiscordText(purchase.paymentMethod ?? "—")}`,
+    ...(purchase.providerStatus ? [`Payment status: **${escapeDiscordText(purchase.providerStatus)}**`] : []),
+    `Created: ${formatDiscordTimestampPair(purchase.createdAt)}`,
+    ...(purchase.expiresAt ? [`Expires: ${formatDiscordTimestampPair(purchase.expiresAt)}`] : [])
+  ];
+
+  return new ContainerBuilder()
+    .addTextDisplayComponents(text(`# Pending Purchase ${reference}\nStatus: **${escapeDiscordText(purchase.status)}**`))
+    .addSeparatorComponents(separator())
+    .addTextDisplayComponents(text(
+      `### Customer\nEmail: ${escapeDiscordText(overview.identity.email ?? "—")}\nDiscord: ${compactDiscordIdentity(overview)}`
+    ))
+    .addTextDisplayComponents(text(`### Purchase\n${purchaseLines.join("\n")}`))
+    .addTextDisplayComponents(text(`### Payment\n${paymentLines.join("\n")}`))
+    .addTextDisplayComponents(text("> No completed order exists yet. Order-only controls remain unavailable until CM creates the canonical order."))
+    .addActionRowComponents(
+      new ActionRowBuilder<ButtonBuilder>().addComponents(
+        button(`cm:purchase:refresh:${sessionId}`, "Refresh Purchase", ButtonStyle.Primary),
+        button(`cm:user:home:${sessionId}`, "User Operations")
+      )
+    )
+    .addActionRowComponents(shareRow(sessionId));
+}
+
+export function buildOrderPanel(
+  sessionId: string,
+  order: OrderDetailsData,
+  overview: UserOverviewData,
+  fulfillmentData: OrderFulfillmentData | null = null
+): ContainerBuilder {
+  const typeLabel = fulfillmentTypeLabel(order, fulfillmentData);
   const purchaseLines = order.purchaseKind === "product"
-    ? [`Item: **${escapeDiscordText(order.productSlug ?? "Product")}**`]
+    ? [
+        `Item: **${escapeDiscordText(order.productSlug ?? "Product")}**`,
+        ...(typeLabel ? [`Type: **${typeLabel}**`] : [])
+      ]
     : [
         `Item: **${escapeDiscordText(order.accountName ?? order.accountGameName ?? order.accountSlug ?? "Account")}**`,
-        ...(order.accountVariantLabel ? [`Variant: ${escapeDiscordText(order.accountVariantLabel)}`] : []),
+        ...(typeLabel ? [`Type: **${typeLabel}**`] : []),
         ...(order.accountGameName ? [`Game: ${escapeDiscordText(order.accountGameName)}`] : [])
       ];
   if (order.quantity > 1) purchaseLines.push(`Quantity: ${order.quantity}`);
+
   const fulfillment = order.fulfillmentSummary;
+  const support = fulfillmentData?.support;
+  const providers = fulfillmentProviders(fulfillmentData);
   const deliveryLines = [
-    `Delivered: **${fulfillment.quantityDelivered}/${fulfillment.quantityRequested}**`
+    ...(providers.length > 0 ? [`Provider: **${providers.join(", ")}**`] : []),
+    ...(support?.productDurationDays
+      ? [`Duration: **${support.productDurationDays} ${support.productDurationDays === 1 ? "day" : "days"}**`]
+      : []),
+    `Delivered: **${fulfillment.quantityDelivered}/${fulfillment.quantityRequested}**`,
+    ...maskedMaterialLines(fulfillmentData)
   ];
-  if (fulfillment.manualRequired) deliveryLines.push("Manual review required: **Yes**");
+
+  const manualRequired = fulfillment.manualRequired || Boolean(support?.manualRequired);
+  if (manualRequired) {
+    deliveryLines.push("Delivery material: **Manual fulfillment required**");
+    deliveryLines.push("Manual review required: **Yes**");
+  } else if (fulfillment.quantityDelivered > 0 && support && support.maskedMaterials.length === 0) {
+    deliveryLines.push("Delivery material: **No masked material returned**");
+  } else if (!fulfillmentData) {
+    deliveryLines.push("Support details: **Unavailable**");
+  }
 
   const actions = new ActionRowBuilder<ButtonBuilder>().addComponents(
     button(`cm:refund:start:${sessionId}`, "Refund", ButtonStyle.Danger),
@@ -204,11 +316,13 @@ export function buildOrderPanel(sessionId: string, order: OrderDetailsData): Con
   return new ContainerBuilder()
     .addTextDisplayComponents(text(`# Order ${orderRef(order)}\nStatus: **${escapeDiscordText(order.status)}**`))
     .addSeparatorComponents(separator())
-    .addTextDisplayComponents(text(`### Customer\n${escapeDiscordText(order.customerEmail)}`))
+    .addTextDisplayComponents(text(
+      `### Customer\nEmail: ${escapeDiscordText(order.customerEmail ?? overview.identity.email ?? "—")}\nDiscord: ${compactDiscordIdentity(overview)}`
+    ))
     .addTextDisplayComponents(text(
       `### Purchase\n${purchaseLines.join("\n")}\nAmount: **${formatMoney(order.amountCents, order.currency)}**\nPayment: ${escapeDiscordText(order.payment.method)}\nPlaced: ${formatDiscordTimestampPair(order.createdAt)}`
     ))
-    .addTextDisplayComponents(text(`### Delivery\n${deliveryLines.join("\n")}`))
+    .addTextDisplayComponents(text(`### Fulfillment\n${deliveryLines.join("\n")}`))
     .addActionRowComponents(actions)
     .addActionRowComponents(shareRow(sessionId));
 }
@@ -222,6 +336,18 @@ export function buildFulfillmentPanel(
       `# Delivery Details\nOrder **${orderRef(data.order)}** · ${escapeDiscordText(data.order.status)}`
     ))
     .addSeparatorComponents(separator());
+
+  const supportLines = [
+    ...(data.support?.productTypeLabel ? [`Type: **${escapeDiscordText(data.support.productTypeLabel)}**`] : []),
+    ...(data.support?.productDurationDays
+      ? [`Duration: **${data.support.productDurationDays} ${data.support.productDurationDays === 1 ? "day" : "days"}**`]
+      : []),
+    ...maskedMaterialLines(data),
+    ...(data.support?.manualRequired ? ["Manual review required: **Yes**"] : [])
+  ];
+  if (supportLines.length > 0) {
+    container.addTextDisplayComponents(text(`### Support Details\n${supportLines.join("\n")}`));
+  }
 
   if (data.fulfillments.length === 0) {
     container.addTextDisplayComponents(text("No fulfillment records were returned."));

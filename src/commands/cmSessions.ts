@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { PurchaseIntentData } from "../api/purchaseIntents";
 import type {
   AuraAdjustmentData,
   InternalIntegrationOperator,
@@ -50,6 +51,7 @@ export type CmShareView =
   | { kind: "user" }
   | { kind: "orders"; page: number }
   | { kind: "order" }
+  | { kind: "purchase-intent" }
   | { kind: "fulfillment"; data: OrderFulfillmentData }
   | { kind: "refund-preview" }
   | { kind: "refund-success"; data: OrderRefundExecuteData }
@@ -62,6 +64,7 @@ export type CmAdminSession = {
   operatorId: string;
   overview: UserOverviewData;
   selectedOrder?: OrderDetailsData;
+  selectedPurchaseIntent?: PurchaseIntentData;
   refundProposal?: RefundProposal;
   adjustmentProposal?: UserAdjustmentProposal;
   shareView: CmShareView;
