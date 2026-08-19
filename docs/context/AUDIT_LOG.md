@@ -155,22 +155,69 @@ Reduce menu/order/statistical bloat across private `/cm` panels and Share to Cha
 - refund/Aura/wallet previews and success panels remove routine backend transaction/audit/idempotency bookkeeping while keeping decision/result information and exceptional warnings.
 - Share to Chat summaries were independently compacted while retaining ADR-0009 customer email and ADR-0008 no-control/internal-field boundaries.
 
-### Verification
+### Verification / merge
 
-Initial CI run `32155910678` passed existing product/security tests but failed two newly added presentation assertions due to incorrect JSON-string escaping expectations. No production behavior defect was found. The tests were corrected to inspect rendered component content directly.
+Initial CI run `32155910678` passed existing product/security tests but failed two newly added presentation assertions due to incorrect JSON-string escaping expectations. No production behavior defect was found. The assertions were corrected to inspect rendered component content directly.
 
 Implementation-head GitHub Actions run `32156144669` passed 131/131 tests, typecheck, build and diff check.
 
-After README/context/audit updates, documentation-head run `32156801285` also passed on Node `22.23.2`:
+After documentation updates, run `32156801285` also passed the same complete gate. The final current-head verification recorded in the merge commit passed 131/131 tests, typecheck, build and `git diff --check`.
+
+PR #4 was squash-merged into `master` at:
 
 ```text
-npm ci: PASS, 0 vulnerabilities
-npm test: PASS — 131/131
-npm run typecheck: PASS
-npm run build: PASS
-git diff --check: PASS
+6cef7695a09c8761d395f5d530bc79b7532c9b9f
 ```
 
-No API/signing, authorization, mutation, environment, slash-command, website/Supabase, leaderboard or `legacy/` change is in scope.
+No API/signing, authorization, mutation, environment, slash-command, website/Supabase, leaderboard or `legacy/` change was in scope.
 
-Verdict: `COMPLETE` for implementation/documentation verification; merge requires the current PR #4 head GitHub Actions status to remain green.
+Verdict: `COMPLETE` on mainline.
+
+---
+
+## 2026-08-19 — TASK-TRANSCRIPTS-CTX-001 — Parallel ticket transcript corpus boundary
+
+### Scope
+
+Record the new parallel support-data workstream without changing the production bot runtime.
+
+Repository established externally:
+
+```text
+Hermann-33/CM-Ticket-Transcripts
+```
+
+Verified repository metadata at task start: private, default branch `main`, empty/data repository baseline.
+
+### Decision
+
+ADR-0010 establishes `CM-Ticket-Transcripts` as a private data-only repository.
+
+Allowed: normalized transcript data, manifests/indexes, failure records, raw transcript snapshots when required, attachment metadata and explicitly scoped derived datasets.
+
+Forbidden: executable exporter/scraper code, production bot code, package/application scaffolding added to run the exporter, bot/HMAC/database credentials, `.env` content and generated dependency trees.
+
+Extraction tooling executes outside the data repository. The production bot does not gain a runtime dependency on the corpus. Normal bot development and transcript acquisition may proceed in parallel.
+
+### Transcript Phase T1
+
+Initial acquisition flow:
+
+```text
+Discord ticket-log history
+  -> ticket metadata + Tickety transcript URLs
+  -> small representative extraction/parsing validation
+  -> normalized complete transcripts
+  -> bulk export with explicit failure accounting
+  -> CM-Ticket-Transcripts
+```
+
+The small-sample validation gate is mandatory before scaling to the full 1,000+ historical ticket set.
+
+### Security/data impact
+
+Ticket transcripts may contain customer PII, Discord identities, emails, order/support details and attachments. The corpus remains private and must not contain credentials. Historical transcript data is not a replacement source of truth for current website account/order state.
+
+No production source, API operation, authorization rule, environment value, website/Supabase behavior, deployment or command registration changed.
+
+Verdict: `COMPLETE` for context/architecture decision; extraction implementation remains the next side-project task.
