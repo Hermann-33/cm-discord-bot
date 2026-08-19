@@ -1,6 +1,6 @@
 # Project History
 
-Updated: 2026-08-18
+Updated: 2026-08-19
 
 This file preserves important chronology without making historical architecture authoritative over current source/ADRs.
 
@@ -67,11 +67,11 @@ Implementation and final-documentation GitHub Actions runs passed; PR #3 was squ
 9466d6f23a6c2027b0e88c32eb4e78ddeeeb61fd
 ```
 
-## 2026-08-18 — Admin UI declutter
+## 2026-08-18 — Admin UI declutter merged
 
 TASK-CM-ADMIN-006 reviewed the complete User Operations, recent orders, direct order, fulfillment, refund, Aura/wallet and Share to Chat presentation surfaces and removed routine operational/statistical bloat.
 
-The task changes presentation only:
+The task changed presentation only:
 
 - User Operations focuses on status, compact identity, current wallet/Aura, order count/latest order and core actions;
 - order views remove internal IDs/provider/redundant fulfillment statistics;
@@ -80,6 +80,24 @@ The task changes presentation only:
 - mutation panels hide routine backend bookkeeping while keeping results and exceptional warnings;
 - customer shares are shortened while preserving ADR-0009 email disclosure and ADR-0008 no-control/internal-field rules.
 
-No API/auth/mutation/database/config/registration/leaderboard/legacy change is part of the task.
+No API/auth/mutation/database/config/registration/leaderboard/legacy change was part of the task.
 
-The first CI run caught two errors in new test assertion escaping only. After correcting those tests, run `32156144669` passed 131/131 tests, typecheck, build and diff check. After documentation updates, run `32156801285` passed the same complete gate. PR #4 is verified for merge subject to a green GitHub Actions status on its current head.
+The first CI run caught two errors in new test assertion escaping only. After correcting those tests, run `32156144669` passed 131/131 tests, typecheck, build and diff check. Documentation verification also passed, and PR #4 was squash-merged into `master` at:
+
+```text
+6cef7695a09c8761d395f5d530bc79b7532c9b9f
+```
+
+## 2026-08-19 — Ticket transcript corpus side project established
+
+A parallel support-data project was established at:
+
+```text
+Hermann-33/CM-Ticket-Transcripts
+```
+
+The repository is private and intentionally data-only. ADR-0010 records that it is not part of the production bot runtime and must not contain executable exporter/scraper code, production bot source, `.env` files or credentials.
+
+The purpose is to collect more than one thousand historical Discord support-ticket logs and their linked Tickety transcript pages into a durable normalized corpus for later analysis.
+
+Initial Phase T1 requires a small representative end-to-end validation before bulk export. Extraction tooling runs outside the data repository. Main bot engineering continues independently, and no runtime dependency on the corpus is implied.
