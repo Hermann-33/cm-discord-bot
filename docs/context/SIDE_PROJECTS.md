@@ -1,6 +1,6 @@
 # Related Side Projects
 
-Updated: 2026-08-19
+Updated: 2026-08-20
 
 This document records adjacent Cheater's Market workstreams that are intentionally outside the standalone Discord bot runtime but are relevant enough that future agents must understand the boundary.
 
@@ -22,9 +22,9 @@ Repository role:
 
 ### Objective
 
-Phase T1 exists to make the historical Discord support-ticket corpus accessible for systematic analysis.
+Phase T1 made the historical Discord support-ticket corpus accessible for systematic analysis.
 
-The current source flow is:
+The completed source flow is:
 
 ```text
 Discord ticket-log channel
@@ -37,7 +37,17 @@ Discord ticket-log channel
   -> CM-Ticket-Transcripts
 ```
 
-The operator's full discovery run found **1,578** unique strict `View Transcript` records. `View Ticket` and other ticket-log controls are not transcript sources and remain ignored.
+The strict discovery run found **1,578** unique `View Transcript` records. `View Ticket` and other ticket-log controls are not transcript sources and remain ignored.
+
+The structured bulk run completed with:
+
+```text
+source transcript records: 1,578
+structured records:        1,578
+failed:                    0
+```
+
+Phase T2 now turns that complete corpus into a source-grounded support knowledge graph that can be browsed as an Obsidian graph and later exported into a compact context pack for a support chatbot.
 
 ### Proven Tickety data path
 
@@ -75,15 +85,17 @@ The structured exporter mirrors that configuration.
 - raw Msgpack transcript payloads;
 - legacy raw HTML snapshots retained as historical acquisition evidence;
 - attachment URLs and metadata;
-- explicitly scoped derived datasets.
+- explicitly scoped derived datasets;
+- data-only analysis inputs;
+- Markdown/JSON knowledge-graph artifacts derived from the corpus.
 
 ### Forbidden data-repository content
 
 The data repository must not contain:
 
-- executable extraction/scraping code;
+- executable extraction/scraping/analysis code;
 - bot/runtime source code;
-- package/application scaffolding introduced to run an exporter;
+- package/application scaffolding introduced to run tooling;
 - Discord bot tokens;
 - Internal Integrations API credentials or HMAC material;
 - Supabase/Postgres credentials;
@@ -91,7 +103,7 @@ The data repository must not contain:
 - generated dependency directories;
 - unrelated Discord bot source or deployment files.
 
-### Extraction tooling boundary
+### Extraction and analysis tooling boundary
 
 Approved tooling lives under:
 
@@ -107,14 +119,16 @@ Current modules:
 tools/ticket-transcript-exporter/
 ├── run-ticket-transcript-export.mjs
 ├── export-ticket-transcripts.mjs
-└── export-ticket-payloads.mjs
+├── export-ticket-payloads.mjs
+└── prepare-knowledge-analysis.mjs
 ```
 
 Roles:
 
 - `run-ticket-transcript-export.mjs` — strict Discord `View Transcript` discovery wrapper;
 - `export-ticket-transcripts.mjs` — original discovery/HTML acquisition support;
-- `export-ticket-payloads.mjs` — current structured Msgpack transcript extractor.
+- `export-ticket-payloads.mjs` — structured Msgpack transcript extractor;
+- `prepare-knowledge-analysis.mjs` — offline deterministic packer for exhaustive T2 corpus review.
 
 ### Structured extractor behavior
 
@@ -138,7 +152,62 @@ Roles:
 - size-caps each binary response;
 - records explicit run/failure manifests.
 
-The validated HAR exposed `x-ratelimit-limit: 8`; the sequential pacing is intentionally conservative and the exporter remains resumable.
+### T2 analysis-input behavior
+
+`prepare-knowledge-analysis.mjs` is an offline read of the already-complete local data repository. It makes no Discord, Tickety, LLM, website/API or database call.
+
+It produces data-only files under the private transcript repository:
+
+```text
+CM-Ticket-Transcripts/
+└── analysis-input/
+    ├── corpus.ndjson
+    ├── review.ndjson
+    ├── stats.json
+    ├── manifest.json
+    └── README.md
+```
+
+`corpus.ndjson` preserves every full plain-text ticket as one line-addressable record so T2 can review all 1,578 tickets without losing source fidelity.
+
+`review.ndjson` is only a deterministic triage view containing bounded opening/customer, other-human-response and closing excerpts. It is **not** an LLM summary and cannot be promoted into a canonical support rule without checking source evidence where needed.
+
+### T2 knowledge graph target
+
+The final graph is intended to be directly usable as an Obsidian vault. Nodes use Markdown frontmatter plus `[[wikilinks]]` so Obsidian's Graph view can display relationships without requiring a plugin.
+
+Target data-only layout:
+
+```text
+knowledge/
+├── 00 - Support Knowledge Graph.md
+├── Categories/
+├── Intents/
+├── Symptoms/
+├── Procedures/
+├── Policies/
+├── Escalations/
+├── Products/
+├── Entities/
+├── Examples/
+└── Evidence/
+```
+
+Each canonical node should distinguish:
+
+- observed recognition signals;
+- diagnostic questions;
+- resolution path or support action;
+- constraints/forbidden assumptions;
+- escalation criteria;
+- linked product/category/intent nodes;
+- supporting ticket evidence/counts;
+- contradictions or uncertainty;
+- confidence/status.
+
+Historical customer PII must not be copied into the canonical chatbot knowledge layer. Raw transcripts remain private source evidence.
+
+Historical conversations are evidence, not automatically policy. A repeated staff answer may still be wrong, obsolete or contradictory. T2 must preserve contradictions/unknowns rather than silently converting every historical message into a bot instruction.
 
 ### Local decoder dependency
 
@@ -152,7 +221,7 @@ This is a local tooling dependency only and is intentionally not persisted in `p
 
 ### Structured output
 
-A successful v2 record set uses:
+The completed v2 record set uses:
 
 ```text
 CM-Ticket-Transcripts/
@@ -176,18 +245,21 @@ The transcript repository is private. Do not add credentials to the corpus, and 
 
 ### Independence from the production bot
 
-Normal Discord bot engineering continues independently. The transcript corpus may later inform support tooling, analytics or product decisions, but no such integration is implied by collecting the data.
+Normal Discord bot engineering continues independently. The transcript corpus and knowledge graph may later inform support tooling, analytics or a separate chatbot, but the current production bot has no runtime dependency on either.
 
-Any future production-bot runtime read/write integration with the transcript corpus requires separate architecture review and, if it changes a durable runtime/data boundary, a new ADR.
+Any future production-bot runtime read/write integration with the transcript corpus or generated knowledge graph requires separate architecture review and, if it changes a durable runtime/data boundary, a new ADR.
 
 ## Current status
 
 ```text
-Side project:       CM Ticket Transcript Corpus
-Phase:              T1 — corpus acquisition
-Strict links found: 1,578
-One-ticket proof:   COMPLETE — real Msgpack transcript decoded
-Bulk exporter:      IMPLEMENTED on TASK-TRANSCRIPTS-002 branch
-Data repo:          private, data-only
-Next gate:          five-record local structured run, then --all --resume
+Side project:          CM Ticket Transcript Corpus
+Phase T1:              COMPLETE
+Strict links found:    1,578
+Structured corpus:     1,578 / 1,578
+Extraction failures:   0
+Data repo:             private, data-only
+Phase T2:              Support Knowledge Graph
+T2 first gate:         generate analysis-input pack from complete local corpus
+T2 final view:         Obsidian Markdown graph with wikilinks
+Later runtime target:  compact chatbot context derived from canonical graph
 ```
