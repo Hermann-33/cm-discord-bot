@@ -4,7 +4,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const TOOL_VERSION = '1.0.0';
+const TOOL_VERSION = '1.0.1';
 const TRANSCRIPT_ID = /^[A-Za-z0-9_-]{6,128}$/;
 const DEFAULT_OUTPUT_SUBDIR = 'analysis-input';
 
@@ -267,8 +267,9 @@ export async function prepareKnowledgeAnalysisPack(options) {
     const normalizedPath = join(options.dataDir, indexRecord.files.normalized);
     const textPath = join(options.dataDir, indexRecord.files.text);
     const normalizedRecord = await readJson(normalizedPath);
+    const normalizedTranscriptId = normalizedRecord?.source?.transcriptId ?? normalizedRecord?.transcriptId;
 
-    if (normalizedRecord?.schemaVersion !== 2 || normalizedRecord?.transcriptId !== indexRecord.transcriptId) {
+    if (normalizedRecord?.schemaVersion !== 2 || normalizedTranscriptId !== indexRecord.transcriptId) {
       throw new Error(`Normalized record mismatch for ${indexRecord.transcriptId}.`);
     }
     if (normalizedRecord?.acquisition?.method !== 'tickety-msgpack-api') {

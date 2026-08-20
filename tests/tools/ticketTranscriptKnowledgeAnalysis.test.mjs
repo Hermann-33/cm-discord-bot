@@ -57,7 +57,7 @@ test('knowledge analysis packer consolidates the complete schema-v2 corpus into 
       const textPath = `text/${record.id}.txt`;
       const normalized = {
         schemaVersion: 2,
-        transcriptId: record.id,
+        source: { transcriptId: record.id },
         acquisition: { method: 'tickety-msgpack-api' },
         transcript: {
           users: [record.customer, record.staff],
