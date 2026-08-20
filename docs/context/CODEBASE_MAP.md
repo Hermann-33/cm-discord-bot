@@ -80,14 +80,16 @@ users.wallet.adjust
 
 ## Non-production tooling
 
-### Ticket transcript exporter
+### Ticket transcript exporter and analysis preparation
 
 - `tools/ticket-transcript-exporter/run-ticket-transcript-export.mjs` — strict Discord-history wrapper that allows only exact `View Transcript` link buttons through discovery.
 - `tools/ticket-transcript-exporter/export-ticket-transcripts.mjs` — original Discord discovery + HTML/Chrome acquisition module; retained for source-log discovery and historical raw-shell evidence.
 - `tools/ticket-transcript-exporter/export-ticket-payloads.mjs` — schema-v2 structured extractor that reads `source-logs.jsonl`, calls Tickety's fixed `/api/ticketTranscript?id=<id>` endpoint, decodes `application/vnd.msgpack`, resolves message authors, and writes real message-level JSON/text/raw Msgpack artifacts.
+- `tools/ticket-transcript-exporter/prepare-knowledge-analysis.mjs` — offline deterministic packer that consolidates the completed local schema-v2 data repository into line-addressable `analysis-input/corpus.ndjson`, deterministic review excerpts and corpus statistics for exhaustive knowledge-graph analysis.
 - `tools/ticket-transcript-exporter/README.md` — discovery + structured extraction workflow.
 - `tests/tools/ticketTranscriptExporter.test.mjs` — strict button discovery, URL restrictions, Discord-log parsing and legacy HTML helper tests.
 - `tests/tools/ticketTranscriptPayloadExporter.test.mjs` — structured-export CLI, payload validation, user resolution and text-projection tests.
+- `tests/tools/ticketTranscriptKnowledgeAnalysis.test.mjs` — analysis-packer path safety, complete-corpus consolidation, deterministic excerpting and provenance/statistics tests.
 
 Boundary:
 
@@ -102,9 +104,19 @@ source-logs.jsonl
   -> https://tickety.top/api/ticketTranscript?id=<id>
   -> application/vnd.msgpack
   -> schema-v2 local corpus files
+
+Stage 3
+complete schema-v2 local corpus
+  -> offline analysis packer
+  -> CM-Ticket-Transcripts/analysis-input/corpus.ndjson
+  -> CM-Ticket-Transcripts/analysis-input/review.ndjson
+  -> corpus statistics/provenance
+  -> source-grounded knowledge-graph review
 ```
 
-The structured stage does not rescan Discord and does not use the Discord bot token. It uses a local no-save `msgpackr` installation rather than adding a production dependency.
+The structured extraction stage does not rescan Discord and does not use the Discord bot token. It uses a local no-save `msgpackr` installation rather than adding a production dependency.
+
+The analysis-packing stage makes no network calls and does not summarize with an LLM. Its review file is a deterministic triage aid only; original transcript records remain authoritative for any rule promoted into the final support knowledge graph.
 
 No transcript tool is imported by `src/`, included in `tsconfig.build.json`, started by the bot, or connected to the Internal Integrations API/database.
 
@@ -121,6 +133,7 @@ Side-project tooling coverage:
 
 - `tests/tools/ticketTranscriptExporter.test.mjs`
 - `tests/tools/ticketTranscriptPayloadExporter.test.mjs`
+- `tests/tools/ticketTranscriptKnowledgeAnalysis.test.mjs`
 
 All prior config/auth/refund/Aura/wallet/leaderboard/lifecycle/logging tests remain part of the root `npm test` gate.
 
@@ -128,4 +141,4 @@ All prior config/auth/refund/Aura/wallet/leaderboard/lifecycle/logging tests rem
 
 This repo does not own website routes, Supabase migrations/RLS/grants/functions, wallet/order/payment/fulfillment accounting, OAuth/Support-role systems or production website integration-client environment values.
 
-`Hermann-33/CM-Ticket-Transcripts` owns generated historical transcript corpus only. The production bot has no runtime dependency on that repository.
+`Hermann-33/CM-Ticket-Transcripts` owns generated historical transcript corpus and derived data-only knowledge-analysis artifacts. The production bot has no runtime dependency on that repository.
