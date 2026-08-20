@@ -34,7 +34,7 @@ test('mineSupportKnowledge processes the full review input and flags restricted 
       transcriptId: 't1',
       messageCount: 4,
       humanMessageCount: 3,
-      openingCustomerMessages: [{ content: 'I paid but I did not receive my order' }],
+      openingCustomerMessages: [{ content: "I paid but I didn't receive my order" }],
       earlyOtherHumanResponses: [{ content: 'Please send your order ID ABCD1234EFGH' }]
     },
     {
