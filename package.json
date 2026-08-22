@@ -28,6 +28,7 @@
     "evaluate:historical-state-replay": "node tools/ticket-transcript-exporter/evaluate-historical-state-replay.mjs",
     "audit:conversational-safety": "node tools/ticket-transcript-exporter/audit-conversational-safety.mjs",
     "audit:first-turn-label-independence": "node tools/ticket-transcript-exporter/audit-first-turn-label-independence.mjs",
+    "build:llm-triage-benchmark": "node tools/ticket-transcript-exporter/build-llm-triage-benchmark.mjs",
     "start": "node dist/index.js"
   },
   "engines": {
