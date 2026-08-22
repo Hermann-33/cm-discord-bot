@@ -44,6 +44,11 @@ test('rejects invented case and lookup IDs', () => {
   assert.ok(result.errors.includes('unknown_lookup:lookup.fake'));
 });
 
+test('rejects ungrounded entity observations', () => {
+  const value = out({ observations: { explicitEntities: ['product.exodus.rust'], supportSurface: 'account', knownFacts: [], missingFacts: [] }, nextAction: 'ask_clarification', clarificationId: 'clarify.nfa.failure_stage' });
+  assert.ok(validateLlmTriageOutput(value, input()).errors.includes('ungrounded_observation_entity:product.exodus.rust'));
+});
+
 test('rejects restricted autonomous answer', () => {
   const triageInput = input({ restricted: true });
   const value = out({ nextAction: 'answer_case', caseIds: ['case.nfa.invalid_first_use'], confidence: 0.95 });
