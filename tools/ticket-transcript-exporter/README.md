@@ -152,3 +152,38 @@ For every successfully fetched transcript it stores:
 5. an estimated message count when common transcript markers exist.
 
 After the first real five-ticket sample is generated, inspect the raw HTML and upgrade the parser to message-level structured JSON against Tickety's actual DOM rather than guessed selectors.
+
+## Canonical support knowledge tooling
+
+The same non-production tooling boundary now also hosts reusable validators/evaluators for the private canonical support-KB phase. These tools read a local `CM-Ticket-Transcripts` checkout but never import private data into this repository.
+
+### Validate canonical/runtime artifacts
+
+```powershell
+npm.cmd run validate:canonical-support-kb -- --data-dir ..\CM-Ticket-Transcripts
+```
+
+`validate-canonical-support-kb.mjs` checks:
+
+- exact historical fact-disposition coverage;
+- allowed disposition values;
+- canonical Obsidian wikilinks;
+- required runtime-pack files and case IDs;
+- obvious privacy leakage candidates.
+
+It does not decide semantic equivalence; entity/fact canonicalization still requires evidence-based reasoning.
+
+### Baseline retrieval evaluation
+
+```powershell
+npm.cmd run evaluate:canonical-support-retrieval -- --data-dir ..\CM-Ticket-Transcripts
+```
+
+`evaluate-canonical-support-retrieval.mjs` provides a deterministic baseline over compact support cases using:
+
+- exact aliases;
+- scope-aware filtering when aliases resolve entities;
+- BM25-style lexical scoring;
+- Recall@1/3/5 and MRR against the sanitized evaluation dataset.
+
+This baseline intentionally calls no external model or embedding API. Dense/hybrid retrieval should only be added after the CM gold set shows measurable benefit.
