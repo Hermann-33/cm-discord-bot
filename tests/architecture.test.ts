@@ -58,6 +58,12 @@ test("API client exposes only explicitly approved bot operations", () => {
   }
 });
 
+test("OpenRouter integration uses the approved host and never imports private transcript tooling", () => {
+  assert.equal(sourceText.includes("https://openrouter.ai"), true);
+  assert.equal(sourceText.includes("tools/ticket-transcript-exporter"), false);
+  assert.equal(sourceText.includes("CM-Ticket-Transcripts"), false);
+});
+
 test("admin authorization is guild-wide and cannot rely on Discord roles alone", () => {
   assert.equal(sourceText.includes("BOT_ADMIN_USER_IDS"), true);
   assert.equal(sourceText.includes("botAdminUserIds.includes"), true);
@@ -84,6 +90,9 @@ test("environment example contains only the approved root variable surface", () 
     "CM_INTERNAL_INTEGRATIONS_API_CLIENT_ID",
     "CM_INTERNAL_INTEGRATIONS_API_KEY_ID",
     "CM_INTERNAL_INTEGRATIONS_API_HMAC_SECRET_BASE64",
-    "CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS"
+    "CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS",
+    "OPENROUTER_API_KEY",
+    "OPENROUTER_MODEL",
+    "OPENROUTER_DATA_COLLECTION"
   ]);
 });
