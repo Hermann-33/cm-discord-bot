@@ -5,6 +5,7 @@ import { performance } from 'node:perf_hooks';
 import { classifyConversationalSafety } from './audit-conversational-safety.mjs';
 import { runLlmTriage } from './llm-triage-contract.mjs';
 import { createLocalOpenAiCompatibleTriageProvider } from './llm-triage-provider.mjs';
+import { createOpenRouterTriageProvider, DEFAULT_OPENROUTER_TRIAGE_MODEL } from './openrouter-triage-provider.mjs';
 
 const readJsonl = async (file) => (await readFile(file, 'utf8')).split(/\r?\n/u).filter(Boolean).map((line) => JSON.parse(line));
 const safeName = (value) => String(value).replace(/[^a-z0-9._-]+/giu, '-').replace(/^-+|-+$/gu, '').toLowerCase() || 'model';
@@ -116,6 +117,27 @@ export async function evaluateLlmTriageRows(rows, {
   return { summary, results };
 }
 
+async function writeEvaluation({ dataDir, inputFile, model, providerName, evaluated, metadata = {} }) {
+  const auditDir = path.join(dataDir, 'knowledge-canonical', 'Audit');
+  const stem = `llm-triage-${providerName}-${safeName(model)}`;
+  const output = {
+    ...evaluated.summary,
+    provider: providerName,
+    inputFile,
+    ...metadata
+  };
+  await writeFile(path.join(auditDir, `${stem}-summary.json`), `${JSON.stringify(output, null, 2)}\n`, 'utf8');
+  await writeFile(path.join(auditDir, `${stem}-results.jsonl`), `${evaluated.results.map((row) => JSON.stringify(row)).join('\n')}\n`, 'utf8');
+  return output;
+}
+
+async function loadRows(dataDir, inputFile, limit) {
+  const auditDir = path.join(dataDir, 'knowledge-canonical', 'Audit');
+  let rows = await readJsonl(path.join(auditDir, inputFile));
+  if (Number.isInteger(limit) && limit > 0) rows = rows.slice(0, limit);
+  return rows;
+}
+
 export async function evaluateLocalLlmTriage({
   dataDir,
   inputFile = 'llm-triage-development-inputs.jsonl',
@@ -126,9 +148,7 @@ export async function evaluateLocalLlmTriage({
   useJsonSchema = true,
   directCaseConfidence = 0.8
 }) {
-  const auditDir = path.join(dataDir, 'knowledge-canonical', 'Audit');
-  let rows = await readJsonl(path.join(auditDir, inputFile));
-  if (Number.isInteger(limit) && limit > 0) rows = rows.slice(0, limit);
+  const rows = await loadRows(dataDir, inputFile, limit);
   const provider = createLocalOpenAiCompatibleTriageProvider({ baseUrl, model, timeoutMs, useJsonSchema });
   const evaluated = await evaluateLlmTriageRows(rows, {
     provider,
@@ -138,17 +158,45 @@ export async function evaluateLocalLlmTriage({
       if (index === 1 || index === total || index % 25 === 0) process.stderr.write(`triage ${index}/${total}\n`);
     }
   });
-  const stem = `llm-triage-${safeName(model)}`;
-  const output = {
-    ...evaluated.summary,
+  return writeEvaluation({
+    dataDir,
     inputFile,
-    baseUrl,
-    useJsonSchema,
-    directCaseConfidence
-  };
-  await writeFile(path.join(auditDir, `${stem}-summary.json`), `${JSON.stringify(output, null, 2)}\n`, 'utf8');
-  await writeFile(path.join(auditDir, `${stem}-results.jsonl`), `${evaluated.results.map((row) => JSON.stringify(row)).join('\n')}\n`, 'utf8');
-  return output;
+    model,
+    providerName: 'local',
+    evaluated,
+    metadata: { baseUrl, useJsonSchema, directCaseConfidence }
+  });
+}
+
+export async function evaluateOpenRouterLlmTriage({
+  dataDir,
+  inputFile = 'llm-triage-development-inputs.jsonl',
+  model = DEFAULT_OPENROUTER_TRIAGE_MODEL,
+  apiKey,
+  limit = null,
+  timeoutMs = 30_000,
+  dataCollection = 'allow',
+  maxTokens = 400,
+  directCaseConfidence = 0.8
+}) {
+  const rows = await loadRows(dataDir, inputFile, limit);
+  const provider = createOpenRouterTriageProvider({ apiKey, model, timeoutMs, dataCollection, maxTokens });
+  const evaluated = await evaluateLlmTriageRows(rows, {
+    provider,
+    model,
+    directCaseConfidence,
+    onProgress: ({ index, total }) => {
+      if (index === 1 || index === total || index % 10 === 0) process.stderr.write(`openrouter triage ${index}/${total}\n`);
+    }
+  });
+  return writeEvaluation({
+    dataDir,
+    inputFile,
+    model,
+    providerName: 'openrouter',
+    evaluated,
+    metadata: { dataCollection, maxTokens, directCaseConfidence }
+  });
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
@@ -158,20 +206,39 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     return index >= 0 ? args[index + 1] : fallback;
   };
   const dataDir = get('--data-dir');
-  const model = get('--model');
-  if (!dataDir || !model) throw new Error('Usage: node evaluate-llm-triage.mjs --data-dir <private-data-dir> --model <local-model> [--base-url http://127.0.0.1:11434/v1] [--limit N]');
+  const providerName = get('--provider', 'local');
+  const model = get('--model', providerName === 'openrouter' ? DEFAULT_OPENROUTER_TRIAGE_MODEL : null);
+  if (!dataDir || !model) throw new Error('Usage: node evaluate-llm-triage.mjs --data-dir <private-data-dir> --provider <local|openrouter> --model <model> [--limit N]');
   const limitRaw = get('--limit');
   const timeoutRaw = get('--timeout-ms');
   const confidenceRaw = get('--direct-case-confidence');
-  const result = await evaluateLocalLlmTriage({
+  const common = {
     dataDir: path.resolve(dataDir),
     inputFile: get('--input-file', 'llm-triage-development-inputs.jsonl'),
     model,
-    baseUrl: get('--base-url', 'http://127.0.0.1:11434/v1'),
     limit: limitRaw ? Number(limitRaw) : null,
     timeoutMs: timeoutRaw ? Number(timeoutRaw) : 30_000,
-    useJsonSchema: !args.includes('--no-json-schema'),
     directCaseConfidence: confidenceRaw ? Number(confidenceRaw) : 0.8
-  });
+  };
+
+  let result;
+  if (providerName === 'openrouter') {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) throw new Error('OPENROUTER_API_KEY is required for --provider openrouter');
+    result = await evaluateOpenRouterLlmTriage({
+      ...common,
+      apiKey,
+      dataCollection: get('--data-collection', process.env.OPENROUTER_DATA_COLLECTION ?? 'allow'),
+      maxTokens: Number(get('--max-tokens', '400'))
+    });
+  } else if (providerName === 'local') {
+    result = await evaluateLocalLlmTriage({
+      ...common,
+      baseUrl: get('--base-url', 'http://127.0.0.1:11434/v1'),
+      useJsonSchema: !args.includes('--no-json-schema')
+    });
+  } else {
+    throw new Error('--provider must be local or openrouter');
+  }
   console.log(JSON.stringify(result, null, 2));
 }
