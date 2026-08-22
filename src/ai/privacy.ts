@@ -4,6 +4,8 @@ const DISCORD_MENTION_PATTERN = /<@!?\d{5,32}>/gu;
 const SNOWFLAKE_PATTERN = /(?<!\d)\d{17,20}(?!\d)/gu;
 const URL_PATTERN = /https?:\/\/[^\s<>()]+/giu;
 const OPENROUTER_KEY_PATTERN = /\bsk-or-[A-Za-z0-9_-]{12,}\b/gu;
+const CM_ORDER_REFERENCE_PATTERN = /\bCM-[A-Za-z0-9-]{4,}\b/giu;
+const LONG_SECRET_LIKE_TOKEN_PATTERN = /\b[A-Za-z0-9_-]{24,}\b/gu;
 
 const SENSITIVE_CONTEXT_KEY = /(?:^|_)(?:email|discord(?:user)?id|customerid|userid|orderid|purchaseid|purchaseintentid|selector|token|credential|password|secret|apikey|api_key|reference|url)(?:$|_)/iu;
 
@@ -14,7 +16,9 @@ export function sanitizeSupportText(value: string): string {
     .replace(DISCORD_MENTION_PATTERN, "[discord mention omitted]")
     .replace(UUID_PATTERN, "[uuid omitted]")
     .replace(SNOWFLAKE_PATTERN, "[numeric id omitted]")
+    .replace(CM_ORDER_REFERENCE_PATTERN, "[order reference omitted]")
     .replace(URL_PATTERN, "[url omitted]")
+    .replace(LONG_SECRET_LIKE_TOKEN_PATTERN, "[token omitted]")
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/gu, " ")
     .replace(/\s+/gu, " ")
     .trim();
