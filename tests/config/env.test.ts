@@ -27,6 +27,7 @@ test("loads a complete strict configuration", () => {
   assert.equal(config.internalApi.clientId, "cm-discord-bot");
   assert.equal(config.internalApi.timeoutMs, 5_000);
   assert.equal(config.internalApi.hmacSecret.byteLength, 32);
+  assert.equal(config.openRouter, undefined);
 });
 
 test("blank leaderboard message ID enables bootstrap mode", () => {
@@ -95,4 +96,54 @@ test("defaults timeout to 5000 and enforces 1000 through 15000 milliseconds", ()
     environment.CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS = value;
     assert.throws(() => loadConfig(environment), /CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS/);
   }
+});
+
+test("OpenRouter remains disabled until an API key is configured", () => {
+  const environment = validEnvironment();
+  environment.OPENROUTER_API_KEY = "   ";
+  environment.OPENROUTER_MODEL = "google/gemma-4-26b-a4b-it:free";
+  assert.equal(loadConfig(environment).openRouter, undefined);
+});
+
+test("OpenRouter key enables pinned Gemma triage defaults", () => {
+  const environment = validEnvironment();
+  environment.OPENROUTER_API_KEY = "sk-or-v1-test-key-1234567890";
+  const config = loadConfig(environment);
+
+  assert.deepEqual(config.openRouter, {
+    origin: "https://openrouter.ai",
+    apiKey: "sk-or-v1-test-key-1234567890",
+    model: "google/gemma-4-26b-a4b-it:free",
+    dataCollection: "allow",
+    timeoutMs: 20_000,
+    maxTokens: 400
+  });
+});
+
+test("OpenRouter model and data policy can be explicitly overridden", () => {
+  const environment = validEnvironment();
+  environment.OPENROUTER_API_KEY = "sk-or-v1-test-key-1234567890";
+  environment.OPENROUTER_MODEL = "arcee-ai/trinity-large-preview:free";
+  environment.OPENROUTER_DATA_COLLECTION = "deny";
+  const config = loadConfig(environment);
+
+  assert.equal(config.openRouter?.model, "arcee-ai/trinity-large-preview:free");
+  assert.equal(config.openRouter?.dataCollection, "deny");
+});
+
+test("rejects malformed OpenRouter configuration without printing the key", () => {
+  const environment = validEnvironment();
+  const key = "not-an-openrouter-key-value";
+  environment.OPENROUTER_API_KEY = key;
+  environment.OPENROUTER_DATA_COLLECTION = "maybe";
+
+  assert.throws(
+    () => loadConfig(environment),
+    (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      return message.includes("OPENROUTER_API_KEY") &&
+        message.includes("OPENROUTER_DATA_COLLECTION") &&
+        !message.includes(key);
+    }
+  );
 });
