@@ -1,0 +1,74 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+import {
+  validateEvaluationRecords
+} from '../../tools/ticket-transcript-exporter/validate-canonical-support-evaluation.mjs';
+
+function baseExpected(caseId) {
+  return {
+    entityIds: [],
+    caseIds: caseId ? [caseId] : [],
+    acceptableCaseIds: [],
+    policyIds: [],
+    dynamicLookupIds: [],
+    mustIncludeClaims: [],
+    mustNotIncludeClaims: [],
+    diagnosticIds: [],
+    escalation: false
+  };
+}
+
+test('evaluation validator accepts complete synthetic behavior coverage', () => {
+  const caseIds = new Set(['case.synthetic']);
+  const families = [
+    'paraphrase',
+    'typo_or_slang',
+    'negation',
+    'already_tried',
+    'product_isolation',
+    'variant_isolation',
+    'account_model_isolation',
+    'dynamic_state',
+    'multi_turn',
+    'ambiguity'
+  ];
+  const records = families.map((family, index) => ({
+    id: `eval.${index + 1}`,
+    query: `safe synthetic query ${index + 1}`,
+    behaviorFamily: family,
+    conversationContext: [],
+    expected: {
+      ...baseExpected('case.synthetic'),
+      dynamicLookupIds: family === 'dynamic_state' ? ['dynamic.order.status'] : [],
+      escalation: family === 'ambiguity'
+    },
+    sourceTranscriptIds: []
+  }));
+
+  const result = validateEvaluationRecords(records, caseIds, records.length);
+  assert.equal(result.ok, true, JSON.stringify(result, null, 2));
+  assert.equal(result.queryCount, families.length);
+  assert.equal(result.dynamicExpectedCount, 1);
+  assert.equal(result.escalationExpectedCount, 1);
+});
+
+test('evaluation validator catches unknown cases, missing families and privacy leakage', () => {
+  const result = validateEvaluationRecords([
+    {
+      id: 'eval.bad',
+      query: 'contact customer@example.com at https://example.com/private',
+      conversationContext: [],
+      expected: {
+        ...baseExpected('case.unknown')
+      },
+      sourceTranscriptIds: []
+    }
+  ], new Set(['case.synthetic']), 2);
+
+  assert.equal(result.ok, false);
+  assert.ok(result.issues.some((issue) => issue.includes('unknown runtime case')));
+  assert.ok(result.issues.some((issue) => issue.includes('privacy candidate email')));
+  assert.ok(result.issues.some((issue) => issue.includes('below required minimum')));
+  assert.ok(result.issues.some((issue) => issue.includes('missing required behavior family')));
+});
