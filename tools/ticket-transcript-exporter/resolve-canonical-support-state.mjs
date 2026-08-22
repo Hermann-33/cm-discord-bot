@@ -1,9 +1,16 @@
 import { rankCases } from './evaluate-canonical-support-retrieval.mjs';
+import { applyClarificationAnswer as recordClarificationAnswer, selectClarification } from './select-canonical-clarification.mjs';
 
 const STATE_ARRAYS = [
   'resolvedEntities',
   'candidateEntities',
   'caseHistory',
+  'candidateCaseIds',
+  'candidateFamilyIds',
+  'questionsAsked',
+  'answersReceived',
+  'unknownContext',
+  'activeIntents',
   'diagnosticsAsked',
   'causesRuledOut',
   'proceduresAttempted',
@@ -14,7 +21,8 @@ const STATE_OBJECTS = [
   'knownContext',
   'diagnosticAnswers',
   'procedureOutcomes',
-  'dynamicLookupResults'
+  'dynamicLookupResults',
+  'policyState'
 ];
 
 function unique(values) {
@@ -41,6 +49,7 @@ export function createSupportState(initial = {}) {
   for (const key of STATE_OBJECTS) state[key] = state[key] && typeof state[key] === 'object' && !Array.isArray(state[key]) ? state[key] : {};
   state.activeCaseId = typeof state.activeCaseId === 'string' ? state.activeCaseId : null;
   state.pendingDiagnosticId = typeof state.pendingDiagnosticId === 'string' ? state.pendingDiagnosticId : null;
+  state.pendingClarificationId = typeof state.pendingClarificationId === 'string' ? state.pendingClarificationId : null;
   return state;
 }
 
@@ -120,6 +129,54 @@ function interpretPendingAnswer(state, text) {
   setDiagnosticAnswer(state, id, yes);
   if (id === 'diagnostic.loader.webview_present') state.knownContext.webviewInstalled = yes;
   if (id === 'diagnostic.order.reference_available') state.knownContext.orderSelectorAvailable = yes;
+  if (id === 'diagnostic.nfa.worked_before') state.knownContext.workedBefore = yes;
+}
+
+function clarificationOption(id, text) {
+  if (/^(?:i dont know|dont know|not sure|idk|unsure)\b/.test(text)) return 'not_sure';
+  const mappings = {
+    'clarify.support_surface': [
+      ['nfa_or_account', /\b(?:nfa|account|acc)\b/],
+      ['loader_or_product', /\b(?:loader|product|cheat|spoofer)\b/],
+      ['website_payment_or_order', /\b(?:website|site|payment|paid|order|delivery)\b/]
+    ],
+    'clarify.nfa.failure_stage': [
+      ['never_worked', /\b(?:never worked|never|first time|from (?:the )?(?:start|beginning)|didnt work)\b/],
+      ['worked_then_invalid', /\b(?:worked (?:before|yesterday|earlier)|used to work|then invalid|became invalid|stopped working)\b/],
+      ['owner_or_session_conflict', /\b(?:owner|someone else|logged out|kicked|signed out)\b/],
+      ['activation_or_token_issue', /\b(?:activate|activation|redeem|token)\b/]
+    ],
+    'clarify.loader.failure_stage': [
+      ['closes_immediately', /\b(?:close|closes|closing|exit|exits|disappear)\b/],
+      ['connection_failure', /\b(?:connect|connection|network|fetch)\b/],
+      ['download_or_update_failure', /\b(?:download|update|updating)\b/],
+      ['key_or_license_error', /\b(?:key|license)\b/]
+    ],
+    'clarify.payment_state': [
+      ['declined', /\b(?:declined|rejected)\b/],
+      ['pending', /\b(?:pending|processing|waiting)\b/],
+      ['completed_missing', /\b(?:paid|completed|charged).*(?:nothing|missing|didnt receive|not received)|(?:nothing|missing).*(?:paid|charged)\b/],
+      ['wallet_balance_issue', /\b(?:wallet|balance)\b/]
+    ],
+    'clarify.order.fulfillment_state': [
+      ['current_status', /\b(?:status|where is|check)\b/],
+      ['waiting_for_delivery', /\b(?:waiting|not received|didnt receive|nothing arrived|missing)\b/],
+      ['wrong_delivery', /\b(?:wrong|different)\b/],
+      ['refund_or_cancel', /\b(?:refund|cancel)\b/]
+    ]
+  };
+  for (const [option, pattern] of mappings[id] ?? []) if (pattern.test(text)) return option;
+  return null;
+}
+
+function interpretPendingClarification(state, text, clarifications) {
+  if (!state.pendingClarificationId) return false;
+  const clarification = (clarifications ?? []).find((item) => item.id === state.pendingClarificationId);
+  if (!clarification) return false;
+  const option = clarificationOption(clarification.id, text);
+  if (!option) return false;
+  Object.assign(state, recordClarificationAnswer(state, clarification, option, text));
+  return true;
 }
 
 function caseById(runtimeCases, id) {
@@ -169,6 +226,10 @@ export function applyAssistantAction(inputState, action = {}) {
     state.pendingDiagnosticId = action.askDiagnosticId;
     state.diagnosticsAsked = unique([...state.diagnosticsAsked, action.askDiagnosticId]);
   }
+  if (action.askClarificationId) {
+    state.pendingClarificationId = action.askClarificationId;
+    state.questionsAsked = unique([...state.questionsAsked, action.askClarificationId]);
+  }
   if (action.recommendProcedureId) state.knownContext.pendingProcedureId = action.recommendProcedureId;
   if (action.requestDynamicLookupId) state.dynamicLookupResults[action.requestDynamicLookupId] = { status: 'requested' };
   return state;
@@ -183,14 +244,19 @@ export function statefulQuery(state, customerText) {
   return `${tags.join(' ')} ${customerText}`.trim();
 }
 
-export function resolveSupportTurn({ state: inputState = {}, customerText, runtimeCases = [], aliasEntries = [], retrievalMethod = 'hybrid' }) {
+export function resolveSupportTurn({ state: inputState = {}, customerText, runtimeCases = [], aliasEntries = [], runtimeClarifications = [], retrievalMethod = 'hybrid' }) {
   const state = createSupportState(inputState);
   const text = normalize(customerText);
   carryEntities(state, text, aliasEntries);
   interpretPendingAnswer(state, text);
+  const answeredClarification = interpretPendingClarification(state, text, runtimeClarifications);
   interpretKnownContext(state, text);
 
   let activeCase = caseById(runtimeCases, state.activeCaseId);
+  if (answeredClarification && state.candidateCaseIds.length === 1) {
+    activateCase(state, state.candidateCaseIds[0]);
+    activeCase = caseById(runtimeCases, state.activeCaseId);
+  }
   const persists = /\b(?:still|everything is the same|everything(?:'s| is)? same|same error|same issue|same crash|same problem|didnt work|did not work|wont open|will not open|keeps? (?:crashing|closing|happening))\b/.test(text);
   const succeeded = /\b(?:worked|fixed|resolved|all good|that did it)\b/.test(text) && !persists;
   const alreadyTried = /\b(?:already (?:did|done|tried|installed|closed|lowered|sent)|tried (?:it|that|this)|did that already)\b/.test(text);
@@ -237,6 +303,11 @@ export function resolveSupportTurn({ state: inputState = {}, customerText, runti
   if (activeCase) {
     const action = applicableNextAction(state, activeCase);
     if (action) return { state, action, usedRetrieval: false, transitionPriority: 'active_case_continuity' };
+  }
+
+  if (!activeCase && runtimeClarifications.length) {
+    const next = selectClarification({ clarifications: runtimeClarifications, candidateCaseIds: state.candidateCaseIds, candidateFamilyIds: state.candidateFamilyIds, state });
+    if (next) return { state, action: { askClarificationId: next.id }, usedRetrieval: false, transitionPriority: answeredClarification ? 'progressive_clarification' : 'information_sufficiency_clarification', candidateReduction: next.expectedCaseReduction };
   }
 
   const ranked = rankCases(statefulQuery(state, customerText), runtimeCases, aliasEntries, 5, retrievalMethod, { state });

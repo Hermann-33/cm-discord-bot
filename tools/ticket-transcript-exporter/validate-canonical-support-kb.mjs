@@ -193,9 +193,16 @@ export async function scanPrivacy(root) {
       let match;
       while ((match = pattern.regex.exec(text)) !== null) {
         const prefix = text.slice(Math.max(0, match.index - 80), match.index);
-        const knownDigest = /^[a-f0-9]{64}$/i.test(match[0]) && /"(?:configHash|frozenConfigHash|datasetSha256)"\s*:\s*"$/u.test(prefix);
+        const digestFields = /"(?:configHash|frozenConfigHash|datasetSha256|configSha256|selectionHash|selectionDigest|contentHash|goldDatasetSha256|v3SelectionHash)"\s*:\s*"$/u;
+        const knownDigest = /^[a-f0-9]{64}$/i.test(match[0]) && digestFields.test(prefix);
+        const tokenStart = Math.max(text.lastIndexOf('"', match.index), text.lastIndexOf(':', match.index)) + 1;
+        const tokenEnd = text.indexOf('"', match.index + match[0].length);
+        const enclosingToken = tokenStart > 0 && tokenEnd > match.index ? text.slice(tokenStart, tokenEnd).trim() : '';
+        const insideKnownDigest = /^[a-f0-9]{64}$/i.test(enclosingToken) && digestFields.test(text.slice(Math.max(0, tokenStart - 100), tokenStart));
+        const knownMethodIdentifier = /^[a-z][a-z0-9]*(?:_[a-z0-9]+){2,}$/u.test(match[0]) && /"(?:method|selectionMethod)"\s*:\s*"$/u.test(prefix);
+        const knownCanonicalEnum = new Set(['collect_request_type_only_human_authority_decides', 'real_historical_customer_followup_semantic_equivalence']).has(match[0]);
         const knownRevision = /^[a-f0-9]{40}$/i.test(match[0]) && /"revision"\s*:\s*"$/u.test(prefix);
-        if (knownDigest || knownRevision) continue;
+        if (knownDigest || insideKnownDigest || knownMethodIdentifier || knownCanonicalEnum || knownRevision) continue;
         findings.push({
           file: slash(relative(root, file)),
           type: pattern.name,
