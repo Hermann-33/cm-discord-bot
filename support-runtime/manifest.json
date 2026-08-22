@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "knowledgeVersion": "1.0.0",
+  "artifacts": [
+    {
+      "file": "action-routing.json",
+      "sha256": "19731c9229c1a7b7cc622eebef258385a734f1c426371ae16a4fe9e7f3240097",
+      "records": 1
+    },
+    {
+      "file": "aliases.json",
+      "sha256": "0ab6b9b40d08a15f679bf12eed279f700112f66c4b2cd6fa52e42d7c28c99ef5",
+      "records": 480
+    },
+    {
+      "file": "cases.json",
+      "sha256": "9be5c3ad5222022cdc714ae33cc1e7a2c278c2bfb7dac463d113be0fea9af0b7",
+      "records": 55
+    },
+    {
+      "file": "catalog.json",
+      "sha256": "0b9e01a9a116e40c713254dec26f073058d45fdf69834cbd79bcee2afc174b8c",
+      "records": 1
+    },
+    {
+      "file": "clarifications.json",
+      "sha256": "0fbe59b1d604567b7e7de3290952b37920c3737f556f74b6667f28258d755527",
+      "records": 14
+    },
+    {
+      "file": "dynamic-lookups.json",
+      "sha256": "553d022d7493e43de8344d8e3bb976c610c894bc1870a116809fa1bf357ab2be",
+      "records": 7
+    },
+    {
+      "file": "escalations.json",
+      "sha256": "f93102c45f95f32ba79a4685f4143965bd81dd3996045a5b223c4b718835e23f",
+      "records": 4
+    },
+    {
+      "file": "policies.json",
+      "sha256": "79432d207dda3235f81d2ca97a344e9b995e18ab7d41b1420904c096f793d05d",
+      "records": 4
+    },
+    {
+      "file": "procedures.json",
+      "sha256": "399efa7b7999405d6d8828a11c4b2c005ab3a4d2e2265f9671ca059772dcda95",
+      "records": 6
+    },
+    {
+      "file": "product-profiles.json",
+      "sha256": "6abf5c3722241f259e748f77b9d603cc84c1725100439f5a3690b26089d44f31",
+      "records": 35
+    },
+    {
+      "file": "restricted-topics.json",
+      "sha256": "53f95ea366327257d44eb8d08ff05ce73f0176145c8d08215c1b1f4c9d33ce6b",
+      "records": 1
+    },
+    {
+      "file": "routing.json",
+      "sha256": "4549564eddcf7538f458e5223a84fde1ee74713215d4e29e10b7fba2da07b384",
+      "records": 55
+    }
+  ]
+}

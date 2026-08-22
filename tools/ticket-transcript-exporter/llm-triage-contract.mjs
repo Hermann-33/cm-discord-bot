@@ -56,6 +56,7 @@ function lookupResolved(state, id) {
 }
 
 function clarificationAlreadyKnown(state, item) {
+  if (!item) return false;
   const fields = Array.isArray(item.setsContext) ? item.setsContext : item.setsContext ? [item.setsContext] : [];
   if (fields.length > 0 && fields.every((field) => state.knownContext?.[field] !== undefined)) return true;
   if ((item.liveLookupCanReplace ?? []).some((id) => lookupResolved(state, id))) return true;
@@ -167,6 +168,7 @@ export function validateLlmTriageOutput(output, input, options = {}) {
   const allowedClarifications = new Set(input?.allowed?.clarificationIds ?? []);
   const allowedLookups = new Set(input?.allowed?.dynamicLookupIds ?? []);
   const allowedPolicies = new Set(input?.allowed?.policyIds ?? []);
+  const clarificationById = byId(input?.allowed?.clarifications ?? []);
   for (const id of output.caseIds ?? []) if (!allowedCases.has(id)) errors.push(`unknown_case:${id}`);
   for (const id of output.dynamicLookupIds ?? []) if (!allowedLookups.has(id)) errors.push(`unknown_lookup:${id}`);
   for (const id of output.policyIds ?? []) if (!allowedPolicies.has(id)) errors.push(`unknown_policy:${id}`);
@@ -181,6 +183,7 @@ export function validateLlmTriageOutput(output, input, options = {}) {
 
   const asked = new Set(input?.state?.questionsAsked ?? []);
   if (output.clarificationId && asked.has(output.clarificationId)) errors.push('repeated_clarification');
+  if (output.clarificationId && clarificationAlreadyKnown(input?.state ?? {}, clarificationById.get(output.clarificationId))) errors.push('clarification_answer_already_known');
 
   const caseIndex = byId(input?.allowed?.cases ?? []);
   for (const id of output.caseIds ?? []) {
@@ -196,10 +199,13 @@ function fallbackObservations() {
 
 export function chooseSafeTriageFallback(input) {
   const activeCaseId = input?.state?.activeCaseId;
-  if (activeCaseId && (input?.allowed?.caseIds ?? []).includes(activeCaseId)) {
+  if (!input?.restricted && activeCaseId && (input?.allowed?.caseIds ?? []).includes(activeCaseId)) {
     return { observations: fallbackObservations(), nextAction: 'answer_case', caseIds: [activeCaseId], clarificationId: null, dynamicLookupIds: [], policyIds: [], confidence: 1, reasonCode: 'existing_active_case' };
   }
-  const clarification = (input?.allowed?.clarifications ?? []).find((item) => !(input?.state?.questionsAsked ?? []).includes(item.id));
+  const clarification = (input?.allowed?.clarifications ?? []).find((item) =>
+    !(input?.state?.questionsAsked ?? []).includes(item.id) &&
+    !clarificationAlreadyKnown(input?.state ?? {}, item)
+  );
   if (clarification) {
     return { observations: fallbackObservations(), nextAction: 'ask_clarification', caseIds: [], clarificationId: clarification.id, dynamicLookupIds: [], policyIds: [], confidence: 1, reasonCode: 'safe_canonical_clarification' };
   }

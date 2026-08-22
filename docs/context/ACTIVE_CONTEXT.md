@@ -1,18 +1,34 @@
 # Active Context
 
-Updated: 2026-08-19
+Updated: 2026-08-23
 
 ## Mainline baseline
 
-Current remote `master` observed during TASK-CM-ADMIN-007:
+Current remote `master` observed while starting the AI support integration:
 
 ```text
-087e2d431ff3ddb74e034b9d736c64f1b914abc9
+c8847611edbd4b8a43a6f8011bae9f069377b0d8
 ```
 
-This mainline includes TASK-CM-ADMIN-006 and the parallel transcript-exporter context/tooling work governed by ADR-0010.
+TASK-CM-ADMIN-007 is merged. Canonical support KB and planner benchmark tooling continue on feature branches; customer-facing AI support is not enabled.
 
-TASK-CM-ADMIN-007 is implemented and source-verified on draft PR #5 / branch `task/cm-order-support-details`; it is not yet merged or deployed.
+## AI support integration feature state
+
+Branch `task/ai-support-integration` prepares the ADR-0012 boundary:
+
+- optional OpenRouter planner, disabled without `OPENROUTER_API_KEY`;
+- pinned default `google/gemma-4-26b-a4b-it:free`;
+- compact planner payload privacy sanitization and deterministic output validation;
+- safe no-retry fallback for timeout, quota/rate limit, 5xx, provider and malformed-output failure;
+- stateful support-service interfaces with pending-question answer consumption;
+- an operator-controlled allowlist importer from private `runtime-kb/` to public bundled `support-runtime/`;
+- no raw transcripts, evidence/provenance fields, transcript/fact IDs, customer PII, routing exemplars, or private manifests in the public pack;
+- no runtime path/dependency on the private transcript repository;
+- no Discord `MessageCreate` support wiring.
+
+The next gate is a controlled 20-record OpenRouter smoke benchmark using the already-consumed development input set after the operator manually supplies the API key. No hosted request is part of repository setup/verification.
+
+Local Node `v24.11.1` repository verification passed on 2026-08-23: `npm.cmd ci` reported 0 vulnerabilities, all 261 tests passed, typecheck/build passed, and `git diff --check` passed.
 
 ## Current mainline production behavior
 

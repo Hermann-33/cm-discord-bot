@@ -176,3 +176,15 @@ Added an offline compiler, canonical/reference/privacy validators, a sanitized e
 ### 2026-08-22 remediation addendum
 
 Independent review correctly found the first 13-case runtime layer and templated benchmark semantically incomplete. The remediation compiler now consumes all 1,578 reviewed ticket ledgers, emits only corpus-matched cases, writes exact ticket and fact-usage ledgers, withholds 341 distinct source-grounded transcript queries from recognition, and keeps 50 synthetic behavioral records separate. Structural, reference, and privacy gates pass. Historical hybrid retrieval improves materially but remains below directional acceptance targets, so the result is explicitly `PARTIAL` and not production-ready.
+
+---
+
+## 2026-08-23 — AI support integration preparation
+
+ADR-0012 establishes a sanitized bundled support-runtime boundary and constrained optional OpenRouter next-action planner. The feature adds strict environment defaults, outbound PII/credential/reference masking, JSON-schema requests, deterministic canonical-ID/scope/restriction/repetition/known-answer validation, safe no-retry provider fallback, explicit stateful support-service interfaces, pending short-answer consumption, and an operator-controlled runtime-pack importer/loader.
+
+The generated public pack excludes private manifests, routing exemplars, provenance, transcript/fact IDs, historical case-context snippets, procedure outcome evidence and customer PII. Production source contains no private repository path and no customer-facing Discord AI wiring.
+
+Hosted OpenRouter execution remains deliberately unperformed. The next operational gate is a 20-record consumed-development smoke benchmark after the operator supplies the key outside Git.
+
+Local Node `v24.11.1` verification passed: `npm.cmd ci` (0 vulnerabilities), `npm.cmd test` (261/261), typecheck, production build, diff check, runtime-pack privacy scan, secret/environment scan, legacy isolation, and confirmation that Discord startup/registration wiring was unchanged.

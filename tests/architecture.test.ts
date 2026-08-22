@@ -62,6 +62,7 @@ test("OpenRouter integration uses the approved host and never imports private tr
   assert.equal(sourceText.includes("https://openrouter.ai"), true);
   assert.equal(sourceText.includes("tools/ticket-transcript-exporter"), false);
   assert.equal(sourceText.includes("CM-Ticket-Transcripts"), false);
+  assert.equal(sourceText.includes("runtime-kb"), false);
 });
 
 test("admin authorization is guild-wide and cannot rely on Discord roles alone", () => {

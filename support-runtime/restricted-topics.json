@@ -1,0 +1,22 @@
+[
+  {
+    "id": "restricted.anti_cheat_bypass",
+    "recognition": [
+      "anti-cheat bypass",
+      "detection evasion",
+      "injection internals",
+      "kernel or driver bypass",
+      "spoofing bypass internals"
+    ],
+    "safeContext": [
+      "exact product identity",
+      "ordinary operating-system context",
+      "customer-visible error"
+    ],
+    "prohibited": [
+      "autonomous operational bypass instructions",
+      "optimized evasion sequence"
+    ],
+    "escalationId": "escalation.known_flow_exhausted"
+  }
+]

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { evaluateLlmTriageRows, triageOutputToPrediction } from '../../tools/ticket-transcript-exporter/evaluate-llm-triage.mjs';
+import { evaluateLlmTriageRows, evaluateOpenRouterLlmTriage, triageOutputToPrediction } from '../../tools/ticket-transcript-exporter/evaluate-llm-triage.mjs';
 
 const input = {
   state: { resolvedEntities: [], questionsAsked: [], activeCaseId: null },
@@ -52,6 +52,7 @@ test('evaluates a valid LLM clarification as optimal', async () => {
   assert.equal(result.summary.counts.optimal, 1);
   assert.equal(result.summary.safeProgressOrBetterRate, 1);
   assert.equal(result.summary.unsafeRate, 0);
+  assert.equal(result.summary.fallbackRate, 0);
 });
 
 test('invalid model JSON uses canonical safe fallback and is tracked separately', async () => {
@@ -76,4 +77,16 @@ test('invalid model JSON uses canonical safe fallback and is tracked separately'
   assert.equal(result.results[0].accepted, false);
   assert.equal(result.results[0].effectiveOutput.nextAction, 'ask_clarification');
   assert.equal(result.summary.safeProgressOrBetterRate, 1);
+  assert.equal(result.summary.fallbackRate, 1);
+});
+
+test('hosted benchmark refuses a new holdout input file before provider creation', async () => {
+  await assert.rejects(
+    evaluateOpenRouterLlmTriage({
+      dataDir: '.',
+      inputFile: 'new-final-holdout.jsonl',
+      apiKey: 'test-api-key'
+    }),
+    /consumed development input set/
+  );
 });

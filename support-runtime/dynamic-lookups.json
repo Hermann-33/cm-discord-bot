@@ -1,0 +1,114 @@
+[
+  {
+    "id": "dynamic.catalog.stock",
+    "questionTypes": [
+      "stock",
+      "availability",
+      "restock"
+    ],
+    "fields": [
+      "catalog.stock"
+    ],
+    "source": "cm_internal_integrations_api_or_current_catalog",
+    "operation": "catalog.current.read",
+    "requiredIdentifiers": [
+      "product selector"
+    ],
+    "neverInferFromHistory": true
+  },
+  {
+    "id": "dynamic.catalog.price",
+    "questionTypes": [
+      "price"
+    ],
+    "fields": [
+      "catalog.price"
+    ],
+    "source": "cm_internal_integrations_api_or_current_catalog",
+    "operation": "catalog.current.read",
+    "requiredIdentifiers": [
+      "product and variant selector"
+    ],
+    "neverInferFromHistory": true
+  },
+  {
+    "id": "dynamic.catalog.product_status",
+    "questionTypes": [
+      "product_status",
+      "detection_status"
+    ],
+    "fields": [
+      "catalog.status"
+    ],
+    "source": "cm_internal_integrations_api_or_current_catalog",
+    "operation": "catalog.current.read",
+    "requiredIdentifiers": [
+      "product selector"
+    ],
+    "neverInferFromHistory": true
+  },
+  {
+    "id": "dynamic.order.status",
+    "questionTypes": [
+      "order_status"
+    ],
+    "fields": [
+      "order.status"
+    ],
+    "source": "cm_internal_integrations_api_or_current_catalog",
+    "operation": "orders.details.read",
+    "requiredIdentifiers": [
+      "order selector"
+    ],
+    "neverInferFromHistory": true
+  },
+  {
+    "id": "dynamic.fulfillment.status",
+    "questionTypes": [
+      "fulfillment_status",
+      "delivery_status"
+    ],
+    "fields": [
+      "fulfillment.status"
+    ],
+    "source": "cm_internal_integrations_api_or_current_catalog",
+    "operation": "orders.fulfillment.read",
+    "requiredIdentifiers": [
+      "order selector"
+    ],
+    "neverInferFromHistory": true
+  },
+  {
+    "id": "dynamic.purchase_intent.status",
+    "questionTypes": [
+      "payment_status",
+      "pending_purchase"
+    ],
+    "fields": [
+      "purchase_intent.status"
+    ],
+    "source": "cm_internal_integrations_api_or_current_catalog",
+    "operation": "purchase-intents.lookup.read",
+    "requiredIdentifiers": [
+      "purchase selector"
+    ],
+    "neverInferFromHistory": true
+  },
+  {
+    "id": "dynamic.user.overview",
+    "questionTypes": [
+      "wallet_balance",
+      "aura_balance",
+      "entitlement"
+    ],
+    "fields": [
+      "user.overview"
+    ],
+    "source": "cm_internal_integrations_api_or_current_catalog",
+    "operation": "users.overview.read",
+    "requiredIdentifiers": [
+      "user selector"
+    ],
+    "neverInferFromHistory": true
+  }
+]

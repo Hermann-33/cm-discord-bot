@@ -1,0 +1,976 @@
+[
+  {
+    "id": "product.reported_lol.hwid_spoofer",
+    "displayName": "Reported.lol HWID Spoofer",
+    "gameId": null,
+    "vendorId": "vendor.reported_lol",
+    "categoryIds": [
+      "category.spoofer"
+    ],
+    "variantIds": [
+      "variant.reported_lol.hwid_spoofer.15d",
+      "variant.reported_lol.hwid_spoofer.30d",
+      "variant.reported_lol.hwid_spoofer.90d",
+      "variant.reported_lol.hwid_spoofer.365d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [
+      "requirement.reported_lol.hwid_spoofer"
+    ],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.exodus.spoofer",
+    "displayName": "Exodus Spoofer",
+    "gameId": null,
+    "vendorId": "vendor.exodus",
+    "categoryIds": [
+      "category.spoofer"
+    ],
+    "variantIds": [
+      "variant.exodus.spoofer.1d",
+      "variant.exodus.spoofer.3d",
+      "variant.exodus.spoofer.7d",
+      "variant.exodus.spoofer.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.venom.apex",
+    "displayName": "Venom Apex Legends",
+    "gameId": "game.apex_legends",
+    "vendorId": "vendor.venom",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.venom.apex.1d",
+      "variant.venom.apex.3d",
+      "variant.venom.apex.7d",
+      "variant.venom.apex.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.ancient.apex",
+    "displayName": "Ancient Apex Legends",
+    "gameId": "game.apex_legends",
+    "vendorId": "vendor.ancient",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.ancient.apex.1d",
+      "variant.ancient.apex.7d",
+      "variant.ancient.apex.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.fecurity.apex",
+    "displayName": "Fecurity Apex Legends",
+    "gameId": "game.apex_legends",
+    "vendorId": "vendor.fecurity",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.fecurity.apex.1d",
+      "variant.fecurity.apex.7d",
+      "variant.fecurity.apex.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.exodus.apex",
+    "displayName": "Exodus Apex Legends",
+    "gameId": "game.apex_legends",
+    "vendorId": "vendor.exodus",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.exodus.apex.1d",
+      "variant.exodus.apex.3d",
+      "variant.exodus.apex.7d",
+      "variant.exodus.apex.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.ancient.arc_raiders",
+    "displayName": "Ancient Arc Raiders External",
+    "gameId": "game.arc_raiders",
+    "vendorId": "vendor.ancient",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.ancient.arc_raiders.1d",
+      "variant.ancient.arc_raiders.7d",
+      "variant.ancient.arc_raiders.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.unnamed.arc_raiders",
+    "displayName": "Unnamed Arc Raiders External",
+    "gameId": "game.arc_raiders",
+    "vendorId": "vendor.unnamed",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.unnamed.arc_raiders.1d",
+      "variant.unnamed.arc_raiders.7d",
+      "variant.unnamed.arc_raiders.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.venom.arc_raiders",
+    "displayName": "Venom Arc Raiders External",
+    "gameId": "game.arc_raiders",
+    "vendorId": "vendor.venom",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.venom.arc_raiders.1d",
+      "variant.venom.arc_raiders.3d",
+      "variant.venom.arc_raiders.7d",
+      "variant.venom.arc_raiders.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.ancient.battlefield_6",
+    "displayName": "Ancient Battlefield 6 External",
+    "gameId": "game.battlefield_6",
+    "vendorId": "vendor.ancient",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.ancient.battlefield_6.1d",
+      "variant.ancient.battlefield_6.7d",
+      "variant.ancient.battlefield_6.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.memesense.cs2",
+    "displayName": "MemeSense CS2",
+    "gameId": "game.cs2",
+    "vendorId": "vendor.memesense",
+    "categoryIds": [
+      "category.internal"
+    ],
+    "variantIds": [
+      "variant.memesense.cs2.14d",
+      "variant.memesense.cs2.31d",
+      "variant.memesense.cs2.90d",
+      "variant.memesense.cs2.180d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.ancient.tarkov_chams",
+    "displayName": "Ancient Chams",
+    "gameId": "game.escape_from_tarkov",
+    "vendorId": "vendor.ancient",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.ancient.tarkov_chams.1d",
+      "variant.ancient.tarkov_chams.7d",
+      "variant.ancient.tarkov_chams.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.nextcheat.tarkov_full",
+    "displayName": "nextcheat Tarkov Full",
+    "gameId": "game.escape_from_tarkov",
+    "vendorId": "vendor.nextcheat",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.nextcheat.tarkov_full.1d",
+      "variant.nextcheat.tarkov_full.7d",
+      "variant.nextcheat.tarkov_full.30d",
+      "variant.nextcheat.tarkov_full.90d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.nextcheat.tarkov_lite",
+    "displayName": "nextcheat Tarkov Lite",
+    "gameId": "game.escape_from_tarkov",
+    "vendorId": "vendor.nextcheat",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.nextcheat.tarkov_lite.1d",
+      "variant.nextcheat.tarkov_lite.7d",
+      "variant.nextcheat.tarkov_lite.30d",
+      "variant.nextcheat.tarkov_lite.90d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.exodus.fortnite",
+    "displayName": "Exodus Fortnite",
+    "gameId": "game.fortnite",
+    "vendorId": "vendor.exodus",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.exodus.fortnite.1d",
+      "variant.exodus.fortnite.3d",
+      "variant.exodus.fortnite.7d",
+      "variant.exodus.fortnite.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.venom.fortnite",
+    "displayName": "Venom Fortnite",
+    "gameId": "game.fortnite",
+    "vendorId": "vendor.venom",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.venom.fortnite.1d",
+      "variant.venom.fortnite.3d",
+      "variant.venom.fortnite.7d",
+      "variant.venom.fortnite.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.fecurity.fortnite",
+    "displayName": "Fecurity Fortnite",
+    "gameId": "game.fortnite",
+    "vendorId": "vendor.fecurity",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.fecurity.fortnite.1d",
+      "variant.fecurity.fortnite.7d",
+      "variant.fecurity.fortnite.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.ancient.fortnite",
+    "displayName": "Ancient Fortnite",
+    "gameId": "game.fortnite",
+    "vendorId": "vendor.ancient",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.ancient.fortnite.1d",
+      "variant.ancient.fortnite.7d",
+      "variant.ancient.fortnite.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [
+      "requirement.ancient.fortnite"
+    ],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.venom.pubg",
+    "displayName": "Venom PUBG External",
+    "gameId": "game.pubg",
+    "vendorId": "vendor.venom",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.venom.pubg.1d",
+      "variant.venom.pubg.3d",
+      "variant.venom.pubg.7d",
+      "variant.venom.pubg.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.ancient.pubg",
+    "displayName": "Ancient PUBG External",
+    "gameId": "game.pubg",
+    "vendorId": "vendor.ancient",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.ancient.pubg.1d",
+      "variant.ancient.pubg.7d",
+      "variant.ancient.pubg.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.desync.pubg",
+    "displayName": "Desync PUBG External",
+    "gameId": "game.pubg",
+    "vendorId": "vendor.desync",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.desync.pubg.1d",
+      "variant.desync.pubg.7d",
+      "variant.desync.pubg.15d",
+      "variant.desync.pubg.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.exodus.r6x",
+    "displayName": "Exodus R6X",
+    "gameId": "game.rainbow_six_siege",
+    "vendorId": "vendor.exodus",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.exodus.r6x.1d",
+      "variant.exodus.r6x.3d",
+      "variant.exodus.r6x.7d",
+      "variant.exodus.r6x.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [
+      "requirement.exodus.r6x"
+    ],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.ancient.r6x",
+    "displayName": "Ancient R6X",
+    "gameId": "game.rainbow_six_siege",
+    "vendorId": "vendor.ancient",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.ancient.r6x.1d",
+      "variant.ancient.r6x.7d",
+      "variant.ancient.r6x.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.vega.r6x",
+    "displayName": "Vega R6X",
+    "gameId": "game.rainbow_six_siege",
+    "vendorId": "vendor.vega",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.vega.r6x.1d",
+      "variant.vega.r6x.3d",
+      "variant.vega.r6x.7d",
+      "variant.vega.r6x.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.venom.r6x_internal",
+    "displayName": "Venom R6X Internal",
+    "gameId": "game.rainbow_six_siege",
+    "vendorId": "vendor.venom",
+    "categoryIds": [
+      "category.internal"
+    ],
+    "variantIds": [
+      "variant.venom.r6x_internal.1d",
+      "variant.venom.r6x_internal.3d",
+      "variant.venom.r6x_internal.7d",
+      "variant.venom.r6x_internal.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.ancient.rust",
+    "displayName": "Ancient Rust",
+    "gameId": "game.rust",
+    "vendorId": "vendor.ancient",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.ancient.rust.1d",
+      "variant.ancient.rust.7d",
+      "variant.ancient.rust.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [
+      "requirement.ancient.rust"
+    ],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.matrix.rust_external",
+    "displayName": "Matrix Rust External",
+    "gameId": "game.rust",
+    "vendorId": "vendor.matrix",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.matrix.rust_external.1d",
+      "variant.matrix.rust_external.3d",
+      "variant.matrix.rust_external.7d",
+      "variant.matrix.rust_external.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.fluent.rust",
+    "displayName": "Fluent Rust",
+    "gameId": "game.rust",
+    "vendorId": "vendor.fluent",
+    "categoryIds": [
+      "category.internal"
+    ],
+    "variantIds": [
+      "variant.fluent.rust.1d",
+      "variant.fluent.rust.7d",
+      "variant.fluent.rust.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.ultimate.rust",
+    "displayName": "Ultimate Rust",
+    "gameId": "game.rust",
+    "vendorId": "vendor.ultimate",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.ultimate.rust.1d",
+      "variant.ultimate.rust.3d",
+      "variant.ultimate.rust.7d",
+      "variant.ultimate.rust.30d",
+      "variant.ultimate.rust.lifetime"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.exodus.rust",
+    "displayName": "Exodus Rust",
+    "gameId": "game.rust",
+    "vendorId": "vendor.exodus",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.exodus.rust.1d",
+      "variant.exodus.rust.3d",
+      "variant.exodus.rust.7d",
+      "variant.exodus.rust.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.venom.rust_external",
+    "displayName": "Venom Rust External",
+    "gameId": "game.rust",
+    "vendorId": "vendor.venom",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.venom.rust_external.1d",
+      "variant.venom.rust_external.3d",
+      "variant.venom.rust_external.7d",
+      "variant.venom.rust_external.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.venom.rust_internal",
+    "displayName": "Venom Rust Internal",
+    "gameId": "game.rust",
+    "vendorId": "vendor.venom",
+    "categoryIds": [
+      "category.internal"
+    ],
+    "variantIds": [
+      "variant.venom.rust_internal.1d",
+      "variant.venom.rust_internal.3d",
+      "variant.venom.rust_internal.7d",
+      "variant.venom.rust_internal.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.unnamed.valorant",
+    "displayName": "Unnamed Valorant",
+    "gameId": "game.valorant",
+    "vendorId": "vendor.unnamed",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.unnamed.valorant.1d",
+      "variant.unnamed.valorant.7d",
+      "variant.unnamed.valorant.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.memez.valorant_full",
+    "displayName": "Memez Valorant Full",
+    "gameId": "game.valorant",
+    "vendorId": "vendor.memez",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.memez.valorant_full.1d",
+      "variant.memez.valorant_full.7d",
+      "variant.memez.valorant_full.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  },
+  {
+    "id": "product.memez.valorant_lite",
+    "displayName": "Memez Valorant Lite",
+    "gameId": "game.valorant",
+    "vendorId": "vendor.memez",
+    "categoryIds": [
+      "category.external"
+    ],
+    "variantIds": [
+      "variant.memez.valorant_lite.1d",
+      "variant.memez.valorant_lite.7d",
+      "variant.memez.valorant_lite.30d"
+    ],
+    "accountModelIds": [],
+    "currentStaticAttributes": {},
+    "dynamicAttributeIds": [
+      "dynamic.catalog.price",
+      "dynamic.catalog.stock",
+      "dynamic.catalog.product_status"
+    ],
+    "caseIds": [
+      "case.product.requirements"
+    ],
+    "policyIds": [],
+    "requirementIds": [],
+    "compatibilityIds": []
+  }
+]

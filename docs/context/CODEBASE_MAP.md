@@ -1,6 +1,6 @@
 # Codebase Map
 
-Updated: 2026-08-20
+Updated: 2026-08-23
 
 ## Repository boundaries
 
@@ -15,6 +15,7 @@ Updated: 2026-08-20
 | `docs/security/` | specialist security models |
 | `.env.example` | non-secret deployment variable names only |
 | `.github/workflows/ci.yml` | Node 22 verification gate |
+| `support-runtime/` | generated sanitized canonical runtime bundle; never raw/private evidence |
 
 Never commit `.env`, `dist/`, `node_modules`, logs, archives, generated transcript data or real credentials.
 
@@ -29,6 +30,15 @@ Never commit `.env`, `dist/`, `node_modules`, logs, archives, generated transcri
 - `src/api/purchaseIntents.ts` — strict `purchase-intents.lookup.read` request/response DTO mirror for pending `/cm order` support.
 - `src/api/errors.ts` — stable safe API errors.
 - `src/config/env.ts` — Discord/API/admin environment validation.
+
+### AI support scaffolding — not customer-enabled
+
+- `src/ai/openRouterClient.ts` — optional no-retry OpenRouter structured triage planner with deterministic fallback.
+- `src/ai/privacy.ts` — outbound planner PII/credential/reference sanitizer.
+- `src/ai/supportTriage.ts` — strict decision schema, canonical-ID/scope/repetition/known-answer validation and fallback.
+- `src/ai/runtimePack.ts` — integrity-checked loader for the bundled public support runtime only.
+- `src/ai/supportConversation.ts` — explicit state model, pending-answer consumption and resolver/planner/action interfaces.
+- `support-runtime/` — generated 12-artifact sanitized pack and public integrity manifest.
 
 Approved active API operations:
 
@@ -86,6 +96,8 @@ users.wallet.adjust
 - `tools/ticket-transcript-exporter/export-ticket-transcripts.mjs` — original Discord discovery + HTML/Chrome acquisition module; retained for source-log discovery and historical raw-shell evidence.
 - `tools/ticket-transcript-exporter/export-ticket-payloads.mjs` — schema-v2 structured extractor that reads `source-logs.jsonl`, calls Tickety's fixed `/api/ticketTranscript?id=<id>` endpoint, decodes `application/vnd.msgpack`, resolves message authors, and writes real message-level JSON/text/raw Msgpack artifacts.
 - `tools/ticket-transcript-exporter/prepare-knowledge-analysis.mjs` — offline deterministic packer that consolidates the completed local schema-v2 data repository into line-addressable `analysis-input/corpus.ndjson`, deterministic review excerpts and corpus statistics for exhaustive knowledge-graph analysis.
+- `tools/ticket-transcript-exporter/import-support-runtime-pack.mjs` — operator-controlled explicit-field importer from private canonical `runtime-kb/` to public `support-runtime/`; strips/rejects evidence, provenance, PII and private identifiers.
+- `tools/ticket-transcript-exporter/support-runtime-privacy.mjs` — hosted benchmark payload sanitizer matching the production privacy boundary.
 - `tools/ticket-transcript-exporter/README.md` — discovery + structured extraction workflow.
 - `tests/tools/ticketTranscriptExporter.test.mjs` — strict button discovery, URL restrictions, Discord-log parsing and legacy HTML helper tests.
 - `tests/tools/ticketTranscriptPayloadExporter.test.mjs` — structured-export CLI, payload validation, user resolution and text-projection tests.

@@ -1,0 +1,247 @@
+{
+  "schemaVersion": 1,
+  "games": [
+    {
+      "id": "game.valorant",
+      "displayName": "Valorant"
+    },
+    {
+      "id": "game.cs2",
+      "displayName": "Counter-Strike 2",
+      "aliases": [
+        "CS2"
+      ]
+    },
+    {
+      "id": "game.apex_legends",
+      "displayName": "Apex Legends",
+      "aliases": [
+        "Apex"
+      ]
+    },
+    {
+      "id": "game.overwatch_2",
+      "displayName": "Overwatch 2"
+    },
+    {
+      "id": "game.rainbow_six_siege",
+      "displayName": "Rainbow Six Siege",
+      "aliases": [
+        "R6",
+        "R6X"
+      ]
+    },
+    {
+      "id": "game.rust",
+      "displayName": "Rust"
+    },
+    {
+      "id": "game.escape_from_tarkov",
+      "displayName": "Escape from Tarkov",
+      "aliases": [
+        "EFT",
+        "Tarkov"
+      ]
+    },
+    {
+      "id": "game.fortnite",
+      "displayName": "Fortnite",
+      "aliases": [
+        "FN"
+      ]
+    },
+    {
+      "id": "game.arc_raiders",
+      "displayName": "Arc Raiders"
+    },
+    {
+      "id": "game.battlefield_6",
+      "displayName": "Battlefield 6",
+      "aliases": [
+        "BF6"
+      ]
+    },
+    {
+      "id": "game.dayz",
+      "displayName": "DayZ"
+    },
+    {
+      "id": "game.pubg",
+      "displayName": "PUBG"
+    }
+  ],
+  "vendors": [
+    {
+      "id": "vendor.ancient",
+      "displayName": "Ancient Cheats",
+      "aliases": [
+        "Ancient"
+      ]
+    },
+    {
+      "id": "vendor.venom",
+      "displayName": "Venom Cheats",
+      "aliases": [
+        "Venom"
+      ]
+    },
+    {
+      "id": "vendor.exodus",
+      "displayName": "Exodus"
+    },
+    {
+      "id": "vendor.fecurity",
+      "displayName": "Fecurity"
+    },
+    {
+      "id": "vendor.unnamed",
+      "displayName": "Unnamed"
+    },
+    {
+      "id": "vendor.memez",
+      "displayName": "Memez"
+    },
+    {
+      "id": "vendor.nextcheat",
+      "displayName": "nextcheat"
+    },
+    {
+      "id": "vendor.vega",
+      "displayName": "Vega"
+    },
+    {
+      "id": "vendor.matrix",
+      "displayName": "Matrix"
+    },
+    {
+      "id": "vendor.fluent",
+      "displayName": "Fluent"
+    },
+    {
+      "id": "vendor.ultimate",
+      "displayName": "Ultimate"
+    },
+    {
+      "id": "vendor.memesense",
+      "displayName": "memesense",
+      "aliases": [
+        "MemeSense"
+      ]
+    },
+    {
+      "id": "vendor.reported_lol",
+      "displayName": "Reported.lol",
+      "aliases": [
+        "Reported"
+      ]
+    },
+    {
+      "id": "vendor.desync",
+      "displayName": "Desync"
+    }
+  ],
+  "categories": [
+    {
+      "id": "category.external",
+      "displayName": "External"
+    },
+    {
+      "id": "category.internal",
+      "displayName": "Internal"
+    },
+    {
+      "id": "category.spoofer",
+      "displayName": "HWID Spoofer"
+    },
+    {
+      "id": "category.account",
+      "displayName": "Game Account"
+    },
+    {
+      "id": "category.manual_service",
+      "displayName": "Manual Account Service"
+    }
+  ],
+  "accountModels": [
+    {
+      "id": "account_model.nfa",
+      "displayName": "NFA",
+      "meaning": "Short-term token-style account access intended for near-term use, not permanent ownership."
+    },
+    {
+      "id": "account_model.full_access",
+      "displayName": "Full Access",
+      "meaning": "Broader account and recovery control; exact transfer remains listing-specific."
+    },
+    {
+      "id": "account_model.manual_service",
+      "displayName": "Manual Service",
+      "meaning": "A staff-performed service or top-up on a customer-owned account, not an account-access model."
+    }
+  ],
+  "accountListings": [
+    {
+      "id": "account_listing.rust.nfa",
+      "displayName": "Cheap Rust NFA Account",
+      "gameId": "game.rust",
+      "accountModelId": "account_model.nfa"
+    },
+    {
+      "id": "account_listing.rust.full_access",
+      "displayName": "Rust Full Access",
+      "gameId": "game.rust",
+      "accountModelId": "account_model.full_access"
+    },
+    {
+      "id": "account_listing.fortnite.crew_service",
+      "displayName": "Fortnite Crew Pack",
+      "gameId": "game.fortnite",
+      "accountModelId": "account_model.manual_service"
+    },
+    {
+      "id": "account_listing.fortnite.vbucks_full_access",
+      "displayName": "Cheap Fortnite V-Bucks Accounts",
+      "gameId": "game.fortnite",
+      "accountModelId": "account_model.full_access"
+    },
+    {
+      "id": "account_listing.arc_raiders.nfa",
+      "displayName": "Arc Raiders NFA Account",
+      "gameId": "game.arc_raiders",
+      "accountModelId": "account_model.nfa"
+    },
+    {
+      "id": "account_listing.arc_raiders.full_access",
+      "displayName": "Arc Raiders Full Access",
+      "gameId": "game.arc_raiders",
+      "accountModelId": "account_model.full_access"
+    },
+    {
+      "id": "account_listing.dayz.nfa",
+      "displayName": "DayZ NFA Account",
+      "gameId": "game.dayz",
+      "accountModelId": "account_model.nfa"
+    },
+    {
+      "id": "account_listing.dayz.full_access",
+      "displayName": "DayZ Full Access",
+      "gameId": "game.dayz",
+      "accountModelId": "account_model.full_access"
+    },
+    {
+      "id": "account_listing.cs2.nfa",
+      "displayName": "CS2 NFA Account",
+      "gameId": "game.cs2",
+      "accountModelId": "account_model.nfa",
+      "listingSpecificFeatures": [
+        "Prime status may be listing-specific"
+      ]
+    },
+    {
+      "id": "account_listing.battlefield_6.nfa",
+      "displayName": "Battlefield 6 NFA Account",
+      "gameId": "game.battlefield_6",
+      "accountModelId": "account_model.nfa"
+    }
+  ]
+}

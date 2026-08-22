@@ -1,0 +1,595 @@
+[
+  {
+    "answerType": "enum",
+    "options": [
+      "nfa_or_account",
+      "loader_or_product",
+      "website_payment_or_order",
+      "something_else"
+    ],
+    "setsContext": [
+      "supportSurface"
+    ],
+    "distinguishesCases": [],
+    "distinguishesFamilies": [
+      "accounts.nfa",
+      "accounts.delivery",
+      "technical.loader",
+      "technical.product",
+      "website.checkout",
+      "commerce.payment",
+      "commerce.order",
+      "commerce.fulfillment"
+    ],
+    "increasesCases": {
+      "nfa_or_account": [
+        "case.nfa.invalid_first_use",
+        "case.nfa.invalid_after_use",
+        "case.nfa.owner_session_conflict",
+        "case.nfa.redemption_activation"
+      ],
+      "loader_or_product": [
+        "case.loader.closes_runtime",
+        "case.loader.connection",
+        "case.loader.update",
+        "case.product.launch_failure"
+      ],
+      "website_payment_or_order": [
+        "case.website.checkout_failure",
+        "case.payment.failed_or_pending",
+        "case.order.status",
+        "case.order.fulfillment_delayed"
+      ]
+    },
+    "decreasesCases": {},
+    "rulesOutCases": {},
+    "liveLookupCanReplace": [
+      "users.overview.read",
+      "orders.lookup.read"
+    ],
+    "restrictedSafetyBoundary": "ordinary_safe_support_context_only",
+    "effort": 1,
+    "id": "clarify.support_surface",
+    "scope": {
+      "global": true
+    },
+    "question": "What isn't working: an NFA/account, a loader or product, or something with the website, payment, or order?"
+  },
+  {
+    "answerType": "entity",
+    "options": [],
+    "setsContext": [
+      "gameId",
+      "productId",
+      "vendorId"
+    ],
+    "distinguishesCases": [],
+    "distinguishesFamilies": [
+      "technical.loader",
+      "technical.product",
+      "product.compatibility",
+      "catalog.dynamic"
+    ],
+    "increasesCases": {},
+    "decreasesCases": {},
+    "rulesOutCases": {},
+    "liveLookupCanReplace": [
+      "users.overview.read",
+      "orders.lookup.read"
+    ],
+    "restrictedSafetyBoundary": "ordinary_safe_support_context_only",
+    "effort": 1,
+    "id": "clarify.product_identity",
+    "scope": {
+      "families": [
+        "technical.loader",
+        "technical.product",
+        "product.compatibility",
+        "catalog.dynamic"
+      ]
+    },
+    "question": "Which game or product is this about?"
+  },
+  {
+    "answerType": "enum",
+    "options": [
+      "nfa",
+      "full_access",
+      "manual_service",
+      "not_sure"
+    ],
+    "setsContext": [
+      "accountModel"
+    ],
+    "distinguishesCases": [
+      "case.nfa.access_model_question",
+      "case.account.full_access",
+      "case.account.manual_service"
+    ],
+    "distinguishesFamilies": [
+      "accounts.nfa",
+      "accounts.full_access",
+      "accounts.manual_service"
+    ],
+    "increasesCases": {},
+    "decreasesCases": {},
+    "rulesOutCases": {},
+    "liveLookupCanReplace": [
+      "orders.details.read",
+      "orders.fulfillment.read"
+    ],
+    "restrictedSafetyBoundary": "ordinary_safe_support_context_only",
+    "effort": 1,
+    "id": "clarify.account_type",
+    "scope": {
+      "families": [
+        "accounts.nfa",
+        "accounts.delivery",
+        "accounts.access",
+        "accounts.full_access"
+      ]
+    },
+    "question": "Is this an NFA account, a full-access account, or a manually delivered account/service?"
+  },
+  {
+    "answerType": "enum",
+    "options": [
+      "never_worked",
+      "worked_then_invalid",
+      "owner_or_session_conflict",
+      "activation_or_token_issue",
+      "not_sure"
+    ],
+    "setsContext": [
+      "nfaFailureStage",
+      "workedBefore",
+      "ownerSessionConflict"
+    ],
+    "distinguishesCases": [
+      "case.nfa.invalid_first_use",
+      "case.nfa.invalid_after_use",
+      "case.nfa.owner_session_conflict",
+      "case.nfa.redemption_activation"
+    ],
+    "distinguishesFamilies": [
+      "accounts.nfa"
+    ],
+    "increasesCases": {
+      "never_worked": [
+        "case.nfa.invalid_first_use"
+      ],
+      "worked_then_invalid": [
+        "case.nfa.invalid_after_use"
+      ],
+      "owner_or_session_conflict": [
+        "case.nfa.owner_session_conflict"
+      ],
+      "activation_or_token_issue": [
+        "case.nfa.redemption_activation"
+      ]
+    },
+    "decreasesCases": {},
+    "rulesOutCases": {
+      "never_worked": [
+        "case.nfa.invalid_after_use"
+      ],
+      "worked_then_invalid": [
+        "case.nfa.invalid_first_use"
+      ]
+    },
+    "liveLookupCanReplace": [
+      "orders.details.read"
+    ],
+    "restrictedSafetyBoundary": "ordinary_safe_support_context_only",
+    "effort": 1,
+    "id": "clarify.nfa.failure_stage",
+    "scope": {
+      "accountModels": [
+        "account_model.nfa"
+      ],
+      "families": [
+        "accounts.nfa"
+      ]
+    },
+    "question": "Did the NFA account never work, did it work before and become invalid later, or are you being logged out because someone else is using it?"
+  },
+  {
+    "answerType": "enum",
+    "options": [
+      "invalid_or_locked",
+      "password_requested",
+      "logged_out",
+      "other_person_active",
+      "different_issue"
+    ],
+    "setsContext": [
+      "nfaSessionState",
+      "ownerSessionConflict"
+    ],
+    "distinguishesCases": [
+      "case.nfa.invalid_first_use",
+      "case.nfa.invalid_after_use",
+      "case.nfa.owner_session_conflict"
+    ],
+    "distinguishesFamilies": [
+      "accounts.nfa"
+    ],
+    "increasesCases": {},
+    "decreasesCases": {},
+    "rulesOutCases": {},
+    "liveLookupCanReplace": [],
+    "restrictedSafetyBoundary": "ordinary_safe_support_context_only",
+    "effort": 1,
+    "id": "clarify.nfa.session_state",
+    "scope": {
+      "accountModels": [
+        "account_model.nfa"
+      ],
+      "families": [
+        "accounts.nfa"
+      ]
+    },
+    "question": "What happens now: invalid/locked, password requested, logged out, or another person is active on the account?"
+  },
+  {
+    "answerType": "enum",
+    "options": [
+      "nothing_received",
+      "wrong_delivery",
+      "received_cannot_access",
+      "not_sure"
+    ],
+    "setsContext": [
+      "deliveryState"
+    ],
+    "distinguishesCases": [
+      "case.order.fulfillment_delayed",
+      "case.order.wrong_delivery",
+      "case.account.login_access",
+      "case.account.wrong_specification"
+    ],
+    "distinguishesFamilies": [
+      "accounts.delivery",
+      "commerce.fulfillment",
+      "accounts.access"
+    ],
+    "increasesCases": {},
+    "decreasesCases": {},
+    "rulesOutCases": {},
+    "liveLookupCanReplace": [
+      "orders.details.read",
+      "orders.fulfillment.read"
+    ],
+    "restrictedSafetyBoundary": "ordinary_safe_support_context_only",
+    "effort": 1,
+    "id": "clarify.account.delivery_state",
+    "scope": {
+      "families": [
+        "accounts.delivery",
+        "commerce.fulfillment"
+      ]
+    },
+    "question": "Did you receive no account/key at all, receive the wrong account, or receive one that cannot be accessed?"
+  },
+  {
+    "answerType": "enum",
+    "options": [
+      "declined",
+      "pending",
+      "completed_missing",
+      "wallet_balance_issue",
+      "not_sure"
+    ],
+    "setsContext": [
+      "paymentState"
+    ],
+    "distinguishesCases": [
+      "case.payment.card_declined",
+      "case.payment.failed_or_pending",
+      "case.payment.completed_missing_order",
+      "case.payment.crypto_pending",
+      "case.wallet.balance"
+    ],
+    "distinguishesFamilies": [
+      "commerce.payment",
+      "commerce.wallet"
+    ],
+    "increasesCases": {},
+    "decreasesCases": {},
+    "rulesOutCases": {},
+    "liveLookupCanReplace": [
+      "purchase-intents.lookup.read",
+      "purchase-intents.process.status.read",
+      "users.overview.read"
+    ],
+    "restrictedSafetyBoundary": "ordinary_safe_support_context_only",
+    "effort": 1,
+    "id": "clarify.payment_state",
+    "scope": {
+      "families": [
+        "commerce.payment",
+        "commerce.wallet"
+      ]
+    },
+    "question": "Was the payment declined, is it still pending, or was it completed but nothing appeared?"
+  },
+  {
+    "answerType": "enum",
+    "options": [
+      "current_status",
+      "waiting_for_delivery",
+      "wrong_delivery",
+      "refund_or_cancel"
+    ],
+    "setsContext": [
+      "orderQuestionType",
+      "deliveryState"
+    ],
+    "distinguishesCases": [
+      "case.order.status",
+      "case.order.fulfillment_delayed",
+      "case.order.wrong_delivery",
+      "case.order.refund_cancel"
+    ],
+    "distinguishesFamilies": [
+      "commerce.order",
+      "commerce.fulfillment",
+      "commerce.policy"
+    ],
+    "increasesCases": {},
+    "decreasesCases": {},
+    "rulesOutCases": {},
+    "liveLookupCanReplace": [
+      "orders.details.read",
+      "orders.fulfillment.read"
+    ],
+    "restrictedSafetyBoundary": "ordinary_safe_support_context_only",
+    "effort": 1,
+    "id": "clarify.order.fulfillment_state",
+    "scope": {
+      "families": [
+        "commerce.order",
+        "commerce.fulfillment"
+      ]
+    },
+    "question": "Are you checking the current order status, waiting for delivery, or saying the delivered item is wrong?"
+  },
+  {
+    "answerType": "selector",
+    "options": [],
+    "setsContext": [
+      "orderSelector",
+      "purchaseSelector"
+    ],
+    "distinguishesCases": [],
+    "distinguishesFamilies": [
+      "commerce.order",
+      "commerce.fulfillment",
+      "commerce.payment"
+    ],
+    "increasesCases": {},
+    "decreasesCases": {},
+    "rulesOutCases": {},
+    "liveLookupCanReplace": [
+      "orders.lookup.read",
+      "purchase-intents.lookup.read"
+    ],
+    "restrictedSafetyBoundary": "ordinary_safe_support_context_only",
+    "effort": 1,
+    "id": "clarify.order_selector",
+    "scope": {
+      "families": [
+        "commerce.order",
+        "commerce.fulfillment",
+        "commerce.payment"
+      ]
+    },
+    "question": "Which recent order or payment is this about? Please use its order/reference selector if more than one is possible."
+  },
+  {
+    "answerType": "enum",
+    "options": [
+      "closes_immediately",
+      "connection_failure",
+      "download_or_update_failure",
+      "key_or_license_error",
+      "other"
+    ],
+    "setsContext": [
+      "loaderFailureStage"
+    ],
+    "distinguishesCases": [
+      "case.loader.closes_runtime",
+      "case.loader.connection",
+      "case.loader.update",
+      "case.loader.key_error",
+      "case.license.activation"
+    ],
+    "distinguishesFamilies": [
+      "technical.loader",
+      "product.license"
+    ],
+    "increasesCases": {
+      "closes_immediately": [
+        "case.loader.closes_runtime"
+      ],
+      "connection_failure": [
+        "case.loader.connection"
+      ],
+      "download_or_update_failure": [
+        "case.loader.update"
+      ],
+      "key_or_license_error": [
+        "case.loader.key_error",
+        "case.license.activation"
+      ]
+    },
+    "decreasesCases": {},
+    "rulesOutCases": {},
+    "liveLookupCanReplace": [],
+    "restrictedSafetyBoundary": "ordinary_safe_support_context_only",
+    "effort": 1,
+    "id": "clarify.loader.failure_stage",
+    "scope": {
+      "families": [
+        "technical.loader"
+      ]
+    },
+    "question": "What happens with the loader: it closes immediately, fails to connect, fails while downloading/updating, or shows a key/license error?"
+  },
+  {
+    "answerType": "enum",
+    "options": [
+      "setup_or_requirements",
+      "launch_or_injection",
+      "game_loading",
+      "in_game_feature"
+    ],
+    "setsContext": [
+      "technicalFailureStage"
+    ],
+    "distinguishesCases": [
+      "case.product.requirements",
+      "case.product.launch_failure",
+      "case.game.crash_loading",
+      "case.game.crash_general",
+      "case.game.feature_behavior",
+      "case.game.overlay_menu"
+    ],
+    "distinguishesFamilies": [
+      "technical.product",
+      "technical.game",
+      "product.requirements"
+    ],
+    "increasesCases": {},
+    "decreasesCases": {},
+    "rulesOutCases": {},
+    "liveLookupCanReplace": [],
+    "restrictedSafetyBoundary": "do_not_request_bypass_or_evasion_details",
+    "effort": 1,
+    "id": "clarify.technical.failure_stage",
+    "scope": {
+      "families": [
+        "technical.product",
+        "technical.game",
+        "product.requirements"
+      ]
+    },
+    "question": "Where does it fail: before launch/setup, while opening or injecting, while loading the game, or after you are in-game?"
+  },
+  {
+    "answerType": "enum",
+    "options": [
+      "stock_or_status",
+      "compatibility",
+      "price",
+      "duration"
+    ],
+    "setsContext": [
+      "catalogQuestionType"
+    ],
+    "distinguishesCases": [
+      "case.catalog.availability_status",
+      "case.catalog.pricing_duration",
+      "case.product.compatibility"
+    ],
+    "distinguishesFamilies": [
+      "catalog.dynamic",
+      "catalog.commercial",
+      "product.compatibility"
+    ],
+    "increasesCases": {},
+    "decreasesCases": {},
+    "rulesOutCases": {},
+    "liveLookupCanReplace": [
+      "orders.lookup.read"
+    ],
+    "restrictedSafetyBoundary": "ordinary_safe_support_context_only",
+    "effort": 1,
+    "id": "clarify.catalog.question_type",
+    "scope": {
+      "families": [
+        "catalog.dynamic",
+        "catalog.commercial"
+      ]
+    },
+    "question": "Are you asking about current stock/status, compatibility, price, or access duration?"
+  },
+  {
+    "answerType": "enum",
+    "options": [
+      "login_or_link",
+      "checkout_or_payment",
+      "dashboard_or_purchase"
+    ],
+    "setsContext": [
+      "websiteFailureStage"
+    ],
+    "distinguishesCases": [
+      "case.website.login",
+      "case.website.checkout_failure",
+      "case.dashboard.verification"
+    ],
+    "distinguishesFamilies": [
+      "website.account",
+      "website.checkout",
+      "website.dashboard"
+    ],
+    "increasesCases": {},
+    "decreasesCases": {},
+    "rulesOutCases": {},
+    "liveLookupCanReplace": [
+      "users.overview.read",
+      "orders.lookup.read"
+    ],
+    "restrictedSafetyBoundary": "ordinary_safe_support_context_only",
+    "effort": 1,
+    "id": "clarify.website_stage",
+    "scope": {
+      "families": [
+        "website.checkout",
+        "website.account",
+        "website.dashboard"
+      ]
+    },
+    "question": "Is the problem signing in/linking Discord, opening checkout or paying, or finding the purchase on your dashboard?"
+  },
+  {
+    "answerType": "enum",
+    "options": [
+      "refund_or_cancel",
+      "replacement_dispute",
+      "wrong_delivery",
+      "information_only"
+    ],
+    "setsContext": [
+      "requestedRemedy"
+    ],
+    "distinguishesCases": [
+      "case.order.refund_cancel",
+      "case.nfa.replacement_dispute",
+      "case.order.wrong_delivery",
+      "case.account.wrong_specification"
+    ],
+    "distinguishesFamilies": [
+      "commerce.policy",
+      "accounts.delivery"
+    ],
+    "increasesCases": {},
+    "decreasesCases": {},
+    "rulesOutCases": {},
+    "liveLookupCanReplace": [
+      "orders.details.read"
+    ],
+    "restrictedSafetyBoundary": "collect_request_type_only_human_authority_decides",
+    "effort": 1,
+    "id": "clarify.policy.remedy_request",
+    "scope": {
+      "families": [
+        "commerce.policy",
+        "accounts.delivery"
+      ]
+    },
+    "question": "Are you requesting a refund/cancellation, disputing a replacement, or reporting a wrong delivery?"
+  }
+]

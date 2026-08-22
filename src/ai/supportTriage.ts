@@ -40,6 +40,7 @@ export type SupportTriageClarification = {
   distinguishesCases?: readonly string[];
   distinguishesFamilies?: readonly string[];
   setsContext?: string | readonly string[] | null;
+  liveLookupCanReplace?: readonly string[];
 };
 
 export type SupportTriageLookup = {
@@ -66,6 +67,9 @@ export type SupportTriageState = {
   proceduresAttempted?: readonly string[];
   procedureOutcomes?: Record<string, unknown>;
   dynamicLookupResults?: Record<string, unknown>;
+  answersReceived?: Record<string, unknown>;
+  policyState?: Record<string, unknown>;
+  intents?: readonly string[];
 };
 
 export type SupportTriageInput = {
@@ -168,6 +172,21 @@ function scopeConflicts(caseRecord: SupportTriageCase | undefined, resolvedEntit
   return false;
 }
 
+function lookupResolved(state: SupportTriageState, id: string): boolean {
+  const value = state.dynamicLookupResults?.[id];
+  if (value === undefined || value === null) return false;
+  if (typeof value !== "object") return true;
+  const status = String((value as Record<string, unknown>).status ?? "").toLowerCase();
+  return !["requested", "pending", "unknown"].includes(status);
+}
+
+function clarificationAlreadyKnown(state: SupportTriageState, item: SupportTriageClarification | undefined): boolean {
+  if (!item) return false;
+  const fields = Array.isArray(item.setsContext) ? item.setsContext : item.setsContext ? [item.setsContext] : [];
+  if (fields.length > 0 && fields.every((field) => state.knownContext?.[field] !== undefined)) return true;
+  return (item.liveLookupCanReplace ?? []).some((id) => lookupResolved(state, id));
+}
+
 export type TriageValidationResult = {
   valid: boolean;
   errors: readonly string[];
@@ -185,6 +204,7 @@ export function validateSupportTriageDecision(
   const allowedPolicies = new Set(input.allowed.policyIds);
   const allowedEntities = new Set(input.allowed.entityIds);
   const cases = new Map(input.allowed.cases.map((item) => [item.id, item] as const));
+  const clarifications = new Map(input.allowed.clarifications.map((item) => [item.id, item] as const));
 
   for (const id of decision.caseIds) if (!allowedCases.has(id)) errors.push(`unknown_case:${id}`);
   for (const id of decision.dynamicLookupIds) if (!allowedLookups.has(id)) errors.push(`unknown_lookup:${id}`);
@@ -215,6 +235,9 @@ export function validateSupportTriageDecision(
   if (decision.clarificationId && asked.has(decision.clarificationId)) {
     errors.push("repeated_clarification");
   }
+  if (decision.clarificationId && clarificationAlreadyKnown(input.state, clarifications.get(decision.clarificationId))) {
+    errors.push("clarification_answer_already_known");
+  }
 
   const resolvedEntities = unique(input.state.resolvedEntities);
   for (const id of decision.caseIds) {
@@ -235,7 +258,7 @@ function fallbackObservations(): SupportTriageDecision["observations"] {
 
 export function chooseSupportTriageFallback(input: SupportTriageInput): SupportTriageDecision {
   const activeCaseId = input.state.activeCaseId;
-  if (activeCaseId && input.allowed.caseIds.includes(activeCaseId)) {
+  if (!input.restricted && activeCaseId && input.allowed.caseIds.includes(activeCaseId)) {
     return {
       observations: fallbackObservations(),
       nextAction: "answer_case",
@@ -249,7 +272,9 @@ export function chooseSupportTriageFallback(input: SupportTriageInput): SupportT
   }
 
   const asked = new Set(input.state.questionsAsked ?? []);
-  const clarification = input.allowed.clarifications.find((item) => !asked.has(item.id));
+  const clarification = input.allowed.clarifications.find((item) =>
+    !asked.has(item.id) && !clarificationAlreadyKnown(input.state, item)
+  );
   if (clarification) {
     return {
       observations: fallbackObservations(),

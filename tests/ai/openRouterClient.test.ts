@@ -152,3 +152,84 @@ test("restricted input cannot accept an autonomous static answer", async () => {
   assert.equal(result.accepted, false);
   assert.ok(result.validationErrors.includes("restricted_autonomous_answer"));
 });
+
+test("malformed structured JSON fails closed", async () => {
+  const fetchImpl: typeof fetch = async () => new Response(JSON.stringify({
+    choices: [{ message: { content: "{bad json" } }]
+  }), { status: 200, headers: { "content-type": "application/json" } });
+  const result = await new OpenRouterTriageClient(config, fetchImpl).triage(triageInput());
+  assert.equal(result.accepted, false);
+  assert.deepEqual(result.validationErrors, ["openrouter_invalid_structured_json"]);
+  assert.equal(result.decision.nextAction, "ask_clarification");
+});
+
+test("timeout fails closed without retrying", async () => {
+  let calls = 0;
+  const timeoutConfig = { ...config, timeoutMs: 5 };
+  const fetchImpl: typeof fetch = async (_input, init) => {
+    calls += 1;
+    return await new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+    });
+  };
+  const result = await new OpenRouterTriageClient(timeoutConfig, fetchImpl).triage(triageInput());
+  assert.equal(calls, 1);
+  assert.deepEqual(result.validationErrors, ["openrouter_timeout"]);
+  assert.equal(result.fallbackUsed, true);
+});
+
+test("5xx provider failure fails closed without exposing response text", async () => {
+  const fetchImpl: typeof fetch = async () => new Response("private provider failure", { status: 503 });
+  const result = await new OpenRouterTriageClient(config, fetchImpl).triage(triageInput());
+  assert.deepEqual(result.validationErrors, ["openrouter_http_503"]);
+  assert.equal(JSON.stringify(result).includes("private provider failure"), false);
+});
+
+test("rejects unknown clarification, lookup, policy, entity, scope, repeated and known-answer routes", async () => {
+  const responses = [
+    decision({ clarificationId: "clarify.invented" }),
+    decision({ nextAction: "request_dynamic_lookup", clarificationId: null, dynamicLookupIds: ["lookup.invented"] }),
+    decision({ nextAction: "request_policy_route", clarificationId: null, policyIds: ["policy.invented"] }),
+    decision({ observations: { ...decision().observations, explicitEntities: ["game.invented"] } }),
+    decision({ nextAction: "answer_case", caseIds: ["case.nfa.invalid_first_use"], clarificationId: null, confidence: 0.5 }),
+    decision({ nextAction: "answer_case", caseIds: ["case.nfa.invalid_first_use"], clarificationId: null, confidence: 0.99 }),
+    decision(),
+    decision()
+  ];
+  let index = 0;
+  const fetchImpl: typeof fetch = async () => new Response(JSON.stringify({
+    choices: [{ message: { content: JSON.stringify(responses[index++]) } }]
+  }), { status: 200, headers: { "content-type": "application/json" } });
+  const client = new OpenRouterTriageClient(config, fetchImpl);
+
+  assert.ok((await client.triage(triageInput())).validationErrors.includes("unknown_clarification:clarify.invented"));
+  assert.ok((await client.triage(triageInput())).validationErrors.includes("unknown_lookup:lookup.invented"));
+  assert.ok((await client.triage(triageInput())).validationErrors.includes("unknown_policy:policy.invented"));
+  assert.ok((await client.triage(triageInput())).validationErrors.includes("ungrounded_observation_entity:game.invented"));
+  assert.ok((await client.triage(triageInput())).validationErrors.includes("low_confidence_direct_case"));
+  const scopeInput = triageInput({
+    state: { ...triageInput().state, resolvedEntities: ["account_model.nfa", "game.rust"] },
+    allowed: {
+      ...triageInput().allowed,
+      entityIds: ["account_model.nfa", "game.rust"],
+      cases: [{
+        ...triageInput().allowed.cases[0]!,
+        scope: { accountModels: ["account_model.nfa"], games: ["game.fortnite"] }
+      }]
+    }
+  });
+  assert.ok((await client.triage(scopeInput)).validationErrors.includes("scope_conflict:case.nfa.invalid_first_use"));
+  const repeatedInput = triageInput({ state: { ...triageInput().state, questionsAsked: ["clarify.nfa.failure_stage"] } });
+  assert.ok((await client.triage(repeatedInput)).validationErrors.includes("repeated_clarification"));
+  const knownInput = triageInput({
+    state: { ...triageInput().state, knownContext: { workedBefore: false } },
+    allowed: {
+      ...triageInput().allowed,
+      clarifications: [{
+        ...triageInput().allowed.clarifications[0]!,
+        setsContext: "workedBefore"
+      }]
+    }
+  });
+  assert.ok((await client.triage(knownInput)).validationErrors.includes("clarification_answer_already_known"));
+});

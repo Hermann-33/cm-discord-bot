@@ -1,0 +1,90 @@
+[
+  {
+    "id": "policy.account_models.distinct",
+    "displayName": "NFA, Full Access, and manual services are separate delivery/control models.",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "authority": "current_authoritative",
+    "rule": "NFA, Full Access, and manual services are separate delivery/control models.",
+    "conditions": [],
+    "exceptionIds": [],
+    "dynamicRequirements": [],
+    "escalateWhen": []
+  },
+  {
+    "id": "policy.nfa.short_term",
+    "displayName": "NFA is intended for prompt short-term use and is not a permanent ownership promise.",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "authority": "current_authoritative",
+    "rule": "NFA is intended for prompt short-term use and is not a permanent ownership promise.",
+    "conditions": [],
+    "exceptionIds": [],
+    "dynamicRequirements": [],
+    "escalateWhen": []
+  },
+  {
+    "id": "policy.dashboard.delivery",
+    "displayName": "Completed-order downloads, keys, or account details are presented in the customer dashboard where supported.",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "authority": "current_authoritative",
+    "rule": "Completed-order downloads, keys, or account details are presented in the customer dashboard where supported.",
+    "conditions": [],
+    "exceptionIds": [],
+    "dynamicRequirements": [],
+    "escalateWhen": []
+  },
+  {
+    "id": "policy.refund_or_replacement.current_state_required",
+    "displayName": "Refund or replacement decisions require current order and policy state",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "authority": "operator_approved",
+    "rule": "Do not infer current refund or replacement eligibility from historical discretionary handling.",
+    "conditions": [],
+    "exceptionIds": [
+      "exception.historical_discretionary_remedy"
+    ],
+    "dynamicRequirements": [
+      "dynamic.order.status",
+      "dynamic.fulfillment.status"
+    ],
+    "escalateWhen": [
+      "current policy or live state is unavailable",
+      "historical evidence is contradictory"
+    ]
+  }
+]

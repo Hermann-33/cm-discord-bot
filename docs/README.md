@@ -40,6 +40,7 @@ This documentation system is the durable memory and governance layer for the Che
 - `decisions/ADR-0009-customer-email-in-shared-panels.md` — supersedes ADR-0008 only for the previous full-email prohibition; shared customer identity includes canonical account email
 - `decisions/ADR-0010-ticket-transcript-data-repository-boundary.md` — keeps the parallel `CM-Ticket-Transcripts` repository private, data-only and independent from production runtime
 - `decisions/ADR-0011-pending-purchase-and-fulfillment-support-view.md` — order-first pending-purchase fallback, optional private masked fulfillment support, and public-share exclusions
+- `decisions/ADR-0012-bundled-support-runtime-and-openrouter-planner.md` — sanitized bundled support runtime, constrained optional OpenRouter planner, stateful deterministic service boundary, and benchmark-before-activation gate
 
 ## Specialist references
 
@@ -52,3 +53,5 @@ This documentation system is the durable memory and governance layer for the Che
 Current source code and verified external state override stale chat memory. Later accepted ADRs supersede conflicting earlier ADRs. Historical audits describe their point-in-time conclusion and may be superseded. External backend facts are dependency context, never permission for the bot to bypass the website Internal Integrations API.
 
 Adjacent side projects remain outside the production bot runtime unless an explicit later architecture decision says otherwise. In particular, `CM-Ticket-Transcripts` is a private data corpus, not an executable bot/tool repository.
+
+ADR-0012 permits only an operator-generated, provenance-free `support-runtime/` derivative in this public repository. It does not permit production reads from the private corpus.

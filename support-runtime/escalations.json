@@ -1,0 +1,22 @@
+[
+  {
+    "id": "escalation.entity_ambiguous",
+    "trigger": "Material entity ambiguity changes the answer.",
+    "action": "Ask targeted disambiguation or route to human support."
+  },
+  {
+    "id": "escalation.known_flow_exhausted",
+    "trigger": "Safe evidence-backed procedure flow is exhausted.",
+    "action": "Escalate with attempted steps and outcomes."
+  },
+  {
+    "id": "escalation.visual_required",
+    "trigger": "Unseen attachment is required for diagnosis.",
+    "action": "Request human visual review."
+  },
+  {
+    "id": "escalation.policy_conflict",
+    "trigger": "Current policy is unavailable and historical handling conflicts.",
+    "action": "Escalate without promising a remedy."
+  }
+]

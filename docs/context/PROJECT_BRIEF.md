@@ -1,6 +1,6 @@
 # Project Brief
 
-Updated: 2026-08-19
+Updated: 2026-08-23
 
 ## Product purpose
 
@@ -97,6 +97,8 @@ Still blocked by backend contract. `orders.fulfillment.read` is read-only diagno
 ## Current maturity
 
 Production-adjacent and security-sensitive. TASK-CM-ADMIN-007 completes the currently available website-side order support integration on the bot branch: pending purchase lookup plus optional masked fulfillment support, without changing mutation authority.
+
+ADR-0012 additionally permits a bundled sanitized canonical support runtime and optional constrained OpenRouter next-action planner. This is scaffolding only: arbitrary customer messages are not connected, the model cannot execute lookups or author ungrounded replies, and activation remains benchmark-gated.
 
 ## Success criteria
 

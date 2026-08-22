@@ -1,0 +1,4329 @@
+[
+  {
+    "alias": "Valorant",
+    "normalized": "valorant",
+    "targets": [
+      "game.valorant"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Counter-Strike 2",
+    "normalized": "counter strike 2",
+    "targets": [
+      "game.cs2"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "CS2",
+    "normalized": "cs2",
+    "targets": [
+      "game.cs2"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Apex Legends",
+    "normalized": "apex legends",
+    "targets": [
+      "game.apex_legends"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Apex",
+    "normalized": "apex",
+    "targets": [
+      "game.apex_legends"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Overwatch 2",
+    "normalized": "overwatch 2",
+    "targets": [
+      "game.overwatch_2"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Rainbow Six Siege",
+    "normalized": "rainbow six siege",
+    "targets": [
+      "game.rainbow_six_siege"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "R6",
+    "normalized": "r6",
+    "targets": [
+      "game.rainbow_six_siege"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "R6X",
+    "normalized": "r6x",
+    "targets": [
+      "game.rainbow_six_siege"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Rust",
+    "normalized": "rust",
+    "targets": [
+      "game.rust"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Escape from Tarkov",
+    "normalized": "escape from tarkov",
+    "targets": [
+      "game.escape_from_tarkov"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "EFT",
+    "normalized": "eft",
+    "targets": [
+      "game.escape_from_tarkov"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Tarkov",
+    "normalized": "tarkov",
+    "targets": [
+      "game.escape_from_tarkov"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Fortnite",
+    "normalized": "fortnite",
+    "targets": [
+      "game.fortnite"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "FN",
+    "normalized": "fn",
+    "targets": [
+      "game.fortnite"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Arc Raiders",
+    "normalized": "arc raiders",
+    "targets": [
+      "game.arc_raiders"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Battlefield 6",
+    "normalized": "battlefield 6",
+    "targets": [
+      "game.battlefield_6"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "BF6",
+    "normalized": "bf6",
+    "targets": [
+      "game.battlefield_6"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "DayZ",
+    "normalized": "dayz",
+    "targets": [
+      "game.dayz"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "PUBG",
+    "normalized": "pubg",
+    "targets": [
+      "game.pubg"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Ancient Cheats",
+    "normalized": "ancient cheats",
+    "targets": [
+      "vendor.ancient"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Ancient",
+    "normalized": "ancient",
+    "targets": [
+      "vendor.ancient"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Venom Cheats",
+    "normalized": "venom cheats",
+    "targets": [
+      "vendor.venom"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Venom",
+    "normalized": "venom",
+    "targets": [
+      "vendor.venom"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Exodus",
+    "normalized": "exodus",
+    "targets": [
+      "vendor.exodus"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Fecurity",
+    "normalized": "fecurity",
+    "targets": [
+      "vendor.fecurity"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Unnamed",
+    "normalized": "unnamed",
+    "targets": [
+      "vendor.unnamed"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Memez",
+    "normalized": "memez",
+    "targets": [
+      "vendor.memez"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "nextcheat",
+    "normalized": "nextcheat",
+    "targets": [
+      "vendor.nextcheat"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Vega",
+    "normalized": "vega",
+    "targets": [
+      "vendor.vega"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Matrix",
+    "normalized": "matrix",
+    "targets": [
+      "vendor.matrix"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Fluent",
+    "normalized": "fluent",
+    "targets": [
+      "vendor.fluent"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Ultimate",
+    "normalized": "ultimate",
+    "targets": [
+      "vendor.ultimate"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "memesense",
+    "normalized": "memesense",
+    "targets": [
+      "vendor.memesense"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "MemeSense",
+    "normalized": "memesense",
+    "targets": [
+      "vendor.memesense"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Reported.lol",
+    "normalized": "reported lol",
+    "targets": [
+      "vendor.reported_lol"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Reported",
+    "normalized": "reported",
+    "targets": [
+      "vendor.reported_lol"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Desync",
+    "normalized": "desync",
+    "targets": [
+      "vendor.desync"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Reported.lol HWID Spoofer",
+    "normalized": "reported lol hwid spoofer",
+    "targets": [
+      "product.reported_lol.hwid_spoofer"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Exodus Spoofer",
+    "normalized": "exodus spoofer",
+    "targets": [
+      "product.exodus.spoofer"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Venom Apex Legends",
+    "normalized": "venom apex legends",
+    "targets": [
+      "product.venom.apex"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Ancient Apex Legends",
+    "normalized": "ancient apex legends",
+    "targets": [
+      "product.ancient.apex"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Fecurity Apex Legends",
+    "normalized": "fecurity apex legends",
+    "targets": [
+      "product.fecurity.apex"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Exodus Apex Legends",
+    "normalized": "exodus apex legends",
+    "targets": [
+      "product.exodus.apex"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Ancient Arc Raiders External",
+    "normalized": "ancient arc raiders external",
+    "targets": [
+      "product.ancient.arc_raiders"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Unnamed Arc Raiders External",
+    "normalized": "unnamed arc raiders external",
+    "targets": [
+      "product.unnamed.arc_raiders"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Venom Arc Raiders External",
+    "normalized": "venom arc raiders external",
+    "targets": [
+      "product.venom.arc_raiders"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Ancient Battlefield 6 External",
+    "normalized": "ancient battlefield 6 external",
+    "targets": [
+      "product.ancient.battlefield_6"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "MemeSense CS2",
+    "normalized": "memesense cs2",
+    "targets": [
+      "product.memesense.cs2"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Ancient Chams",
+    "normalized": "ancient chams",
+    "targets": [
+      "product.ancient.tarkov_chams"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "nextcheat Tarkov Full",
+    "normalized": "nextcheat tarkov full",
+    "targets": [
+      "product.nextcheat.tarkov_full"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "nextcheat Tarkov Lite",
+    "normalized": "nextcheat tarkov lite",
+    "targets": [
+      "product.nextcheat.tarkov_lite"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Exodus Fortnite",
+    "normalized": "exodus fortnite",
+    "targets": [
+      "product.exodus.fortnite"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Venom Fortnite",
+    "normalized": "venom fortnite",
+    "targets": [
+      "product.venom.fortnite"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Fecurity Fortnite",
+    "normalized": "fecurity fortnite",
+    "targets": [
+      "product.fecurity.fortnite"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Ancient Fortnite",
+    "normalized": "ancient fortnite",
+    "targets": [
+      "product.ancient.fortnite"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Venom PUBG External",
+    "normalized": "venom pubg external",
+    "targets": [
+      "product.venom.pubg"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Ancient PUBG External",
+    "normalized": "ancient pubg external",
+    "targets": [
+      "product.ancient.pubg"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Desync PUBG External",
+    "normalized": "desync pubg external",
+    "targets": [
+      "product.desync.pubg"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Exodus R6X",
+    "normalized": "exodus r6x",
+    "targets": [
+      "product.exodus.r6x"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Ancient R6X",
+    "normalized": "ancient r6x",
+    "targets": [
+      "product.ancient.r6x"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Vega R6X",
+    "normalized": "vega r6x",
+    "targets": [
+      "product.vega.r6x"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Venom R6X Internal",
+    "normalized": "venom r6x internal",
+    "targets": [
+      "product.venom.r6x_internal"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Ancient Rust",
+    "normalized": "ancient rust",
+    "targets": [
+      "product.ancient.rust"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Matrix Rust External",
+    "normalized": "matrix rust external",
+    "targets": [
+      "product.matrix.rust_external"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Fluent Rust",
+    "normalized": "fluent rust",
+    "targets": [
+      "product.fluent.rust"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Ultimate Rust",
+    "normalized": "ultimate rust",
+    "targets": [
+      "product.ultimate.rust"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Exodus Rust",
+    "normalized": "exodus rust",
+    "targets": [
+      "product.exodus.rust"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Venom Rust External",
+    "normalized": "venom rust external",
+    "targets": [
+      "product.venom.rust_external"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Venom Rust Internal",
+    "normalized": "venom rust internal",
+    "targets": [
+      "product.venom.rust_internal"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Unnamed Valorant",
+    "normalized": "unnamed valorant",
+    "targets": [
+      "product.unnamed.valorant"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Memez Valorant Full",
+    "normalized": "memez valorant full",
+    "targets": [
+      "product.memez.valorant_full"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Memez Valorant Lite",
+    "normalized": "memez valorant lite",
+    "targets": [
+      "product.memez.valorant_lite"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Cheap Rust NFA Account",
+    "normalized": "cheap rust nfa account",
+    "targets": [
+      "account_listing.rust.nfa"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Rust Full Access",
+    "normalized": "rust full access",
+    "targets": [
+      "account_listing.rust.full_access"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Fortnite Crew Pack",
+    "normalized": "fortnite crew pack",
+    "targets": [
+      "account_listing.fortnite.crew_service"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Cheap Fortnite V-Bucks Accounts",
+    "normalized": "cheap fortnite v bucks accounts",
+    "targets": [
+      "account_listing.fortnite.vbucks_full_access"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Arc Raiders NFA Account",
+    "normalized": "arc raiders nfa account",
+    "targets": [
+      "account_listing.arc_raiders.nfa"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Arc Raiders Full Access",
+    "normalized": "arc raiders full access",
+    "targets": [
+      "account_listing.arc_raiders.full_access"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "DayZ NFA Account",
+    "normalized": "dayz nfa account",
+    "targets": [
+      "account_listing.dayz.nfa"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "DayZ Full Access",
+    "normalized": "dayz full access",
+    "targets": [
+      "account_listing.dayz.full_access"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "CS2 NFA Account",
+    "normalized": "cs2 nfa account",
+    "targets": [
+      "account_listing.cs2.nfa"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "Battlefield 6 NFA Account",
+    "normalized": "battlefield 6 nfa account",
+    "targets": [
+      "account_listing.battlefield_6.nfa"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "nfa",
+    "normalized": "nfa",
+    "targets": [
+      "account_model.nfa"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "full access",
+    "normalized": "full access",
+    "targets": [
+      "account_model.full_access"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "manual service",
+    "normalized": "manual service",
+    "targets": [
+      "account_model.manual_service"
+    ],
+    "status": "exact",
+    "disambiguation": []
+  },
+  {
+    "alias": "When I launch the NFA launcher and log in via Steam, it closes after a moment; the Steam window appears, I click on my profile, the account loads, and then it asks for the NFA account password. [reply reference omitted]",
+    "normalized": "when i launch the nfa launcher and log in via steam it closes after a moment the steam window appears i click on my profile the account loads and then it asks for the nfa account password reply reference omitted",
+    "targets": [
+      "case.nfa.redemption_activation"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "[mention omitted] hello just want to ask. Can i login NFA account without getting my all steam accounts logged out?",
+    "normalized": "mention omitted hello just want to ask can i login nfa account without getting my all steam accounts logged out",
+    "targets": [
+      "case.nfa.owner_session_conflict"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "[URL omitted] 🤷‍♂️ [embed title] GitHub - alterra-lol/nfa-account-manager: Lightweight Steam account... Lightweight Steam account manager helpful for NFA accounts. Store, switch, and manage multiple Steam logins using cache data only. - al",
+    "normalized": "url omitted embed title github alterra lol nfa account manager lightweight steam account lightweight steam account manager helpful for nfa accounts store switch and manage multiple steam logins using cache data only al",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "for my nfa it just said it got resigned in someplace else is that just the owner of the account?",
+    "normalized": "for my nfa it just said it got resigned in someplace else is that just the owner of the account",
+    "targets": [
+      "case.nfa.owner_session_conflict"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "But if I allready joined with the nfa and was kicked",
+    "normalized": "but if i allready joined with the nfa and was kicked",
+    "targets": [
+      "case.nfa.owner_session_conflict"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "okk thx nfa.exe Does it work for all the tokens in your store?",
+    "normalized": "okk thx nfa exe does it work for all the tokens in your store",
+    "targets": [
+      "case.nfa.redemption_activation"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "should I run the cs2 account from the nfa.exe or the steam after first launch?",
+    "normalized": "should i run the cs2 account from the nfa exe or the steam after first launch",
+    "targets": [
+      "case.nfa.redemption_activation"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "My friend just want to steal my nfa acc can he stole it just by seen my token?",
+    "normalized": "my friend just want to steal my nfa acc can he stole it just by seen my token",
+    "targets": [
+      "case.nfa.redemption_activation"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "its asking for a password and even if i use the nfa launcher it still does",
+    "normalized": "its asking for a password and even if i use the nfa launcher it still does",
+    "targets": [
+      "case.nfa.redemption_activation"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "took over dc fully even with nfa and new token",
+    "normalized": "took over dc fully even with nfa and new token",
+    "targets": [
+      "case.nfa.redemption_activation"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Cheater's Market Secure order delivery Your order is ready. Your account access token is below. Your dashboard shows the matching loader, and the setup guide is linked below. Item CS2 Prime NFA Variant default Context Counter-Strike 2 Statu",
+    "normalized": "cheaters market secure order delivery your order is ready your account access token is below your dashboard shows the matching loader and the setup guide is linked below item cs2 prime nfa variant default context counter strike 2 statu",
+    "targets": [
+      "case.catalog.availability_status"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "also can you give me the new functioning nfa account downloader please?",
+    "normalized": "also can you give me the new functioning nfa account downloader please",
+    "targets": [
+      "case.nfa.redemption_activation"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "cus the nfa loader wont work",
+    "normalized": "cus the nfa loader wont work",
+    "targets": [
+      "case.nfa.redemption_activation"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "[URL omitted] [embed title] NFA Account Guide How NFA game accounts and token-based delivery work.",
+    "normalized": "url omitted embed title nfa account guide how nfa game accounts and token based delivery work",
+    "targets": [
+      "case.nfa.redemption_activation"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "I bought a new nfa from the regular loader",
+    "normalized": "i bought a new nfa from the regular loader",
+    "targets": [
+      "case.nfa.redemption_activation"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "question, if I want to use my normal ac (not NFA), launch it through the loader too?",
+    "normalized": "question if i want to use my normal ac not nfa launch it through the loader too",
+    "targets": [
+      "case.nfa.redemption_activation"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "There nfa loader ? I mean, I’m very careful of what I click on. I don’t click on random links. I don’t download random stuff. Literally the only stuff I unload and buy from y’all and cheese vault",
+    "normalized": "there nfa loader i mean im very careful of what i click on i dont click on random links i dont download random stuff literally the only stuff i unload and buy from yall and cheese vault",
+    "targets": [
+      "case.nfa.access_model_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "i just have a question since im always buying from u guys when i buy multiple nfa at once , are they all activated once bought or once the account is accessed it gets activated",
+    "normalized": "i just have a question since im always buying from u guys when i buy multiple nfa at once are they all activated once bought or once the account is accessed it gets activated",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Also quick question: are these NFA accounts stolen or legit? If they're stolen, I'd rather not contribute in this. I don't want a refund or anything, I just don't want to be a part of it, so please let me know.",
+    "normalized": "also quick question are these nfa accounts stolen or legit if theyre stolen id rather not contribute in this i dont want a refund or anything i just dont want to be a part of it so please let me know",
+    "targets": [
+      "case.nfa.replacement_dispute"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Arc Raiders nfa meaning?",
+    "normalized": "arc raiders nfa meaning",
+    "targets": [
+      "case.product.compatibility"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Hi, unfortunately this is normal behavior for these types of accounts. When account session data changes, it goes invalid. Session data changes when the account credentials are changed Or If you logout from the account via steam Account lif",
+    "normalized": "hi unfortunately this is normal behavior for these types of accounts when account session data changes it goes invalid session data changes when the account credentials are changed or if you logout from the account via steam account lif",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "can i top up pls",
+    "normalized": "can i top up pls",
+    "targets": [
+      "case.account.manual_service"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "anyways can i topup $20?",
+    "normalized": "anyways can i topup 20",
+    "targets": [
+      "case.account.manual_service"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "can you top up 2.2 dollars into my acc and i send to you",
+    "normalized": "can you top up 2 2 dollars into my acc and i send to you",
+    "targets": [
+      "case.account.manual_service"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "directly pay not wallet top up",
+    "normalized": "directly pay not wallet top up",
+    "targets": [
+      "case.account.manual_service"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Yoo bro I wanted to topup 2.50$ but I mistakenly clicked on card instead of crypto can you cancel this so I can pay with crypto??💀 [attachment omitted]",
+    "normalized": "yoo bro i wanted to topup 2 50 but i mistakenly clicked on card instead of crypto can you cancel this so i can pay with crypto attachment omitted",
+    "targets": [
+      "case.account.manual_service"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "can iget working acount replacment pls i need to top up acount soon for more",
+    "normalized": "can iget working acount replacment pls i need to top up acount soon for more",
+    "targets": [
+      "case.account.manual_service"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "hi i just come back acount invalid i will top up acount now and buy more pls replace it by tomorrow i played 0 games today waiting for a working acount [attachment omitted] [reply reference omitted]",
+    "normalized": "hi i just come back acount invalid i will top up acount now and buy more pls replace it by tomorrow i played 0 games today waiting for a working acount attachment omitted reply reference omitted",
+    "targets": [
+      "case.account.manual_service"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "fuck do you mean, Your website encourages people to buy multiple accounts, and switch between them",
+    "normalized": "fuck do you mean your website encourages people to buy multiple accounts and switch between them",
+    "targets": [
+      "case.account.bulk_purchase"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Website showed the requested account tier out of stock",
+    "normalized": "website showed the requested account tier out of stock",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "PayPal purchase did not immediately deliver account",
+    "normalized": "paypal purchase did not immediately deliver account",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Customer lost access after using another purchased account",
+    "normalized": "customer lost access after using another purchased account",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "you know other people selling nfa",
+    "normalized": "you know other people selling nfa",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Im trying to buy an NFA",
+    "normalized": "im trying to buy an nfa",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "can u send me temp link to buy nfa",
+    "normalized": "can u send me temp link to buy nfa",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Cs2 nfa stock please",
+    "normalized": "cs2 nfa stock please",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "oh okay, bought nfa from yall for now.. looking for a cheap shop that sells fa account too",
+    "normalized": "oh okay bought nfa from yall for now looking for a cheap shop that sells fa account too",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "i can buy 1 cs2 nfa account",
+    "normalized": "i can buy 1 cs2 nfa account",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "if i buy cs2 prime nfa account, where i get the account details after i bought it?",
+    "normalized": "if i buy cs2 prime nfa account where i get the account details after i bought it",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "can i buy this nfa [attachment omitted]",
+    "normalized": "can i buy this nfa attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "[mention] i cant buy nfa account",
+    "normalized": "mention i cant buy nfa account",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "cant buy nfa acc",
+    "normalized": "cant buy nfa acc",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Hello, do you sell the NFA Rust account provider? [mention omitted]",
+    "normalized": "hello do you sell the nfa rust account provider mention omitted",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "If I buy 5 accounts and use them within a week, will they expire by then? [reply reference omitted]",
+    "normalized": "if i buy 5 accounts and use them within a week will they expire by then reply reference omitted",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "i rather pay 50cents more on another selle and not get a 5 minute account",
+    "normalized": "i rather pay 50cents more on another selle and not get a 5 minute account",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "alr well ig il just have to buy from somewhere where i dont have to pay account just do get it for 5 minutes",
+    "normalized": "alr well ig il just have to buy from somewhere where i dont have to pay account just do get it for 5 minutes",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "If so, I will get you a lot of clients because I have a team that buys such accounts",
+    "normalized": "if so i will get you a lot of clients because i have a team that buys such accounts",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "im buying an nfa",
+    "normalized": "im buying an nfa",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "i just buy nfa cs2 prime",
+    "normalized": "i just buy nfa cs2 prime",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "There is 0 reason for anyone to buy a prime account which cannot play on premier [reply reference omitted]",
+    "normalized": "there is 0 reason for anyone to buy a prime account which cannot play on premier reply reference omitted",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Do you also sell rust nfas which cant join any servers?",
+    "normalized": "do you also sell rust nfas which cant join any servers",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "You obviously want a bigger % in selling cs nfa",
+    "normalized": "you obviously want a bigger in selling cs nfa",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "gonna restock rust nfas",
+    "normalized": "gonna restock rust nfas",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "but I’m not okay just keep the 2$ I’ll take business somewhere else I’m not changing my server cause y’all sell bunk accounts",
+    "normalized": "but im not okay just keep the 2 ill take business somewhere else im not changing my server cause yall sell bunk accounts",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Did we have to buy them from separate accounts?",
+    "normalized": "did we have to buy them from separate accounts",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "I just have an account I purchased earlier.",
+    "normalized": "i just have an account i purchased earlier",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "no im asking if your giving me another acc to test ab the reply^ or do u want me to buy another account [reply reference omitted]",
+    "normalized": "no im asking if your giving me another acc to test ab the reply or do u want me to buy another account reply reference omitted",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "and do yk when more nfas will get restocked?",
+    "normalized": "and do yk when more nfas will get restocked",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "I wanted to buy a csgo nfa account",
+    "normalized": "i wanted to buy a csgo nfa account",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Choud you give me another account? I lowkey don't wanna buy one just becouse of this",
+    "normalized": "choud you give me another account i lowkey dont wanna buy one just becouse of this",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "is rust nfa accs stocked?",
+    "normalized": "is rust nfa accs stocked",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "might buy nfa again",
+    "normalized": "might buy nfa again",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "when i get my money im gonna just buy woofer from your website and another nfa acc",
+    "normalized": "when i get my money im gonna just buy woofer from your website and another nfa acc",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "I’m his friend he made me buy for him and he said your the cheapest provider and he’s sorry can u unban him in his main account plz",
+    "normalized": "im his friend he made me buy for him and he said your the cheapest provider and hes sorry can u unban him in his main account plz",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "restock nfa fr🙏 [reply reference omitted]",
+    "normalized": "restock nfa fr reply reference omitted",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "for some reason i cant use my wallet to buy the accounts",
+    "normalized": "for some reason i cant use my wallet to buy the accounts",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "When’s the rust accounts in stock?",
+    "normalized": "whens the rust accounts in stock",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "i buy many nfa",
+    "normalized": "i buy many nfa",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "bro i buy nfa account",
+    "normalized": "bro i buy nfa account",
+    "targets": [
+      "case.account.purchase_question"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "so i need to go on different account yh?",
+    "normalized": "so i need to go on different account yh",
+    "targets": [
+      "case.account.wrong_specification"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "I think I was looking at a different account, my apologies.",
+    "normalized": "i think i was looking at a different account my apologies",
+    "targets": [
+      "case.account.wrong_specification"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "I’m following the steps one by one, but the account still isn't working; it keeps asking for a password, yet I never received one. A friend of mine bought from you and his works fine, but mine doesn't. We have different accounts, and no one",
+    "normalized": "im following the steps one by one but the account still isnt working it keeps asking for a password yet i never received one a friend of mine bought from you and his works fine but mine doesnt we have different accounts and no one",
+    "targets": [
+      "case.catalog.availability_status"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "cause ive been in the server on like 5 different accounts",
+    "normalized": "cause ive been in the server on like 5 different accounts",
+    "targets": [
+      "case.account.wrong_specification"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Customer reported account bans",
+    "normalized": "customer reported account bans",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Hardware-ban/account-ban confusion",
+    "normalized": "hardware ban account ban confusion",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Account game-banned within about one minute",
+    "normalized": "account game banned within about one minute",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Delivered account EAC-banned in Rust",
+    "normalized": "delivered account eac banned in rust",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Two later accounts had VAC/CS bans that restricted desired Rust servers",
+    "normalized": "two later accounts had vac cs bans that restricted desired rust servers",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Customer later said delivered account was already game-banned",
+    "normalized": "customer later said delivered account was already game banned",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Account later became banned",
+    "normalized": "account later became banned",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Fortnite account ban",
+    "normalized": "fortnite account ban",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Customer said one delivered account was banned",
+    "normalized": "customer said one delivered account was banned",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Customer thought account was banned",
+    "normalized": "customer thought account was banned",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Later account banned",
+    "normalized": "later account banned",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "why do i get banned steam banned on an fa rust acc but not on an nfa",
+    "normalized": "why do i get banned steam banned on an fa rust acc but not on an nfa",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "think it was kinda unfair it got banned that quick",
+    "normalized": "think it was kinda unfair it got banned that quick",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "can i have a account not ban",
+    "normalized": "can i have a account not ban",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "yo the account i just bought i try to load into a server and it says recent game ban is that just for the account? [reply reference omitted]",
+    "normalized": "yo the account i just bought i try to load into a server and it says recent game ban is that just for the account reply reference omitted",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "im not playing on anymore accounts with those i just get server banned",
+    "normalized": "im not playing on anymore accounts with those i just get server banned",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "and i get banned on the server i play on if the account has any sort of bans",
+    "normalized": "and i get banned on the server i play on if the account has any sort of bans",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Never once have I had another nfa with a ban",
+    "normalized": "never once have i had another nfa with a ban",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Ok please if he come with my nfa ban him",
+    "normalized": "ok please if he come with my nfa ban him",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "i mean i was on on a nfa for like 5 hours yea no ban [reply reference omitted]",
+    "normalized": "i mean i was on on a nfa for like 5 hours yea no ban reply reference omitted",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "just let me know when more nfas come back bc i would probably jsut keep getting banned if i use 100 hour accounts",
+    "normalized": "just let me know when more nfas come back bc i would probably jsut keep getting banned if i use 100 hour accounts",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "do you think it’s possible to hop on another nfa and not get insta banned? or do you think i’m most likely fully hwid banned",
+    "normalized": "do you think its possible to hop on another nfa and not get insta banned or do you think im most likely fully hwid banned",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "like i dont get how im not banned on a nfa",
+    "normalized": "like i dont get how im not banned on a nfa",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "ive been on a nfa for like 2 hours still no ban",
+    "normalized": "ive been on a nfa for like 2 hours still no ban",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "why 2 accounts are gambanned",
+    "normalized": "why 2 accounts are gambanned",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "I bought a CS2 account, but it has a 12-hour VAC ban.",
+    "normalized": "i bought a cs2 account but it has a 12 hour vac ban",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "I got 2 accounts, both are banned, you need to give 2 accounts",
+    "normalized": "i got 2 accounts both are banned you need to give 2 accounts",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "will i be able to play for a bit on the accounts? or are they just going to end up insta banned?",
+    "normalized": "will i be able to play for a bit on the accounts or are they just going to end up insta banned",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "ahh i see, so what if i buy an nfa and dont chat at all? im still going to get eac banned for ban evaiding?",
+    "normalized": "ahh i see so what if i buy an nfa and dont chat at all im still going to get eac banned for ban evaiding",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "cause i was banned from the server once, joined it on an nfa with a different chet, i think it had a built in spofer, and was fine",
+    "normalized": "cause i was banned from the server once joined it on an nfa with a different chet i think it had a built in spofer and was fine",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "well that nfa was just instagamebanne",
+    "normalized": "well that nfa was just instagamebanne",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "but im pretty sure the second this venom works again, im just insta banned on another account",
+    "normalized": "but im pretty sure the second this venom works again im just insta banned on another account",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "was false banned from rust in the first place on an account with like 800$ worth of skins I purchased first hand on due to whatever bs their system detected, I had sent my laptop in for a motherboard replacement to the manufacturer, when i ",
+    "normalized": "was false banned from rust in the first place on an account with like 800 worth of skins i purchased first hand on due to whatever bs their system detected i had sent my laptop in for a motherboard replacement to the manufacturer when i",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "another account with a game ban [attachment omitted] [attachment omitted]",
+    "normalized": "another account with a game ban attachment omitted attachment omitted",
+    "targets": [
+      "case.account.banned"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Multiple delivered accounts reported offline/invalid despite validity indicator",
+    "normalized": "multiple delivered accounts reported offline invalid despite validity indicator",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Account later went invalid/offline",
+    "normalized": "account later went invalid offline",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Another account later invalid before customer claimed to use it",
+    "normalized": "another account later invalid before customer claimed to use it",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Login screen showed account invalid",
+    "normalized": "login screen showed account invalid",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Account credentials invalid before customer reported any use",
+    "normalized": "account credentials invalid before customer reported any use",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Account later became invalid",
+    "normalized": "account later became invalid",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "First supplied account was inaccessible",
+    "normalized": "first supplied account was inaccessible",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Hey i hope you guys are well! Just letting you know out of the 5 accounts, these 3 accounts did not work. In game rank was to low for premier. [account token omitted] [account token omitted] [account token omitted]",
+    "normalized": "hey i hope you guys are well just letting you know out of the 5 accounts these 3 accounts did not work in game rank was to low for premier account token omitted account token omitted account token omitted",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "i bujy account invalid [attachment omitted] [reply reference omitted]",
+    "normalized": "i bujy account invalid attachment omitted reply reference omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "i write token but i got account invalid error",
+    "normalized": "i write token but i got account invalid error",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "[mention omitted] it says account is invalid",
+    "normalized": "mention omitted it says account is invalid",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "My account isn't Prime, so I can't access the select match.",
+    "normalized": "my account isnt prime so i cant access the select match",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Hello again, it gaves me that this account you gave me is invalid after 2 days of use [reply reference omitted]",
+    "normalized": "hello again it gaves me that this account you gave me is invalid after 2 days of use reply reference omitted",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "I bought 3 accounts recently and I haven’t even played on them and it’s says they’re invalid",
+    "normalized": "i bought 3 accounts recently and i havent even played on them and its says theyre invalid",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "The problem is not the activation of the token, but the fact that I could not log into the account at all. At the first login I was asked for a password that I did not have, so I did not actually have access to the account. I got the email ",
+    "normalized": "the problem is not the activation of the token but the fact that i could not log into the account at all at the first login i was asked for a password that i did not have so i did not actually have access to the account i got the email",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "In the end I trusted you and ran the loader. I was using the accounts and went to sleep, and now I no longer have access to the account: [account token omitted]",
+    "normalized": "in the end i trusted you and ran the loader i was using the accounts and went to sleep and now i no longer have access to the account cm nfa 95rfpnv41v38nt04bezbyra3r",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "When I launch the launcher, it logs me into Steam, but a moment later, when I open Steam, it asks for my password to log in to the account—so I can't use it. [reply reference omitted]",
+    "normalized": "when i launch the launcher it logs me into steam but a moment later when i open steam it asks for my password to log in to the account so i cant use it reply reference omitted",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "my account is still not works",
+    "normalized": "my account is still not works",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "My account password was changed suddenly and I can't log in.",
+    "normalized": "my account password was changed suddenly and i cant log in",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Reference [order identifier omitted] i swear i bought the account and i have the same problem again it wont let me log in can you use the key too the past few days i bought a lot of accounts and i never had this happen but now i bought anot",
+    "normalized": "reference order identifier omitted i swear i bought the account and i have the same problem again it wont let me log in can you use the key too the past few days i bought a lot of accounts and i never had this happen but now i bought anot",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "I was able to download it, but when I create an account, it gives me this error and I can't log in. [account token omitted] [attachment omitted]",
+    "normalized": "i was able to download it but when i create an account it gives me this error and i cant log in account token omitted attachment omitted",
+    "targets": [
+      "case.catalog.availability_status"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Hey i have 2 alternate accounts i need help accessing please",
+    "normalized": "hey i have 2 alternate accounts i need help accessing please",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "I'm aware of that—I bought an account an hour ago, but I can't get the code to access your site. [reply reference omitted]",
+    "normalized": "im aware of that i bought an account an hour ago but i cant get the code to access your site reply reference omitted",
+    "targets": [
+      "case.account.login_access"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Buy one-day access through Stripe after card declines",
+    "normalized": "buy one day access through stripe after card declines",
+    "targets": [
+      "case.payment.card_declined"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Normal card processing was flagged/declined",
+    "normalized": "normal card processing was flagged declined",
+    "targets": [
+      "case.payment.card_declined"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Stripe route initially unavailable due disputes",
+    "normalized": "stripe route initially unavailable due disputes",
+    "targets": [
+      "case.payment.card_declined"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Internet trouble during payment; card charged but checkout reported failure and delivered nothing",
+    "normalized": "internet trouble during payment card charged but checkout reported failure and delivered nothing",
+    "targets": [
+      "case.website.checkout_failure"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Stripe unavailable",
+    "normalized": "stripe unavailable",
+    "targets": [
+      "case.payment.card_declined"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Card declined on multiple processors",
+    "normalized": "card declined on multiple processors",
+    "targets": [
+      "case.payment.card_declined"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Card discount unavailable after processor switch",
+    "normalized": "card discount unavailable after processor switch",
+    "targets": [
+      "case.discount.coupon"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "One card processor failed",
+    "normalized": "one card processor failed",
+    "targets": [
+      "case.payment.card_declined"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Stripe had failed for customer",
+    "normalized": "stripe had failed for customer",
+    "targets": [
+      "case.payment.card_declined"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Prepaid card declined",
+    "normalized": "prepaid card declined",
+    "targets": [
+      "case.payment.card_declined"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Card payments unavailable",
+    "normalized": "card payments unavailable",
+    "targets": [
+      "case.payment.card_declined"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "this is my order id im trying to pay with card and they are decling it",
+    "normalized": "this is my order id im trying to pay with card and they are decling it",
+    "targets": [
+      "case.payment.card_declined"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "SellAuth and PayPal unavailable",
+    "normalized": "sellauth and paypal unavailable",
+    "targets": [
+      "case.payment.paypal_unavailable"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Crypto payment misread/unreceived initially",
+    "normalized": "crypto payment misread unreceived initially",
+    "targets": [
+      "case.payment.crypto_pending"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Crypto purchase had not immediately confirmed",
+    "normalized": "crypto purchase had not immediately confirmed",
+    "targets": [
+      "case.payment.crypto_pending"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "First crypto purchase not emailed; later crypto purchase self-confirmed",
+    "normalized": "first crypto purchase not emailed later crypto purchase self confirmed",
+    "targets": [
+      "case.payment.crypto_pending"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "heres the buy me a coffee thingy, ive bought 7 and only received 6, my emails [email omitted] so u can check [attachment omitted]",
+    "normalized": "heres the buy me a coffee thingy ive bought 7 and only received 6 my emails email omitted so u can check attachment omitted",
+    "targets": [
+      "case.payment.manual"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Okay but I didnt get a mail from u only the buy me a coffee send me this",
+    "normalized": "okay but i didnt get a mail from u only the buy me a coffee send me this",
+    "targets": [
+      "case.payment.manual"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "[URL omitted] [embed title] Ashley Barnes's Shop | Buy Me a Coffee Aura Farming",
+    "normalized": "url omitted embed title ashley barness shop buy me a coffee aura farming",
+    "targets": [
+      "case.payment.manual"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "i clicked on it and it said [URL omitted] [embed title] Ashley Barnes's Shop | Buy Me a Coffee Aura Farming",
+    "normalized": "i clicked on it and it said url omitted embed title ashley barness shop buy me a coffee aura farming",
+    "targets": [
+      "case.payment.manual"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Same mail on buymeacoffeee g",
+    "normalized": "same mail on buymeacoffeee g",
+    "targets": [
+      "case.payment.manual"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "i paid with card and no recive nothing",
+    "normalized": "i paid with card and no recive nothing",
+    "targets": [
+      "case.payment.completed_missing_order"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "i literally clicked the coffee thing or wtv paid and nothing",
+    "normalized": "i literally clicked the coffee thing or wtv paid and nothing",
+    "targets": [
+      "case.payment.completed_missing_order"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Later payment pending/not received",
+    "normalized": "later payment pending not received",
+    "targets": [
+      "case.payment.failed_or_pending"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Refund or exchange an accidental purchase after GPU failure",
+    "normalized": "refund or exchange an accidental purchase after gpu failure",
+    "targets": [
+      "case.order.refund_cancel"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "where do i find my purchase [attachment omitted]",
+    "normalized": "where do i find my purchase attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "You don't understand: I enter $10 on the payment screen, but the system directs a charge of $15—the total for all my orders—to my bank. I am not entering $15 anywhere; your system is requesting it automatically.",
+    "normalized": "you dont understand i enter 10 on the payment screen but the system directs a charge of 15 the total for all my orders to my bank i am not entering 15 anywhere your system is requesting it automatically",
+    "targets": [
+      "case.order.status"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "but im 99% sure this was after original order where i paid",
+    "normalized": "but im 99 sure this was after original order where i paid",
+    "targets": [
+      "case.order.status"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Is it where I purchased it at just wanted to make sure",
+    "normalized": "is it where i purchased it at just wanted to make sure",
+    "targets": [
+      "case.order.status"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Exception (cs:155243): NullReferenceException: Object reference not set to an instance of an object. UnityEngine.Bindings.ThrowHelper.ThrowNullReferenceException (System.Object obj) (at [mention omitted]:0) UnityEngine.AnimationCurve.Evalua",
+    "normalized": "exception cs 155243 nullreferenceexception object reference not set to an instance of an object unityengine bindings throwhelper thrownullreferenceexception system object obj at mention omitted 0 unityengine animationcurve evalua",
+    "targets": [
+      "case.wallet.balance"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "[embed title] todoroki\\.joe's Aura Your linked Cheater's Market Aura balance. [embed field] Available: <:aura:[platform identifier omitted]> `6,000` [embed field] Lifetime Earned: <:aura:[platform identifier omitted]> `6,000` [reply referen",
+    "normalized": "embed title todoroki joes aura your linked cheaters market aura balance embed field available aura platform identifier omitted 6 000 embed field lifetime earned aura platform identifier omitted 6 000 reply referen",
+    "targets": [
+      "case.catalog.availability_status"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "[embed title] todoroki\\.joe's Aura Your linked Cheater's Market Aura balance. [embed field] Available: <:aura:[platform identifier omitted]> ` 6,000` [embed field] Lifetime Earned: <:aura:[platform identifier omitted]> ` 6,000` [reply refer",
+    "normalized": "embed title todoroki joes aura your linked cheaters market aura balance embed field available aura platform identifier omitted 6 000 embed field lifetime earned aura platform identifier omitted 6 000 reply refer",
+    "targets": [
+      "case.catalog.availability_status"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "You can convert that aura to balance [reply reference omitted]",
+    "normalized": "you can convert that aura to balance reply reference omitted",
+    "targets": [
+      "case.aura.balance_or_adjustment"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Recover discount",
+    "normalized": "recover discount",
+    "targets": [
+      "case.discount.coupon"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "could i get a discount",
+    "normalized": "could i get a discount",
+    "targets": [
+      "case.discount.coupon"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "btw any discounts if i buy bulk keys for me and my friends",
+    "normalized": "btw any discounts if i buy bulk keys for me and my friends",
+    "targets": [
+      "case.discount.coupon"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "also can i get sum coupon codes or nah?",
+    "normalized": "also can i get sum coupon codes or nah",
+    "targets": [
+      "case.discount.coupon"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "and do yall got discount codes?",
+    "normalized": "and do yall got discount codes",
+    "targets": [
+      "case.discount.coupon"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "they had a discount code",
+    "normalized": "they had a discount code",
+    "targets": [
+      "case.discount.coupon"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "can i get a discount of 0.80usd?",
+    "normalized": "can i get a discount of 0 80usd",
+    "targets": [
+      "case.discount.coupon"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Is there an NFA discount?",
+    "normalized": "is there an nfa discount",
+    "targets": [
+      "case.discount.coupon"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "do you have any account for 1.29 i only have 1.34 in my wallet or maybe a discount code",
+    "normalized": "do you have any account for 1 29 i only have 1 34 in my wallet or maybe a discount code",
+    "targets": [
+      "case.discount.coupon"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "bc all orders in the dashboard were created after order",
+    "normalized": "bc all orders in the dashboard were created after order",
+    "targets": [
+      "case.dashboard.verification"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Second checkout page failed to load",
+    "normalized": "second checkout page failed to load",
+    "targets": [
+      "case.website.checkout_failure"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "VBS/core-isolation prerequisite error",
+    "normalized": "vbs core isolation prerequisite error",
+    "targets": [
+      "case.website.checkout_failure"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "PIN/Hyper-V prerequisite error",
+    "normalized": "pin hyper v prerequisite error",
+    "targets": [
+      "case.website.checkout_failure"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Card checkout stuck processing",
+    "normalized": "card checkout stuck processing",
+    "targets": [
+      "case.website.checkout_failure"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "I would like to sell your product via an affiliate link, if possible, or through keys.",
+    "normalized": "i would like to sell your product via an affiliate link if possible or through keys",
+    "targets": [
+      "case.reseller.application"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "from the reviews left by the customers from the resellers, the most majority are positive reviews, stating easy setup and safe to use",
+    "normalized": "from the reviews left by the customers from the resellers the most majority are positive reviews stating easy setup and safe to use",
+    "targets": [
+      "case.reseller.application"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "todoroki i was wondering do you have resellers",
+    "normalized": "todoroki i was wondering do you have resellers",
+    "targets": [
+      "case.reseller.application"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Understand an apparent product status/error",
+    "normalized": "understand an apparent product status error",
+    "targets": [
+      "case.product.launch_failure"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Spoofer detected iaStor/RAID condition despite no RAID usage",
+    "normalized": "spoofer detected iastor raid condition despite no raid usage",
+    "targets": [
+      "case.product.compatibility"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Previously working account and newly bought account both failed on customer's PC while friend's worked",
+    "normalized": "previously working account and newly bought account both failed on customers pc while friends worked",
+    "targets": [
+      "case.catalog.availability_status"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Product not available after waiting a day",
+    "normalized": "product not available after waiting a day",
+    "targets": [
+      "case.catalog.availability_status"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Are all the rust cheats down right now ?",
+    "normalized": "are all the rust cheats down right now",
+    "targets": [
+      "case.catalog.availability_status"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "I enter the product key, it downloads, and then it just stays there.",
+    "normalized": "i enter the product key it downloads and then it just stays there",
+    "targets": [
+      "case.catalog.availability_status"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "but what would be the reason for that ban does it mean the cheats got detected or the wpoofer",
+    "normalized": "but what would be the reason for that ban does it mean the cheats got detected or the wpoofer",
+    "targets": [
+      "case.catalog.availability_status"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "im waiting for one of my cheats to come back from updating",
+    "normalized": "im waiting for one of my cheats to come back from updating",
+    "targets": [
+      "case.catalog.availability_status"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Token is working and account is working",
+    "normalized": "token is working and account is working",
+    "targets": [
+      "case.catalog.availability_status"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Owhh Damm venom external was updating",
+    "normalized": "owhh damm venom external was updating",
+    "targets": [
+      "case.catalog.availability_status"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "i tried ancient but it got detected last time [reply reference omitted]",
+    "normalized": "i tried ancient but it got detected last time reply reference omitted",
+    "targets": [
+      "case.catalog.availability_status"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "its alr, i got it setup, but i bought exodus right before they started updating it, and now it says my key is expired even tho i couldnt even use it cuz it was down becuase they were updating it",
+    "normalized": "its alr i got it setup but i bought exodus right before they started updating it and now it says my key is expired even tho i couldnt even use it cuz it was down becuase they were updating it",
+    "targets": [
+      "case.license.expired_time"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "I am the developer/owner of a working, undetected chet for MECCHA CHAMELEON, currently one of the most popular games on Steam. I came across your marketplace and was impressed by your focus on a curated selection from vetted developers. My ",
+    "normalized": "i am the developer owner of a working undetected chet for meccha chameleon currently one of the most popular games on steam i came across your marketplace and was impressed by your focus on a curated selection from vetted developers my",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "[mention omitted] are any of the cheats not updating?",
+    "normalized": "mention omitted are any of the cheats not updating",
+    "targets": [
+      "case.catalog.availability_status"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Ohh it’s working now with exodus woofer I thought I tried before but I guess not",
+    "normalized": "ohh its working now with exodus woofer i thought i tried before but i guess not",
+    "targets": [
+      "case.catalog.availability_status"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Obtain a spoofer license without consuming its duration immediately",
+    "normalized": "obtain a spoofer license without consuming its duration immediately",
+    "targets": [
+      "case.license.expired_time"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "alr ima buy a month key for it tomorrow",
+    "normalized": "alr ima buy a month key for it tomorrow",
+    "targets": [
+      "case.catalog.pricing_duration"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "well im a ex chease dev for rust and stuff, which is why im using cheaser market so much, just testing new stuff out, i found somthing that honestly worth it and can chease for about 10 days without being banned, untill i was, wich is good ",
+    "normalized": "well im a ex chease dev for rust and stuff which is why im using cheaser market so much just testing new stuff out i found somthing that honestly worth it and can chease for about 10 days without being banned untill i was wich is good",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "need help getting 1 month key for sploofer",
+    "normalized": "need help getting 1 month key for sploofer",
+    "targets": [
+      "case.catalog.pricing_duration"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "KEY_LHXPTTTH40HT8EJ5A5R120J0 Its a week key",
+    "normalized": "key lhxpttth40ht8ej5a5r120j0 its a week key",
+    "targets": [
+      "case.catalog.pricing_duration"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Ahh hmm, cause I half installed bsttlenet cause I was about play cod, then a day or 2 later after not using one of my cheats from another provider I tried again after buying a month key snd it don't wana work, they telling me to reinstall w",
+    "normalized": "ahh hmm cause i half installed bsttlenet cause i was about play cod then a day or 2 later after not using one of my cheats from another provider i tried again after buying a month key snd it dont wana work they telling me to reinstall w",
+    "targets": [
+      "case.catalog.pricing_duration"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "i bought 2 two week keys",
+    "normalized": "i bought 2 two week keys",
+    "targets": [
+      "case.catalog.pricing_duration"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Windows 11 25H2 unsupported",
+    "normalized": "windows 11 25h2 unsupported",
+    "targets": [
+      "case.product.requirements"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Product still requested virtualization be disabled after customer believed it was disabled",
+    "normalized": "product still requested virtualization be disabled after customer believed it was disabled",
+    "targets": [
+      "case.product.requirements"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Virtualization warning persisted",
+    "normalized": "virtualization warning persisted",
+    "targets": [
+      "case.product.requirements"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Required DMA/virtualization state could not be changed on HP firmware",
+    "normalized": "required dma virtualization state could not be changed on hp firmware",
+    "targets": [
+      "case.product.requirements"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Windows 11 concern",
+    "normalized": "windows 11 concern",
+    "targets": [
+      "case.product.requirements"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Understand requirements and repeated kicks",
+    "normalized": "understand requirements and repeated kicks",
+    "targets": [
+      "case.product.requirements"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Hi for venom cheese is obligatory disable virtualization",
+    "normalized": "hi for venom cheese is obligatory disable virtualization",
+    "targets": [
+      "case.product.requirements"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "shit i bought a woofer of u and it says aes instruction not supported",
+    "normalized": "shit i bought a woofer of u and it says aes instruction not supported",
+    "targets": [
+      "case.product.requirements"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "do i have to disable the secure boot",
+    "normalized": "do i have to disable the secure boot",
+    "targets": [
+      "case.product.requirements"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "i can leave secure boot on sir ? [reply reference omitted]",
+    "normalized": "i can leave secure boot on sir reply reference omitted",
+    "targets": [
+      "case.product.requirements"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "do i need secure boot on for rust to not get banned?",
+    "normalized": "do i need secure boot on for rust to not get banned",
+    "targets": [
+      "case.product.requirements"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "just completely removed my damn DeviceGuard folder in the registrys and turned secure boot off",
+    "normalized": "just completely removed my damn deviceguard folder in the registrys and turned secure boot off",
+    "targets": [
+      "case.product.requirements"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Customer expected PlayStation 5 compatibility",
+    "normalized": "customer expected playstation 5 compatibility",
+    "targets": [
+      "case.product.compatibility"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Unsupported Windows build",
+    "normalized": "unsupported windows build",
+    "targets": [
+      "case.product.compatibility"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "RAID-related block",
+    "normalized": "raid related block",
+    "targets": [
+      "case.product.compatibility"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "RAID enabled/incompatible",
+    "normalized": "raid enabled incompatible",
+    "targets": [
+      "case.product.compatibility"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Later license needed reset after incompatible software state",
+    "normalized": "later license needed reset after incompatible software state",
+    "targets": [
+      "case.product.compatibility"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Bundled cleaner incompatible with Fortnite",
+    "normalized": "bundled cleaner incompatible with fortnite",
+    "targets": [
+      "case.product.compatibility"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "incompatibale hwid",
+    "normalized": "incompatibale hwid",
+    "targets": [
+      "case.product.compatibility"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "arc-raiders-30-b105494c",
+    "normalized": "arc raiders 30 b105494c",
+    "targets": [
+      "case.product.compatibility"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "arc-raiders-23-ddb78b09",
+    "normalized": "arc raiders 23 ddb78b09",
+    "targets": [
+      "case.product.compatibility"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "but my device was incompatible",
+    "normalized": "but my device was incompatible",
+    "targets": [
+      "case.product.compatibility"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "but it says incompatible hwi",
+    "normalized": "but it says incompatible hwi",
+    "targets": [
+      "case.product.compatibility"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Cuz not compatible",
+    "normalized": "cuz not compatible",
+    "targets": [
+      "case.product.compatibility"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "whats raid disk",
+    "normalized": "whats raid disk",
+    "targets": [
+      "case.product.compatibility"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "No, I have overlays enabled that was me trying with Discord. It also didn’t work with medal.",
+    "normalized": "no i have overlays enabled that was me trying with discord it also didnt work with medal",
+    "targets": [
+      "case.product.compatibility"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "arc-raiders-23-2433f36f",
+    "normalized": "arc raiders 23 2433f36f",
+    "targets": [
+      "case.product.compatibility"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "for arc raiders",
+    "normalized": "for arc raiders",
+    "targets": [
+      "case.product.compatibility"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "nfa arc raiders 100+ and 200+",
+    "normalized": "nfa arc raiders 100 and 200",
+    "targets": [
+      "case.product.compatibility"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "i just bought ancient and its saying incompatible hwid 😭",
+    "normalized": "i just bought ancient and its saying incompatible hwid",
+    "targets": [
+      "case.product.compatibility"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "License activated on spoofed serials",
+    "normalized": "license activated on spoofed serials",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Spoofer key appeared invalid and clipboard paste unclear",
+    "normalized": "spoofer key appeared invalid and clipboard paste unclear",
+    "targets": [
+      "case.license.activation"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "When i want to use 2 keys i just bought, it say \"Invalid_key\"",
+    "normalized": "when i want to use 2 keys i just bought it say invalid key",
+    "targets": [
+      "case.license.activation"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "How do I activate the key?",
+    "normalized": "how do i activate the key",
+    "targets": [
+      "case.license.activation"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "I tried to spoof after i login with key but i get an error",
+    "normalized": "i tried to spoof after i login with key but i get an error",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "i got the app to open but its saying the key is invalid is there any chance its already pulled back and how can i tell for sure?",
+    "normalized": "i got the app to open but its saying the key is invalid is there any chance its already pulled back and how can i tell for sure",
+    "targets": [
+      "case.license.activation"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "and both keys are invalid",
+    "normalized": "and both keys are invalid",
+    "targets": [
+      "case.license.activation"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "debug key is not workign",
+    "normalized": "debug key is not workign",
+    "targets": [
+      "case.license.activation"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "im in, and now the key from cheaters.market is invalid it says",
+    "normalized": "im in and now the key from cheaters market is invalid it says",
+    "targets": [
+      "case.license.activation"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "License time expired",
+    "normalized": "license time expired",
+    "targets": [
+      "case.license.expired_time"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "License expired during incident",
+    "normalized": "license expired during incident",
+    "targets": [
+      "case.license.expired_time"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "One-day key expired unused",
+    "normalized": "one day key expired unused",
+    "targets": [
+      "case.license.expired_time"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "and well my keys expired so i want to try other",
+    "normalized": "and well my keys expired so i want to try other",
+    "targets": [
+      "case.license.expired_time"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Well can I maybe get another key for compensation I have proof",
+    "normalized": "well can i maybe get another key for compensation i have proof",
+    "targets": [
+      "case.license.expired_time"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "cuz i only bought a day key im considering lifetime i js need a woofer",
+    "normalized": "cuz i only bought a day key im considering lifetime i js need a woofer",
+    "targets": [
+      "case.license.expired_time"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "so it still doesnt work so when do i get my money back? its been over 50% of my key time now thats ridiculous",
+    "normalized": "so it still doesnt work so when do i get my money back its been over 50 of my key time now thats ridiculous",
+    "targets": [
+      "case.license.expired_time"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Test loader stuck",
+    "normalized": "test loader stuck",
+    "targets": [
+      "case.loader.connection"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Loader/server access failed across several loader builds",
+    "normalized": "loader server access failed across several loader builds",
+    "targets": [
+      "case.loader.connection"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Loader stuck loading user data",
+    "normalized": "loader stuck loading user data",
+    "targets": [
+      "case.loader.connection"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "the loader recongnizes it but when i click for it to login to steam it doesnt",
+    "normalized": "the loader recongnizes it but when i click for it to login to steam it doesnt",
+    "targets": [
+      "case.loader.connection"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "did they ever update the matrix? every site says its up but loader still says down",
+    "normalized": "did they ever update the matrix every site says its up but loader still says down",
+    "targets": [
+      "case.loader.update"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Injection error persisted through prerequisites and overlay reinstall",
+    "normalized": "injection error persisted through prerequisites and overlay reinstall",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Later generic injection failure",
+    "normalized": "later generic injection failure",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Later restart did not clear injection error",
+    "normalized": "later restart did not clear injection error",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Injection error with game open",
+    "normalized": "injection error with game open",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Attachment-shown injection error",
+    "normalized": "attachment shown injection error",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "hey so now im just trying it without the woofer with discord overlay and when i hit inject nothing happens",
+    "normalized": "hey so now im just trying it without the woofer with discord overlay and when i hit inject nothing happens",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "yea ive tried it like 3 times i inject then spoof then open rust and then i hit insert and nothing happens",
+    "normalized": "yea ive tried it like 3 times i inject then spoof then open rust and then i hit insert and nothing happens",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Game crashed after loading",
+    "normalized": "game crashed after loading",
+    "targets": [
+      "case.game.crash_general"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "it gets to downloading data and then nothing happens and it closes",
+    "normalized": "it gets to downloading data and then nothing happens and it closes",
+    "targets": [
+      "case.game.crash_loading"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "so basically its a tool for lagging/ crashing game servers",
+    "normalized": "so basically its a tool for lagging crashing game servers",
+    "targets": [
+      "case.game.crash_loading"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Game crash/PC restart on exit",
+    "normalized": "game crash pc restart on exit",
+    "targets": [
+      "case.game.crash_general"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Fortnite crash and ban after 30 minutes",
+    "normalized": "fortnite crash and ban after 30 minutes",
+    "targets": [
+      "case.game.crash_general"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "u got any clue why when i load into a server my rust freezes and says not reponding?",
+    "normalized": "u got any clue why when i load into a server my rust freezes and says not reponding",
+    "targets": [
+      "case.game.crash_general"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "And when i start my game it closes",
+    "normalized": "and when i start my game it closes",
+    "targets": [
+      "case.game.crash_general"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Menu later did not open",
+    "normalized": "menu later did not open",
+    "targets": [
+      "case.game.overlay_menu"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Performance setting appeared to reset",
+    "normalized": "performance setting appeared to reset",
+    "targets": [
+      "case.game.feature_behavior"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Per-weapon configuration did not work",
+    "normalized": "per weapon configuration did not work",
+    "targets": [
+      "case.game.feature_behavior"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Loot visualization did not work while player visualization and aim features did",
+    "normalized": "loot visualization did not work while player visualization and aim features did",
+    "targets": [
+      "case.game.feature_behavior"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Btw on venom external npc esp was not working on oil rigs npc and cargo!!",
+    "normalized": "btw on venom external npc esp was not working on oil rigs npc and cargo",
+    "targets": [
+      "case.game.feature_behavior"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "[mention omitted] aimbot does not work",
+    "normalized": "mention omitted aimbot does not work",
+    "targets": [
+      "case.game.feature_behavior"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "like when i finally make it work the esp lagg so much aimbot does not work triggerbot start shotting the fucking trees",
+    "normalized": "like when i finally make it work the esp lagg so much aimbot does not work triggerbot start shotting the fucking trees",
+    "targets": [
+      "case.game.feature_behavior"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Same screenshot-based error after VPN, Defender/prerequisite steps, restart, and alternate RivaTuner version",
+    "normalized": "same screenshot based error after vpn defender prerequisite steps restart and alternate rivatuner version",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Website down despite VPN",
+    "normalized": "website down despite vpn",
+    "targets": [
+      "case.network.vpn"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Repeated VPN kicks despite multiple cleaners/spoofer",
+    "normalized": "repeated vpn kicks despite multiple cleaners spoofer",
+    "targets": [
+      "case.network.vpn"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Connection failed during injection",
+    "normalized": "connection failed during injection",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "BSOD when exiting the game or disconnecting VPN",
+    "normalized": "bsod when exiting the game or disconnecting vpn",
+    "targets": [
+      "case.network.vpn"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Connection failed in loader",
+    "normalized": "connection failed in loader",
+    "targets": [
+      "case.network.vpn"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "it was my vpn",
+    "normalized": "it was my vpn",
+    "targets": [
+      "case.network.vpn"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "my network keeps blocking the connection so i cant get it myself",
+    "normalized": "my network keeps blocking the connection so i cant get it myself",
+    "targets": [
+      "case.network.vpn"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "vpn wouldn t work?",
+    "normalized": "vpn wouldn t work",
+    "targets": [
+      "case.network.vpn"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "tried with vpn and still stuck on downloading",
+    "normalized": "tried with vpn and still stuck on downloading",
+    "targets": [
+      "case.network.vpn"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "I'm pretty sure hopping on my mobile Hotspot would do the same thing as a VPN ngl",
+    "normalized": "im pretty sure hopping on my mobile hotspot would do the same thing as a vpn ngl",
+    "targets": [
+      "case.network.vpn"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "there now i just bought another fucking account, I need a working vpn",
+    "normalized": "there now i just bought another fucking account i need a working vpn",
+    "targets": [
+      "case.network.vpn"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "can i use a vpn while i use venom?",
+    "normalized": "can i use a vpn while i use venom",
+    "targets": [
+      "case.network.vpn"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Do i need use vpn? To make it work?",
+    "normalized": "do i need use vpn to make it work",
+    "targets": [
+      "case.network.vpn"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "also vpn? because i need that to make the loader run",
+    "normalized": "also vpn because i need that to make the loader run",
+    "targets": [
+      "case.network.vpn"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "its vpn from avast",
+    "normalized": "its vpn from avast",
+    "targets": [
+      "case.network.vpn"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "without vpn the key dont work [attachment omitted]",
+    "normalized": "without vpn the key dont work attachment omitted",
+    "targets": [
+      "case.network.vpn"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Windows activation failed after restart",
+    "normalized": "windows activation failed after restart",
+    "targets": [
+      "case.windows.activation_after_spoofer"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Activation error 0xC004F211",
+    "normalized": "activation error 0xc004f211",
+    "targets": [
+      "case.windows.activation_after_spoofer"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "HWID error after running spoofer while already temporarily spoofed, then restarting",
+    "normalized": "hwid error after running spoofer while already temporarily spoofed then restarting",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Temporary spoof reset after reboot",
+    "normalized": "temporary spoof reset after reboot",
+    "targets": [
+      "case.spoofer.reversal_reset"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Spoofer/cleaner restart behavior confused customer",
+    "normalized": "spoofer cleaner restart behavior confused customer",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "So let's say I'm playing Modern Warfare 3 but then I switch the bo7 same spoof right I don't have to reset the computer spoof then play a different game",
+    "normalized": "so lets say im playing modern warfare 3 but then i switch the bo7 same spoof right i dont have to reset the computer spoof then play a different game",
+    "targets": [
+      "case.spoofer.reversal_reset"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "when i use the exodus spoof i load rust then it turns my wifi off and i gotta restart",
+    "normalized": "when i use the exodus spoof i load rust then it turns my wifi off and i gotta restart",
+    "targets": [
+      "case.spoofer.reversal_reset"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "no need to spoof when it takes 30sec and a restart to start testing again",
+    "normalized": "no need to spoof when it takes 30sec and a restart to start testing again",
+    "targets": [
+      "case.spoofer.reversal_reset"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Prior free HWID-changing/spoofer use was associated by the customer with bans across accounts",
+    "normalized": "prior free hwid changing spoofer use was associated by the customer with bans across accounts",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Spoofer auto delivery failed",
+    "normalized": "spoofer auto delivery failed",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Auto spoofer key generation failed",
+    "normalized": "auto spoofer key generation failed",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "The program got me banned after 2 hours and this is my first time cheating so it's not like they read my hwid from a last ban",
+    "normalized": "the program got me banned after 2 hours and this is my first time cheating so its not like they read my hwid from a last ban",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "how does it become a hwid ban",
+    "normalized": "how does it become a hwid ban",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "oh yea i had a quick question i have gotten game banned like 2-3 times on my actual hwid but i havent gotten hwid banned from rust how is that possible?",
+    "normalized": "oh yea i had a quick question i have gotten game banned like 2 3 times on my actual hwid but i havent gotten hwid banned from rust how is that possible",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "im def hwid banned now though",
+    "normalized": "im def hwid banned now though",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "hey guys. so i got 3 days banned on rust after spoofing. and today the 3 day ban is gone. what should i do next",
+    "normalized": "hey guys so i got 3 days banned on rust after spoofing and today the 3 day ban is gone what should i do next",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "if ive been banned before would i need to woof my hwid to play without getting banned?",
+    "normalized": "if ive been banned before would i need to woof my hwid to play without getting banned",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "but tracex just changes hwid and is free, works like a dream too",
+    "normalized": "but tracex just changes hwid and is free works like a dream too",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "haha that was my thing lmao to work on the chease cause thats where it pays, but fyi those spoofs never work if u buy it attached to a chease.",
+    "normalized": "haha that was my thing lmao to work on the chease cause thats where it pays but fyi those spoofs never work if u buy it attached to a chease",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "are there still no spoofers that works",
+    "normalized": "are there still no spoofers that works",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "When i get back home i send you the error i get , btw i cleaned spoofed and i played legit like 5 hours , as soon as i injected ancient i got 3d banned [reply reference omitted]",
+    "normalized": "when i get back home i send you the error i get btw i cleaned spoofed and i played legit like 5 hours as soon as i injected ancient i got 3d banned reply reference omitted",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "if i re spoof and a new account would it still work?",
+    "normalized": "if i re spoof and a new account would it still work",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Tried spoof nd ip still catch the temp ban",
+    "normalized": "tried spoof nd ip still catch the temp ban",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "thanks, as well another issue idk if you see the flagged msg but the hwid download dont work [reply reference omitted]",
+    "normalized": "thanks as well another issue idk if you see the flagged msg but the hwid download dont work reply reference omitted",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "I just got HWID banned and it was to find out if there's a swoof and a disk woof",
+    "normalized": "i just got hwid banned and it was to find out if theres a swoof and a disk woof",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Hey [mention omitted] if I buy the Exodus temp spoof, will it work for rust because it says it is testing for EAC",
+    "normalized": "hey mention omitted if i buy the exodus temp spoof will it work for rust because it says it is testing for eac",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "like built in spoofers in the cheats work tho dont they?",
+    "normalized": "like built in spoofers in the cheats work tho dont they",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "SO I DID NeeD SPOOF I GOT BAN",
+    "normalized": "so i did need spoof i got ban",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "spoofed and cleaned",
+    "normalized": "spoofed and cleaned",
+    "targets": [
+      "case.spoofer.hwid_state"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "PC restarted/crashed during injection",
+    "normalized": "pc restarted crashed during injection",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "PC restarted during injection",
+    "normalized": "pc restarted during injection",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "After disabling core isolation, injection progressed but crashed the PC",
+    "normalized": "after disabling core isolation injection progressed but crashed the pc",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "PC bluescreen/restart on injection",
+    "normalized": "pc bluescreen restart on injection",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "'Your device ran into a problem' every time customer injected",
+    "normalized": "your device ran into a problem every time customer injected",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Injection later succeeded after Vanguard removal",
+    "normalized": "injection later succeeded after vanguard removal",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Product later injected successfully",
+    "normalized": "product later injected successfully",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "PC bluescreen/reset on game load after injection",
+    "normalized": "pc bluescreen reset on game load after injection",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "then i injected cheats",
+    "normalized": "then i injected cheats",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "updates are done usually the same day or the day after, for critical anticheat updates it might take up to 2/3 days",
+    "normalized": "updates are done usually the same day or the day after for critical anticheat updates it might take up to 2 3 days",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "how do i stay undetected by eac",
+    "normalized": "how do i stay undetected by eac",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "so it just finihsed downloading and now theres nothing on my screen does that mean its injected?",
+    "normalized": "so it just finihsed downloading and now theres nothing on my screen does that mean its injected",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "i dont think the cheats are injecting properly",
+    "normalized": "i dont think the cheats are injecting properly",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "i dont think my woofer will allow me to play with it injected",
+    "normalized": "i dont think my woofer will allow me to play with it injected",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "this is what i get whenever i try to woof after inject",
+    "normalized": "this is what i get whenever i try to woof after inject",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "and for this i should do same thing inject first then run wpoofer",
+    "normalized": "and for this i should do same thing inject first then run wpoofer",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "yea i keep on running into this issue with injecting though",
+    "normalized": "yea i keep on running into this issue with injecting though",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "is there any troubleshooting for it like when i switched to medal it would freeze and the overlay would stop bc it would say not repsonding and most the time when i would hit inject it wouldnt work and for discord overlay literally nothing ",
+    "normalized": "is there any troubleshooting for it like when i switched to medal it would freeze and the overlay would stop bc it would say not repsonding and most the time when i would hit inject it wouldnt work and for discord overlay literally nothing",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "no yea i did when i did that but for discord it doesnt work when i hit inject",
+    "normalized": "no yea i did when i did that but for discord it doesnt work when i hit inject",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "im having issues with injecting , it says window defender is enabled , but i disabled it",
+    "normalized": "im having issues with injecting it says window defender is enabled but i disabled it",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "i inject",
+    "normalized": "i inject",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Cant i spoof after injectv",
+    "normalized": "cant i spoof after injectv",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "[URL omitted] [embed title] Saturn | Hardware Privacy Tool for Windows Saturn is a kernel-level hardware identity tool for Windows. Anonymize your hardware IDs across Vanguard, Easy Anti-Cheat, and BattlEye with no Windows reinstall. Truste",
+    "normalized": "url omitted embed title saturn hardware privacy tool for windows saturn is a kernel level hardware identity tool for windows anonymize your hardware ids across vanguard easy anti cheat and battleye with no windows reinstall truste",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "also ive been using fluent perfectly fine and got off for a little and now whenever i inject and load up it just crashes my entire pc",
+    "normalized": "also ive been using fluent perfectly fine and got off for a little and now whenever i inject and load up it just crashes my entire pc",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "HOW I SET THIS UP TO MAKE THE INJECTION WORK",
+    "normalized": "how i set this up to make the injection work",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "I dont have valorant and cs2 so idk why i need uninstall that when i dont have that anticheat",
+    "normalized": "i dont have valorant and cs2 so idk why i need uninstall that when i dont have that anticheat",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "[URL omitted] [embed title] venom inject",
+    "normalized": "url omitted embed title venom inject",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "workred 1 time but then i didnt inject cheese",
+    "normalized": "workred 1 time but then i didnt inject cheese",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "it worked when i didnt inject cheese",
+    "normalized": "it worked when i didnt inject cheese",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "but only likeafter 10 injects",
+    "normalized": "but only likeafter 10 injects",
+    "targets": [
+      "case.restricted.technical"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "so i cant get support if i dont give my email or what? [reply reference omitted]",
+    "normalized": "so i cant get support if i dont give my email or what reply reference omitted",
+    "targets": [
+      "case.support.followup"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "so i cant get support now? [reply reference omitted]",
+    "normalized": "so i cant get support now reply reference omitted",
+    "targets": [
+      "case.support.followup"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "any updates? [reply reference omitted]",
+    "normalized": "any updates reply reference omitted",
+    "targets": [
+      "case.support.followup"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "oh and also any updates on exodus and when they gonna fix it?",
+    "normalized": "oh and also any updates on exodus and when they gonna fix it",
+    "targets": [
+      "case.support.followup"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "any updates?",
+    "normalized": "any updates",
+    "targets": [
+      "case.support.followup"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Promote the product in a video",
+    "normalized": "promote the product in a video",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "This is my problem: [attachment omitted]",
+    "normalized": "this is my problem attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "wont go past this part [attachment omitted]",
+    "normalized": "wont go past this part attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Order : [order ID omitted] [attachment omitted]",
+    "normalized": "order order id omitted attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "cant sign in [attachment omitted]",
+    "normalized": "cant sign in attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "and u guys say [attachment omitted]",
+    "normalized": "and u guys say attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "I create CS2 competitive gameplay videos on YouTube using cheats. Even though I’m new, my videos appear in the “Suggested” section. However, many people are currently using temporary accounts to create “semi-cheated” videos in Premier mode.",
+    "normalized": "i create cs2 competitive gameplay videos on youtube using cheats even though im new my videos appear in the suggested section however many people are currently using temporary accounts to create semi cheated videos in premier mode",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "problem? [attachment omitted]",
+    "normalized": "problem attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "and [attachment omitted]",
+    "normalized": "and attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "ok? [attachment omitted]",
+    "normalized": "ok attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Hi, I need manual delivery please. Thank you! [attachment omitted]",
+    "normalized": "hi i need manual delivery please thank you attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "can i get one more? [attachment omitted] [reply reference omitted]",
+    "normalized": "can i get one more attachment omitted reply reference omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": ";c [attachment omitted]",
+    "normalized": "c attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "one more [attachment omitted] [reply reference omitted]",
+    "normalized": "one more attachment omitted reply reference omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "cs2 prime nfa [attachment omitted]",
+    "normalized": "cs2 prime nfa attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Hello, I just bought NFA CS2 Prime, and when I enter the code, it says it is connecting to the account, but then it immediately logs me out. [attachment omitted]",
+    "normalized": "hello i just bought nfa cs2 prime and when i enter the code it says it is connecting to the account but then it immediately logs me out attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "[mention omitted] plz ^^ [attachment omitted]",
+    "normalized": "mention omitted plz attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "[mention omitted] Hii guys ^^ [attachment omitted]",
+    "normalized": "mention omitted hii guys attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "[mention omitted] [mention omitted] [attachment omitted]",
+    "normalized": "mention omitted mention omitted attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "first i have to pay fee here then on checkout [attachment omitted]",
+    "normalized": "first i have to pay fee here then on checkout attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "i cant play comp in this one [attachment omitted]",
+    "normalized": "i cant play comp in this one attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "another source code eg. [attachment omitted]",
+    "normalized": "another source code eg attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "and here when i press a tab pops up for a millisecond and closes [attachment omitted]",
+    "normalized": "and here when i press a tab pops up for a millisecond and closes attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "it still says pending [attachment omitted]",
+    "normalized": "it still says pending attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "idk what i did wrong again, gave the same email as on your website [attachment omitted]",
+    "normalized": "idk what i did wrong again gave the same email as on your website attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "i can't pay with google pay [attachment omitted]",
+    "normalized": "i cant pay with google pay attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "bought [attachment omitted]",
+    "normalized": "bought attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "theres an account settings tab im guessing it be there but i wont let me press it got any ideas on why i cant [attachment omitted]",
+    "normalized": "theres an account settings tab im guessing it be there but i wont let me press it got any ideas on why i cant attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Site having issues with reconizing emails [attachment omitted] [reply reference omitted]",
+    "normalized": "site having issues with reconizing emails attachment omitted reply reference omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "if you give me one Rust account, I have a bunch of TikTok accounts with high followers, each has at least 1k followers, and I also have one YouTube channel. I would share 1 video weekly from each account.",
+    "normalized": "if you give me one rust account i have a bunch of tiktok accounts with high followers each has at least 1k followers and i also have one youtube channel i would share 1 video weekly from each account",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "bro [attachment omitted] [attachment omitted] [attachment omitted] [attachment omitted]",
+    "normalized": "bro attachment omitted attachment omitted attachment omitted attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "ILL RESTART [attachment omitted]",
+    "normalized": "ill restart attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Keeps doing that when I log in [attachment omitted]",
+    "normalized": "keeps doing that when i log in attachment omitted",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Send me a video of how to login",
+    "normalized": "send me a video of how to login",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Video",
+    "normalized": "video",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "Send me a video",
+    "normalized": "send me a video",
+    "targets": [
+      "case.attachment.review"
+    ],
+    "status": "slang",
+    "disambiguation": []
+  },
+  {
+    "alias": "ancient",
+    "normalized": "ancient",
+    "targets": [
+      "vendor.ancient"
+    ],
+    "status": "ambiguous",
+    "disambiguation": [
+      "Ask for the game/product before applying product-specific requirements."
+    ]
+  },
+  {
+    "alias": "exodus",
+    "normalized": "exodus",
+    "targets": [
+      "vendor.exodus"
+    ],
+    "status": "ambiguous",
+    "disambiguation": [
+      "Ask for the exact Exodus product and game."
+    ]
+  },
+  {
+    "alias": "spoofer",
+    "normalized": "spoofer",
+    "targets": [
+      "product.reported_lol.hwid_spoofer",
+      "product.exodus.spoofer"
+    ],
+    "status": "ambiguous",
+    "disambiguation": [
+      "Ask which spoofer product."
+    ]
+  }
+]

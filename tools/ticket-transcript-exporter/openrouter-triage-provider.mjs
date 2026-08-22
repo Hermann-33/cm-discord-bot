@@ -1,4 +1,5 @@
 import { buildTriageMessages, TRIAGE_OUTPUT_SCHEMA } from './llm-triage-prompt.mjs';
+import { sanitizeSupportPlannerPayload } from './support-runtime-privacy.mjs';
 
 export const DEFAULT_OPENROUTER_TRIAGE_MODEL = 'google/gemma-4-26b-a4b-it:free';
 
@@ -22,6 +23,7 @@ export function createOpenRouterTriageProvider({
   const endpoint = new URL(root.pathname.replace(/\/$/u, '') + '/chat/completions', root.origin);
 
   return async (input) => {
+    const sanitizedInput = sanitizeSupportPlannerPayload(input);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -35,7 +37,7 @@ export function createOpenRouterTriageProvider({
         },
         body: JSON.stringify({
           model,
-          messages: buildTriageMessages(input),
+          messages: buildTriageMessages(sanitizedInput),
           temperature: 0,
           max_tokens: maxTokens,
           stream: false,

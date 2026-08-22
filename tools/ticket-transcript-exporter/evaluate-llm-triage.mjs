@@ -98,6 +98,7 @@ export async function evaluateLlmTriageRows(rows, {
     records: results.length,
     structuredOutputAcceptanceRate: results.filter((row) => row.accepted).length / total,
     exactOptimalActionRate: results.filter((row) => row.exactOptimalAction).length / total,
+    fallbackRate: results.filter((row) => !row.accepted).length / total,
     counts,
     safeProgressOrBetterRate: (counts.optimal + counts.safe_progress) / total,
     unsafeRate: (counts.unsafe_wrong_route + counts.unsafe_scope_leakage + counts.invalid) / total,
@@ -179,6 +180,9 @@ export async function evaluateOpenRouterLlmTriage({
   maxTokens = 400,
   directCaseConfidence = 0.8
 }) {
+  if (inputFile !== 'llm-triage-development-inputs.jsonl') {
+    throw new Error('OpenRouter evaluation is restricted to the consumed development input set');
+  }
   const rows = await loadRows(dataDir, inputFile, limit);
   const provider = createOpenRouterTriageProvider({ apiKey, model, timeoutMs, dataCollection, maxTokens });
   const evaluated = await evaluateLlmTriageRows(rows, {

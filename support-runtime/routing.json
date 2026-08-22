@@ -1,0 +1,326 @@
+{
+  "schemaVersion": 1,
+  "levels": [
+    {
+      "level": 0,
+      "use": "greetings and acknowledgements"
+    },
+    {
+      "level": 1,
+      "use": "exact alias and direct policy"
+    },
+    {
+      "level": 2,
+      "use": "normal scoped case retrieval"
+    },
+    {
+      "level": 3,
+      "use": "ambiguous or multipart support"
+    },
+    {
+      "level": 4,
+      "use": "conflicting, restricted, or low-confidence support"
+    }
+  ],
+  "caseRoutes": [
+    {
+      "caseId": "case.rust.nfa.server_load_crash.continue",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.rust.nfa.server_load_crash",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.nfa.invalid_first_use",
+      "dynamicLookupIds": [],
+      "escalation": true
+    },
+    {
+      "caseId": "case.nfa.invalid_after_use",
+      "dynamicLookupIds": [],
+      "escalation": true
+    },
+    {
+      "caseId": "case.nfa.owner_session_conflict",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.nfa.redemption_activation",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.nfa.replacement_dispute",
+      "dynamicLookupIds": [],
+      "escalation": true
+    },
+    {
+      "caseId": "case.nfa.access_model_question",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.account.full_access",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.account.manual_service",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.account.bulk_purchase",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.account.purchase_question",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.account.wrong_specification",
+      "dynamicLookupIds": [],
+      "escalation": true
+    },
+    {
+      "caseId": "case.account.banned",
+      "dynamicLookupIds": [],
+      "escalation": true
+    },
+    {
+      "caseId": "case.account.login_access",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.payment.card_declined",
+      "dynamicLookupIds": [
+        "dynamic.purchase_intent.status"
+      ],
+      "escalation": false
+    },
+    {
+      "caseId": "case.payment.paypal_unavailable",
+      "dynamicLookupIds": [
+        "dynamic.purchase_intent.status"
+      ],
+      "escalation": false
+    },
+    {
+      "caseId": "case.payment.crypto_pending",
+      "dynamicLookupIds": [
+        "dynamic.purchase_intent.status"
+      ],
+      "escalation": false
+    },
+    {
+      "caseId": "case.payment.manual",
+      "dynamicLookupIds": [],
+      "escalation": true
+    },
+    {
+      "caseId": "case.payment.completed_missing_order",
+      "dynamicLookupIds": [
+        "dynamic.purchase_intent.status"
+      ],
+      "escalation": false
+    },
+    {
+      "caseId": "case.payment.failed_or_pending",
+      "dynamicLookupIds": [
+        "dynamic.purchase_intent.status"
+      ],
+      "escalation": false
+    },
+    {
+      "caseId": "case.order.fulfillment_delayed",
+      "dynamicLookupIds": [
+        "dynamic.fulfillment.status"
+      ],
+      "escalation": false
+    },
+    {
+      "caseId": "case.order.wrong_delivery",
+      "dynamicLookupIds": [],
+      "escalation": true
+    },
+    {
+      "caseId": "case.order.refund_cancel",
+      "dynamicLookupIds": [],
+      "escalation": true
+    },
+    {
+      "caseId": "case.order.status",
+      "dynamicLookupIds": [
+        "dynamic.order.status"
+      ],
+      "escalation": false
+    },
+    {
+      "caseId": "case.wallet.balance",
+      "dynamicLookupIds": [
+        "dynamic.user.overview"
+      ],
+      "escalation": false
+    },
+    {
+      "caseId": "case.aura.balance_or_adjustment",
+      "dynamicLookupIds": [
+        "dynamic.user.overview"
+      ],
+      "escalation": false
+    },
+    {
+      "caseId": "case.discount.coupon",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.dashboard.verification",
+      "dynamicLookupIds": [
+        "dynamic.purchase_intent.status"
+      ],
+      "escalation": false
+    },
+    {
+      "caseId": "case.website.checkout_failure",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.website.login",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.media.application",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.reseller.application",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.catalog.availability_status",
+      "dynamicLookupIds": [
+        "dynamic.catalog.product_status"
+      ],
+      "escalation": false
+    },
+    {
+      "caseId": "case.catalog.pricing_duration",
+      "dynamicLookupIds": [
+        "dynamic.catalog.product_status"
+      ],
+      "escalation": false
+    },
+    {
+      "caseId": "case.product.requirements",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.product.compatibility",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.license.activation",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.license.expired_time",
+      "dynamicLookupIds": [],
+      "escalation": true
+    },
+    {
+      "caseId": "case.loader.closes_runtime",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.loader.connection",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.loader.update",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.loader.key_error",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.product.launch_failure",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.game.crash_loading",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.game.crash_general",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.game.overlay_menu",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.game.feature_behavior",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.network.vpn",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.windows.activation_after_spoofer",
+      "dynamicLookupIds": [],
+      "escalation": false
+    },
+    {
+      "caseId": "case.spoofer.reversal_reset",
+      "dynamicLookupIds": [],
+      "escalation": true
+    },
+    {
+      "caseId": "case.spoofer.hwid_state",
+      "dynamicLookupIds": [],
+      "escalation": true
+    },
+    {
+      "caseId": "case.restricted.technical",
+      "dynamicLookupIds": [],
+      "escalation": true
+    },
+    {
+      "caseId": "case.support.followup",
+      "dynamicLookupIds": [],
+      "escalation": true
+    },
+    {
+      "caseId": "case.attachment.review",
+      "dynamicLookupIds": [],
+      "escalation": true
+    }
+  ]
+}

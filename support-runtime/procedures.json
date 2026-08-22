@@ -1,0 +1,202 @@
+[
+  {
+    "id": "procedure.system.reduce_resource_pressure",
+    "displayName": "Reduce ordinary system resource pressure",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "steps": [
+      {
+        "id": "step.1",
+        "action": "If graphics are high, lower ordinary in-game graphics settings.",
+        "when": [
+          "graphicsLevel=high"
+        ],
+        "requiresContext": [
+          "graphicsLevel"
+        ],
+        "onSuccess": [
+          "outcome.resolved"
+        ],
+        "onFailure": [
+          "diagnostic.system.available_resources"
+        ]
+      },
+      {
+        "id": "step.2",
+        "action": "Close unnecessary background applications and free ordinary system resources.",
+        "when": [
+          "resourcePressure=true_or_unknown"
+        ],
+        "requiresContext": [],
+        "onSuccess": [
+          "outcome.resolved"
+        ],
+        "onFailure": [
+          "case.rust.nfa.server_load_crash.continue"
+        ]
+      }
+    ],
+    "restricted": false
+  },
+  {
+    "id": "procedure.loader.install_webview_runtime",
+    "displayName": "Install the supported WebView runtime",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "steps": [
+      {
+        "id": "step.1",
+        "action": "Install or repair the supported Evergreen WebView runtime from its official source.",
+        "when": [
+          "webview_missing_or_damaged"
+        ],
+        "requiresContext": [],
+        "onSuccess": [
+          "outcome.resolved"
+        ],
+        "onFailure": [
+          "case.loader.closes.continue"
+        ]
+      }
+    ],
+    "restricted": false
+  },
+  {
+    "id": "procedure.loader.restart_and_retry",
+    "displayName": "Restart the affected application and retry",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "steps": [
+      {
+        "id": "step.1",
+        "action": "Close the affected application fully, reopen it, and retry once.",
+        "when": [],
+        "requiresContext": [],
+        "onSuccess": [
+          "outcome.resolved"
+        ],
+        "onFailure": [
+          "escalation.known_flow_exhausted"
+        ]
+      }
+    ],
+    "restricted": false
+  },
+  {
+    "id": "procedure.browser.clear_state",
+    "displayName": "Clear ordinary browser state",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "steps": [
+      {
+        "id": "step.1",
+        "action": "Clear the relevant browser cookies/cache or retry in another supported browser.",
+        "when": [
+          "browser_flow_failure"
+        ],
+        "requiresContext": [],
+        "onSuccess": [
+          "outcome.resolved"
+        ],
+        "onFailure": [
+          "escalation.known_flow_exhausted"
+        ]
+      }
+    ],
+    "restricted": false
+  },
+  {
+    "id": "procedure.order.lookup_current_state",
+    "displayName": "Look up current order and fulfillment state",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "steps": [
+      {
+        "id": "step.1",
+        "action": "Use the approved current order lookup with a public order selector.",
+        "when": [],
+        "requiresContext": [
+          "order selector"
+        ],
+        "onSuccess": [
+          "case.order.current_state"
+        ],
+        "onFailure": [
+          "dynamic.purchase_intent.status"
+        ]
+      }
+    ],
+    "restricted": false
+  },
+  {
+    "id": "procedure.product.read_exact_requirements",
+    "displayName": "Read exact current product or variant requirements",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "steps": [
+      {
+        "id": "step.1",
+        "action": "Resolve the exact product and variant, then read only its current authoritative requirements.",
+        "when": [],
+        "requiresContext": [
+          "productId"
+        ],
+        "onSuccess": [
+          "outcome.context_resolved"
+        ],
+        "onFailure": [
+          "escalation.entity_ambiguous"
+        ]
+      }
+    ],
+    "restricted": false
+  }
+]

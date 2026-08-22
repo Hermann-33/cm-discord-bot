@@ -1,6 +1,6 @@
 # Current Architecture
 
-Updated: 2026-08-19
+Updated: 2026-08-23
 
 ## System boundary
 
@@ -192,6 +192,32 @@ Because slash-command JSON is unchanged, command re-registration is not required
 ## Parallel non-runtime tooling
 
 ADR-0010 remains unchanged: ticket transcript exporter code under `tools/` is non-production and the private `CM-Ticket-Transcripts` corpus is not a runtime dependency.
+
+## AI support architecture — prepared, not activated
+
+ADR-0012 adds a deliberately disconnected production support-service boundary:
+
+```text
+future customer message
+  -> deterministic entity/context resolver
+  -> explicit bounded conversation state
+  -> sanitized compact OpenRouter planner payload
+  -> deterministic decision validation/fallback
+  -> deterministic case/clarification/lookup/policy action resolver
+  -> grounded reply
+```
+
+The OpenRouter model chooses only among supplied canonical IDs/actions. It cannot call APIs, mutate state directly, select arbitrary operations, or produce an unvalidated customer answer. Provider failures use the existing deterministic flow when safe, then an unanswered canonical clarification, then human escalation. There is no aggressive retry.
+
+`SupportConversationState` retains resolved entities, candidate cases/families, known/unknown context, pending clarification, questions/answers, diagnostics, procedures/outcomes, lookup results, policy state and multiple intents. Pending short answers are consumed before fresh routing.
+
+`src/index.ts` does not construct this service or route arbitrary Discord messages to it. Customer-facing activation requires the consumed-development OpenRouter benchmark and a separate activation review.
+
+### Bundled support runtime
+
+Production reads only `support-runtime/` bundled with the public deployment. The operator-controlled importer selects 12 sanitized canonical artifacts from a supplied private `runtime-kb/` directory and emits an integrity manifest. It excludes routing exemplars, private manifests/evaluation data, historical match-context prose, provenance, outcome evidence, transcript/fact IDs and PII.
+
+No environment variable or startup path can point production at the private repository.
 
 ## Fragile boundaries
 

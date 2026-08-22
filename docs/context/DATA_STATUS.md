@@ -1,6 +1,6 @@
 # Data and Backend Dependency Status
 
-Verified/re-baselined: 2026-08-19
+Verified/re-baselined: 2026-08-23
 
 ## Bot-side invariant
 
@@ -154,3 +154,9 @@ Live Supabase context is upstream dependency evidence only. This repository owns
 ## Secret handling
 
 Never commit/log real Discord tokens, HMAC secrets, website service credentials, Supabase service-role/database credentials or production integration-client key material. Masked fulfillment support values are privileged staff presentation data, not reveal credentials, and must not be republished through customer-safe Share to Chat.
+
+## AI planner and support knowledge data boundary
+
+OpenRouter receives only a compact sanitized planning payload: customer text after identifier/credential masking, bounded support state, and explicit canonical case/clarification/lookup/policy/entity options. Raw transcripts, historical evidence, private evaluation rows, fulfillment material, API request bodies and credentials are forbidden.
+
+The public `support-runtime/` pack is an ADR-0012 sanitized derivative, not a copy of private `runtime-kb/`. The import allowlist excludes private manifests, routing exemplars, provenance/evidence fields, transcript/fact IDs and historical match-context prose. Production has no private-repository filesystem dependency.

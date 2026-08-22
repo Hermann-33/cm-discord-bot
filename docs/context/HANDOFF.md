@@ -1,6 +1,6 @@
 # Latest Handoff
 
-Updated: 2026-08-20
+Updated: 2026-08-23
 
 ## Authority
 
@@ -11,6 +11,7 @@ Updated: 2026-08-20
 - ADR-0009 — canonical CM account email is intentionally shared; all other ADR-0008 exclusions remain.
 - ADR-0010 — `CM-Ticket-Transcripts` is a separate private data-only side project with no production-bot dependency.
 - ADR-0011 — `/cm order` is canonical-order-first with `NOT_FOUND`-only pending purchase fallback; masked fulfillment support remains private staff data.
+- ADR-0012 — production support may use only a bundled sanitized runtime derivative and a constrained optional OpenRouter next-action planner; no private-corpus runtime path or customer activation yet.
 - `BOT_AUDIT_LOG_CHANNEL_ID` is required before refund/Aura/wallet execute.
 - no direct Supabase/Postgres.
 - manual fulfillment blocked until website owns a dedicated mutation.
@@ -48,6 +49,32 @@ data-only
 no executable extraction code
 no production-bot runtime dependency
 ```
+
+The production bot feature branch may bundle only the sanitized `support-runtime/` derivative generated through the ADR-0012 allowlist importer. That is not a runtime dependency on this private repository.
+
+## AI support integration handoff
+
+`task/ai-support-integration` prepares but does not enable customer support:
+
+- `OPENROUTER_API_KEY` optional; default Gemma free model/data policy are in `.env.example`;
+- strict structured request and deterministic validation/fallback;
+- sanitizer applied by both production and hosted benchmark clients;
+- benchmark restricted to `llm-triage-development-inputs.jsonl` and reports acceptance, optimal action, safety/scope, fallback and latency;
+- public support-runtime importer/loader boundary;
+- explicit stateful support service with pending-answer interpretation;
+- no `src/index.ts` or Discord registration wiring.
+
+Exact next action after repository verification: the operator manually supplies `OPENROUTER_API_KEY` and runs only:
+
+```powershell
+npm.cmd run evaluate:openrouter-triage -- `
+  --data-dir ..\CM-Ticket-Transcripts `
+  --limit 20
+```
+
+Review the private benchmark outputs before any activation work.
+
+Repository verification on Node `v24.11.1` passed: clean `npm.cmd ci` with 0 vulnerabilities, 261/261 tests, typecheck, build, diff check, focused secret/private-data/runtime-wiring scans, and no hosted API call.
 
 The strict Discord discovery stage has already identified 1,578 unique `View Transcript` records and stored the durable discovery set in:
 

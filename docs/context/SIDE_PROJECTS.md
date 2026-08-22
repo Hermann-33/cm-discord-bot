@@ -1,6 +1,6 @@
 # Related Side Projects
 
-Updated: 2026-08-20
+Updated: 2026-08-23
 
 This document records adjacent Cheater's Market workstreams that are intentionally outside the standalone Discord bot runtime but are relevant enough that future agents must understand the boundary.
 
@@ -247,7 +247,9 @@ The transcript repository is private. Do not add credentials to the corpus, and 
 
 Normal Discord bot engineering continues independently. The transcript corpus and knowledge graph may later inform support tooling, analytics or a separate chatbot, but the current production bot has no runtime dependency on either.
 
-Any future production-bot runtime read/write integration with the transcript corpus or generated knowledge graph requires separate architecture review and, if it changes a durable runtime/data boundary, a new ADR.
+ADR-0012 completed that architecture review for one narrow derivative only: an operator-controlled public importer may select sanitized canonical runtime fields into the bot repository's bundled `support-runtime/` directory. Production still cannot read this private repository, raw transcripts, evidence/provenance, transcript/fact IDs, routing exemplars, evaluation/holdout data or customer PII.
+
+The private repository remains data-only and is never written by bot startup. Canonical updates require an explicit offline import/review/commit cycle in the public bot repository.
 
 ## Current status
 
@@ -264,6 +266,6 @@ T2 final view:         Obsidian Markdown graph with wikilinks
 Later runtime target:  compact chatbot context derived from canonical graph
 ```
 
-Canonicalization is now implemented as an offline, data-repository-targeted phase. The public tools build, validate, privacy-scan, and evaluate `knowledge-canonical/` plus `runtime-kb/`; the production bot does not read either output.
+Canonicalization is implemented as an offline, data-repository-targeted phase. Public tools build, validate, privacy-scan, and evaluate `knowledge-canonical/` plus private `runtime-kb/`. Production reads only the separately generated and reviewed public `support-runtime/` derivative governed by ADR-0012; it never reads the private outputs directly.
 
 The exhaustive remediation layer adds corpus-derived case synthesis, 1,578-ticket runtime-disposition coverage, 3,949-fact runtime-usage coverage, and separate historical/adversarial benchmarks. Retrieval quality remains a measured follow-up; structural completion does not imply production readiness.

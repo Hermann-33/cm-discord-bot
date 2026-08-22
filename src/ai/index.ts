@@ -19,3 +19,22 @@ export {
   type TriageValidationResult
 } from "./supportTriage";
 export { sanitizeSupportText, sanitizeTriagePlannerPayload } from "./privacy";
+export {
+  SUPPORT_RUNTIME_ARTIFACTS,
+  bundledSupportRuntimeDirectory,
+  loadBundledSupportRuntimePack,
+  type SupportRuntimePack,
+  type SupportRuntimeRecord
+} from "./runtimePack";
+export {
+  SupportConversationService,
+  applyPendingClarificationAnswer,
+  createSupportConversationState,
+  type DeterministicSupportActionResolver,
+  type DeterministicSupportResolver,
+  type GroundedSupportAction,
+  type PendingSupportClarification,
+  type SupportConversationState,
+  type SupportTriagePlanner,
+  type SupportTurnContext
+} from "./supportConversation";

@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "offlineReferenceOnly": true,
+  "productionApiCallsPerformed": false,
+  "decisionOrder": [
+    "resolve_explicit_entities",
+    "detect_control_plane",
+    "use_known_session_context",
+    "request_minimum_approved_lookup",
+    "evaluate_information_sufficiency",
+    "select_clarification",
+    "persist_answer",
+    "continue_statefully"
+  ],
+  "approvedLookups": [
+    {
+      "id": "users.overview.read",
+      "useWhen": [
+        "linked user context may identify recent relevant commerce/account state"
+      ],
+      "suppliesContext": [
+        "recentOrders",
+        "walletBalance",
+        "auraBalance",
+        "entitlements"
+      ]
+    },
+    {
+      "id": "orders.lookup.read",
+      "useWhen": [
+        "order is implied but selector is unknown"
+      ],
+      "suppliesContext": [
+        "candidateOrderSelectors"
+      ]
+    },
+    {
+      "id": "orders.details.read",
+      "useWhen": [
+        "one order selector is known and product/type/state affects routing"
+      ],
+      "suppliesContext": [
+        "orderState",
+        "productId",
+        "variantId",
+        "accountModel"
+      ]
+    },
+    {
+      "id": "orders.fulfillment.read",
+      "useWhen": [
+        "delivery or missing key/account is reported"
+      ],
+      "suppliesContext": [
+        "fulfillmentState",
+        "deliveryType"
+      ]
+    },
+    {
+      "id": "purchase-intents.lookup.read",
+      "useWhen": [
+        "payment is reported without an order"
+      ],
+      "suppliesContext": [
+        "purchaseIntentState",
+        "purchaseSelector"
+      ]
+    },
+    {
+      "id": "purchase-intents.process.status.read",
+      "useWhen": [
+        "current payment processing state is required"
+      ],
+      "suppliesContext": [
+        "paymentState"
+      ]
+    },
+    {
+      "id": "aura.lookup.read",
+      "useWhen": [
+        "Aura balance or adjustment is explicitly requested"
+      ],
+      "suppliesContext": [
+        "auraBalance",
+        "auraState"
+      ]
+    }
+  ],
+  "forbidden": [
+    "direct_database_access",
+    "unapproved_fields",
+    "historical_state_as_current",
+    "production_call_from_offline_tooling"
+  ]
+}

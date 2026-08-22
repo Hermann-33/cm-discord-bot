@@ -1,6 +1,6 @@
 # Command Catalog and Policy
 
-Updated: 2026-08-19
+Updated: 2026-08-23
 
 ## Authorities
 
@@ -12,6 +12,10 @@ Updated: 2026-08-19
 - ADR-0011 — canonical-order-first pending purchase fallback and private fulfillment support metadata boundary.
 
 No command may directly connect to Supabase/Postgres.
+
+## AI support activation state
+
+ADR-0012 support planner/service scaffolding is not connected to Discord. There is no AI support command and arbitrary `MessageCreate` traffic is not routed to OpenRouter. Customer-facing activation requires a separate benchmark-backed task.
 
 ## `cm aura`
 

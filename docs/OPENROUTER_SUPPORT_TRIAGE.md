@@ -2,6 +2,8 @@
 
 The bot now has a production-safe OpenRouter client for the constrained support-triage planner. It is not wired to a customer-facing Discord support flow yet; customer-facing activation remains gated on benchmark quality.
 
+ADR-0012 also defines the production knowledge boundary: the bot may load only the generated public `support-runtime/` bundle. It never reads the private transcript repository at startup.
+
 ## Model
 
 Default:
@@ -56,6 +58,17 @@ Canonical IDs such as `case.*`, `game.*`, `product.*`, and `account_model.*` rem
 
 The model never needs raw ticket history, raw evidence prose, credentials, fulfillment material, database access, or direct website access.
 
+## Bundled runtime pack
+
+An operator refreshes the sanitized public pack explicitly:
+
+```powershell
+npm.cmd run import:support-runtime-pack -- `
+  --data-dir ..\CM-Ticket-Transcripts
+```
+
+The importer reads only private `runtime-kb/`, selects an explicit artifact/field allowlist, strips case historical-context phrases plus provenance/outcome-evidence fields, rejects transcript/fact IDs and PII, and writes `support-runtime/` with an integrity manifest. Routing exemplars, private manifests/evaluation data, raw transcripts and evidence prose are never copied.
+
 ## Deterministic validation and fallback
 
 The client rejects model output that contains:
@@ -66,6 +79,7 @@ The client rejects model output that contains:
 - a restricted autonomous answer;
 - a direct case below the configured confidence threshold;
 - a repeated clarification;
+- a clarification whose answer is already present in known/live context;
 - malformed or schema-invalid JSON.
 
 HTTP failures, timeouts and invalid outputs fail closed to the canonical fallback:
@@ -87,6 +101,8 @@ npm.cmd run evaluate:openrouter-triage -- `
 ```
 
 The command reads `OPENROUTER_API_KEY` from the environment. It writes only benchmark results under the private audit directory and never prints the API key.
+
+Hosted evaluation is restricted to the already-consumed `llm-triage-development-inputs.jsonl`; it will refuse a different/new holdout filename. Reports include structured-output acceptance, exact optimal action, `optimal`, `safe_progress`, `safe_no_progress`, `unsafe_wrong_route`, scope leakage, fallback rate, and latency.
 
 The selected free model has OpenRouter free-tier request limits, so do not run hundreds of cases blindly. Start with 20, inspect structured-output acceptance/safety, and scale only within the account's current free-model allowance.
 

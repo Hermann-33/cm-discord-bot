@@ -1,0 +1,2740 @@
+[
+  {
+    "id": "case.rust.nfa.server_load_crash.continue",
+    "displayName": "Rust NFA server-load crash after resource steps fail",
+    "family": "technical.rust_nfa",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [
+        "game.rust"
+      ],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [
+        "account_model.nfa"
+      ],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [
+      "case.rust.nfa.server_load_crash"
+    ],
+    "specializesCaseIds": [
+      "case.rust.nfa.server_load_crash"
+    ],
+    "relatedCaseIds": [
+      "case.rust.nfa.server_load_crash",
+      "case.loader.closes_runtime",
+      "case.loader.connection",
+      "case.loader.update",
+      "case.loader.key_error",
+      "case.product.launch_failure",
+      "case.game.crash_loading",
+      "case.game.crash_general"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.rust.nfa.server_load_crash",
+    "displayName": "Rust NFA crashes while loading a server or world",
+    "family": "technical.rust_nfa",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [
+        "game.rust"
+      ],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [
+        "account_model.nfa"
+      ],
+      "accountListings": []
+    },
+    "ask": [
+      "diagnostic.rust.graphics_level",
+      "diagnostic.system.available_resources"
+    ],
+    "causes": [
+      "cause.rust.server_load_resource_pressure"
+    ],
+    "flow": [
+      {
+        "when": [
+          "graphicsLevel=high"
+        ],
+        "procedureId": "procedure.system.reduce_resource_pressure",
+        "onSuccess": "outcome.resolved",
+        "onFailure": "case.rust.nfa.server_load_crash.continue"
+      }
+    ],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.rust.nfa.server_load_crash.continue"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": "case.rust.nfa.server_load_crash.continue",
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.nfa.invalid_first_use",
+    "displayName": "NFA invalid or locked at first use",
+    "family": "accounts.nfa",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [
+        "account_model.nfa"
+      ],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [
+      "policy.refund_or_replacement.current_state_required"
+    ],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.nfa.invalid_after_use",
+      "case.nfa.owner_session_conflict",
+      "case.nfa.redemption_activation",
+      "case.nfa.replacement_dispute",
+      "case.nfa.access_model_question",
+      "case.account.full_access",
+      "case.account.manual_service",
+      "case.account.bulk_purchase"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [
+      "escalation.known_flow_exhausted"
+    ],
+    "escalate": [
+      "Human review or current authoritative state is required."
+    ],
+    "match": {
+      "phrases": [],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.nfa.invalid_after_use",
+    "displayName": "NFA became invalid after prior use",
+    "family": "accounts.nfa",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [
+        "account_model.nfa"
+      ],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [
+      "policy.refund_or_replacement.current_state_required"
+    ],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.nfa.invalid_first_use",
+      "case.nfa.owner_session_conflict",
+      "case.nfa.redemption_activation",
+      "case.nfa.replacement_dispute",
+      "case.nfa.access_model_question",
+      "case.account.full_access",
+      "case.account.manual_service",
+      "case.account.bulk_purchase"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [
+      "escalation.known_flow_exhausted"
+    ],
+    "escalate": [
+      "Human review or current authoritative state is required."
+    ],
+    "match": {
+      "phrases": [
+        "When I launch the NFA launcher and log in via Steam, it closes after a moment; the Steam window appears, I click on my profile, the account loads, and then it asks for the NFA account password. [reply reference omitted]"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.nfa.owner_session_conflict",
+    "displayName": "NFA owner or session conflict",
+    "family": "accounts.nfa",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [
+        "account_model.nfa"
+      ],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.nfa.invalid_first_use",
+      "case.nfa.invalid_after_use",
+      "case.nfa.redemption_activation",
+      "case.nfa.replacement_dispute",
+      "case.nfa.access_model_question",
+      "case.account.full_access",
+      "case.account.manual_service",
+      "case.account.bulk_purchase"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "[mention omitted] hello just want to ask. Can i login NFA account without getting my all steam accounts logged out?",
+        "[URL omitted] 🤷‍♂️ [embed title] GitHub - alterra-lol/nfa-account-manager: Lightweight Steam account... Lightweight Steam account manager helpful for NFA accounts. Store, switch, and manage multiple Steam logins using cache data only. - al",
+        "for my nfa it just said it got resigned in someplace else is that just the owner of the account?",
+        "When I launch the NFA launcher and log in via Steam, it closes after a moment; the Steam window appears, I click on my profile, the account loads, and then it asks for the NFA account password. [reply reference omitted]",
+        "But if I allready joined with the nfa and was kicked"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.nfa.redemption_activation",
+    "displayName": "NFA redemption or activation help",
+    "family": "accounts.nfa",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [
+        "account_model.nfa"
+      ],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.nfa.invalid_first_use",
+      "case.nfa.invalid_after_use",
+      "case.nfa.owner_session_conflict",
+      "case.nfa.replacement_dispute",
+      "case.nfa.access_model_question",
+      "case.account.full_access",
+      "case.account.manual_service",
+      "case.account.bulk_purchase"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "okk thx nfa.exe Does it work for all the tokens in your store?",
+        "should I run the cs2 account from the nfa.exe or the steam after first launch?",
+        "My friend just want to steal my nfa acc can he stole it just by seen my token?",
+        "its asking for a password and even if i use the nfa launcher it still does",
+        "took over dc fully even with nfa and new token",
+        "When I launch the NFA launcher and log in via Steam, it closes after a moment; the Steam window appears, I click on my profile, the account loads, and then it asks for the NFA account password. [reply reference omitted]",
+        "Cheater's Market Secure order delivery Your order is ready. Your account access token is below. Your dashboard shows the matching loader, and the setup guide is linked below. Item CS2 Prime NFA Variant default Context Counter-Strike 2 Statu",
+        "also can you give me the new functioning nfa account downloader please?",
+        "cus the nfa loader wont work",
+        "[URL omitted] [embed title] NFA Account Guide How NFA game accounts and token-based delivery work.",
+        "I bought a new nfa from the regular loader",
+        "question, if I want to use my normal ac (not NFA), launch it through the loader too?"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.nfa.replacement_dispute",
+    "displayName": "NFA replacement or refund dispute",
+    "family": "accounts.nfa",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [
+        "account_model.nfa"
+      ],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [
+      "policy.refund_or_replacement.current_state_required"
+    ],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.nfa.invalid_first_use",
+      "case.nfa.invalid_after_use",
+      "case.nfa.owner_session_conflict",
+      "case.nfa.redemption_activation",
+      "case.nfa.access_model_question",
+      "case.account.full_access",
+      "case.account.manual_service",
+      "case.account.bulk_purchase"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [
+      "escalation.known_flow_exhausted"
+    ],
+    "escalate": [
+      "Human review or current authoritative state is required."
+    ],
+    "match": {
+      "phrases": [
+        "Also quick question: are these NFA accounts stolen or legit? If they're stolen, I'd rather not contribute in this. I don't want a refund or anything, I just don't want to be a part of it, so please let me know."
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.nfa.access_model_question",
+    "displayName": "NFA access and ownership question",
+    "family": "accounts.nfa",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [
+        "account_model.nfa"
+      ],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.nfa.invalid_first_use",
+      "case.nfa.invalid_after_use",
+      "case.nfa.owner_session_conflict",
+      "case.nfa.redemption_activation",
+      "case.nfa.replacement_dispute",
+      "case.account.full_access",
+      "case.account.manual_service",
+      "case.account.bulk_purchase"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Arc Raiders nfa meaning?",
+        "Hi, unfortunately this is normal behavior for these types of accounts. When account session data changes, it goes invalid. Session data changes when the account credentials are changed Or If you logout from the account via steam Account lif",
+        "Cheater's Market Secure order delivery Your order is ready. Your account access token is below. Your dashboard shows the matching loader, and the setup guide is linked below. Item CS2 Prime NFA Variant default Context Counter-Strike 2 Statu",
+        "There nfa loader ? I mean, I’m very careful of what I click on. I don’t click on random links. I don’t download random stuff. Literally the only stuff I unload and buy from y’all and cheese vault",
+        "i just have a question since im always buying from u guys when i buy multiple nfa at once , are they all activated once bought or once the account is accessed it gets activated"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.account.full_access",
+    "displayName": "Full Access account question or problem",
+    "family": "accounts.full_access",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [
+        "account_model.full_access"
+      ],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.nfa.invalid_first_use",
+      "case.nfa.invalid_after_use",
+      "case.nfa.owner_session_conflict",
+      "case.nfa.redemption_activation",
+      "case.nfa.replacement_dispute",
+      "case.nfa.access_model_question",
+      "case.account.manual_service",
+      "case.account.bulk_purchase"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.account.manual_service",
+    "displayName": "Manual service fulfillment",
+    "family": "accounts.manual_service",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [
+        "account_model.manual_service"
+      ],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.nfa.invalid_first_use",
+      "case.nfa.invalid_after_use",
+      "case.nfa.owner_session_conflict",
+      "case.nfa.redemption_activation",
+      "case.nfa.replacement_dispute",
+      "case.nfa.access_model_question",
+      "case.account.full_access",
+      "case.account.bulk_purchase"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "can i top up pls",
+        "anyways can i topup $20?",
+        "can you top up 2.2 dollars into my acc and i send to you",
+        "directly pay not wallet top up",
+        "Yoo bro I wanted to topup 2.50$ but I mistakenly clicked on card instead of crypto can you cancel this so I can pay with crypto??💀 [attachment omitted]",
+        "can iget working acount replacment pls i need to top up acount soon for more",
+        "hi i just come back acount invalid i will top up acount now and buy more pls replace it by tomorrow i played 0 games today waiting for a working acount [attachment omitted] [reply reference omitted]"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.account.bulk_purchase",
+    "displayName": "Bulk account purchase question",
+    "family": "accounts.purchase",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.nfa.invalid_first_use",
+      "case.nfa.invalid_after_use",
+      "case.nfa.owner_session_conflict",
+      "case.nfa.redemption_activation",
+      "case.nfa.replacement_dispute",
+      "case.nfa.access_model_question",
+      "case.account.full_access",
+      "case.account.manual_service"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "fuck do you mean, Your website encourages people to buy multiple accounts, and switch between them"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.account.purchase_question",
+    "displayName": "Account purchase or listing question",
+    "family": "accounts.purchase",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.nfa.invalid_first_use",
+      "case.nfa.invalid_after_use",
+      "case.nfa.owner_session_conflict",
+      "case.nfa.redemption_activation",
+      "case.nfa.replacement_dispute",
+      "case.nfa.access_model_question",
+      "case.account.full_access",
+      "case.account.manual_service"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Website showed the requested account tier out of stock",
+        "PayPal purchase did not immediately deliver account",
+        "Customer lost access after using another purchased account",
+        "you know other people selling nfa",
+        "Im trying to buy an NFA",
+        "can u send me temp link to buy nfa",
+        "Cs2 nfa stock please",
+        "oh okay, bought nfa from yall for now.. looking for a cheap shop that sells fa account too",
+        "i can buy 1 cs2 nfa account",
+        "if i buy cs2 prime nfa account, where i get the account details after i bought it?",
+        "can i buy this nfa [attachment omitted]",
+        "[mention] i cant buy nfa account"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.account.wrong_specification",
+    "displayName": "Wrong account or specification delivered",
+    "family": "accounts.delivery",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [
+      "policy.refund_or_replacement.current_state_required"
+    ],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.nfa.invalid_first_use",
+      "case.nfa.invalid_after_use",
+      "case.nfa.owner_session_conflict",
+      "case.nfa.redemption_activation",
+      "case.nfa.replacement_dispute",
+      "case.nfa.access_model_question",
+      "case.account.full_access",
+      "case.account.manual_service"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [
+      "escalation.known_flow_exhausted"
+    ],
+    "escalate": [
+      "Human review or current authoritative state is required."
+    ],
+    "match": {
+      "phrases": [
+        "so i need to go on different account yh?",
+        "I think I was looking at a different account, my apologies.",
+        "I’m following the steps one by one, but the account still isn't working; it keeps asking for a password, yet I never received one. A friend of mine bought from you and his works fine, but mine doesn't. We have different accounts, and no one",
+        "cause ive been in the server on like 5 different accounts"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.account.banned",
+    "displayName": "Delivered or purchased account is banned",
+    "family": "accounts.delivery",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [
+      "policy.refund_or_replacement.current_state_required"
+    ],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.nfa.invalid_first_use",
+      "case.nfa.invalid_after_use",
+      "case.nfa.owner_session_conflict",
+      "case.nfa.redemption_activation",
+      "case.nfa.replacement_dispute",
+      "case.nfa.access_model_question",
+      "case.account.full_access",
+      "case.account.manual_service"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [
+      "escalation.known_flow_exhausted"
+    ],
+    "escalate": [
+      "Human review or current authoritative state is required."
+    ],
+    "match": {
+      "phrases": [
+        "Customer reported account bans",
+        "Hardware-ban/account-ban confusion",
+        "Account game-banned within about one minute",
+        "Delivered account EAC-banned in Rust",
+        "Two later accounts had VAC/CS bans that restricted desired Rust servers",
+        "Customer later said delivered account was already game-banned",
+        "Account later became banned",
+        "Fortnite account ban",
+        "Customer said one delivered account was banned",
+        "Customer thought account was banned",
+        "Later account banned",
+        "why do i get banned steam banned on an fa rust acc but not on an nfa"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.account.login_access",
+    "displayName": "Account login or credential access problem",
+    "family": "accounts.access",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.nfa.invalid_first_use",
+      "case.nfa.invalid_after_use",
+      "case.nfa.owner_session_conflict",
+      "case.nfa.redemption_activation",
+      "case.nfa.replacement_dispute",
+      "case.nfa.access_model_question",
+      "case.account.full_access",
+      "case.account.manual_service"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Multiple delivered accounts reported offline/invalid despite validity indicator",
+        "Account later went invalid/offline",
+        "Another account later invalid before customer claimed to use it",
+        "Login screen showed account invalid",
+        "Account credentials invalid before customer reported any use",
+        "Account later became invalid",
+        "First supplied account was inaccessible",
+        "Hey i hope you guys are well! Just letting you know out of the 5 accounts, these 3 accounts did not work. In game rank was to low for premier. [account token omitted] [account token omitted] [account token omitted]",
+        "i bujy account invalid [attachment omitted] [reply reference omitted]",
+        "i write token but i got account invalid error",
+        "[URL omitted] 🤷‍♂️ [embed title] GitHub - alterra-lol/nfa-account-manager: Lightweight Steam account... Lightweight Steam account manager helpful for NFA accounts. Store, switch, and manage multiple Steam logins using cache data only. - al",
+        "[mention omitted] it says account is invalid"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.payment.card_declined",
+    "displayName": "Card payment declined or unavailable",
+    "family": "commerce.payment",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [
+      "dynamic.purchase_intent.status"
+    ],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.payment.paypal_unavailable",
+      "case.payment.crypto_pending",
+      "case.payment.manual",
+      "case.payment.completed_missing_order",
+      "case.payment.failed_or_pending",
+      "case.order.fulfillment_delayed",
+      "case.order.wrong_delivery",
+      "case.order.refund_cancel"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Buy one-day access through Stripe after card declines",
+        "Normal card processing was flagged/declined",
+        "Stripe route initially unavailable due disputes",
+        "Internet trouble during payment; card charged but checkout reported failure and delivered nothing",
+        "Stripe unavailable",
+        "Card declined on multiple processors",
+        "Card discount unavailable after processor switch",
+        "One card processor failed",
+        "Stripe had failed for customer",
+        "Prepaid card declined",
+        "Card payments unavailable",
+        "this is my order id im trying to pay with card and they are decling it"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.payment.paypal_unavailable",
+    "displayName": "PayPal availability or payment problem",
+    "family": "commerce.payment",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [
+      "dynamic.purchase_intent.status"
+    ],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.payment.card_declined",
+      "case.payment.crypto_pending",
+      "case.payment.manual",
+      "case.payment.completed_missing_order",
+      "case.payment.failed_or_pending",
+      "case.order.fulfillment_delayed",
+      "case.order.wrong_delivery",
+      "case.order.refund_cancel"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "SellAuth and PayPal unavailable"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.payment.crypto_pending",
+    "displayName": "Crypto payment pending or unconfirmed",
+    "family": "commerce.payment",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [
+      "dynamic.purchase_intent.status"
+    ],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.payment.card_declined",
+      "case.payment.paypal_unavailable",
+      "case.payment.manual",
+      "case.payment.completed_missing_order",
+      "case.payment.failed_or_pending",
+      "case.order.fulfillment_delayed",
+      "case.order.wrong_delivery",
+      "case.order.refund_cancel"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Crypto payment misread/unreceived initially",
+        "Crypto purchase had not immediately confirmed",
+        "First crypto purchase not emailed; later crypto purchase self-confirmed"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.payment.manual",
+    "displayName": "Manual payment coordination",
+    "family": "commerce.payment",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [
+      "policy.refund_or_replacement.current_state_required"
+    ],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.payment.card_declined",
+      "case.payment.paypal_unavailable",
+      "case.payment.crypto_pending",
+      "case.payment.completed_missing_order",
+      "case.payment.failed_or_pending",
+      "case.order.fulfillment_delayed",
+      "case.order.wrong_delivery",
+      "case.order.refund_cancel"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [
+      "escalation.known_flow_exhausted"
+    ],
+    "escalate": [
+      "Human review or current authoritative state is required."
+    ],
+    "match": {
+      "phrases": [
+        "heres the buy me a coffee thingy, ive bought 7 and only received 6, my emails [email omitted] so u can check [attachment omitted]",
+        "Okay but I didnt get a mail from u only the buy me a coffee send me this",
+        "[URL omitted] [embed title] Ashley Barnes's Shop | Buy Me a Coffee Aura Farming",
+        "i clicked on it and it said [URL omitted] [embed title] Ashley Barnes's Shop | Buy Me a Coffee Aura Farming",
+        "Same mail on buymeacoffeee g"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.payment.completed_missing_order",
+    "displayName": "Payment completed but order is missing",
+    "family": "commerce.payment",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [
+      "dynamic.purchase_intent.status"
+    ],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.payment.card_declined",
+      "case.payment.paypal_unavailable",
+      "case.payment.crypto_pending",
+      "case.payment.manual",
+      "case.payment.failed_or_pending",
+      "case.order.fulfillment_delayed",
+      "case.order.wrong_delivery",
+      "case.order.refund_cancel"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Internet trouble during payment; card charged but checkout reported failure and delivered nothing",
+        "i paid with card and no recive nothing",
+        "i literally clicked the coffee thing or wtv paid and nothing"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.payment.failed_or_pending",
+    "displayName": "Payment failed or remains pending",
+    "family": "commerce.payment",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [
+      "dynamic.purchase_intent.status"
+    ],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.payment.card_declined",
+      "case.payment.paypal_unavailable",
+      "case.payment.crypto_pending",
+      "case.payment.manual",
+      "case.payment.completed_missing_order",
+      "case.order.fulfillment_delayed",
+      "case.order.wrong_delivery",
+      "case.order.refund_cancel"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Later payment pending/not received"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.order.fulfillment_delayed",
+    "displayName": "Order exists but fulfillment is delayed",
+    "family": "commerce.fulfillment",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [
+      "dynamic.fulfillment.status"
+    ],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.payment.card_declined",
+      "case.payment.paypal_unavailable",
+      "case.payment.crypto_pending",
+      "case.payment.manual",
+      "case.payment.completed_missing_order",
+      "case.payment.failed_or_pending",
+      "case.order.wrong_delivery",
+      "case.order.refund_cancel"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.order.wrong_delivery",
+    "displayName": "Wrong product, key, or delivery received",
+    "family": "commerce.fulfillment",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [
+      "policy.refund_or_replacement.current_state_required"
+    ],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.payment.card_declined",
+      "case.payment.paypal_unavailable",
+      "case.payment.crypto_pending",
+      "case.payment.manual",
+      "case.payment.completed_missing_order",
+      "case.payment.failed_or_pending",
+      "case.order.fulfillment_delayed",
+      "case.order.refund_cancel"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [
+      "escalation.known_flow_exhausted"
+    ],
+    "escalate": [
+      "Human review or current authoritative state is required."
+    ],
+    "match": {
+      "phrases": [],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.order.refund_cancel",
+    "displayName": "Order refund or cancellation request",
+    "family": "commerce.policy",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [
+      "policy.refund_or_replacement.current_state_required"
+    ],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.payment.card_declined",
+      "case.payment.paypal_unavailable",
+      "case.payment.crypto_pending",
+      "case.payment.manual",
+      "case.payment.completed_missing_order",
+      "case.payment.failed_or_pending",
+      "case.order.fulfillment_delayed",
+      "case.order.wrong_delivery"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [
+      "escalation.known_flow_exhausted"
+    ],
+    "escalate": [
+      "Human review or current authoritative state is required."
+    ],
+    "match": {
+      "phrases": [
+        "Refund or exchange an accidental purchase after GPU failure"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.order.status",
+    "displayName": "Current order status question",
+    "family": "commerce.order",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [
+      "dynamic.order.status"
+    ],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.payment.card_declined",
+      "case.payment.paypal_unavailable",
+      "case.payment.crypto_pending",
+      "case.payment.manual",
+      "case.payment.completed_missing_order",
+      "case.payment.failed_or_pending",
+      "case.order.fulfillment_delayed",
+      "case.order.wrong_delivery"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "where do i find my purchase [attachment omitted]",
+        "You don't understand: I enter $10 on the payment screen, but the system directs a charge of $15—the total for all my orders—to my bank. I am not entering $15 anywhere; your system is requesting it automatically.",
+        "but im 99% sure this was after original order where i paid",
+        "Cheater's Market Secure order delivery Your order is ready. Your account access token is below. Your dashboard shows the matching loader, and the setup guide is linked below. Item CS2 Prime NFA Variant default Context Counter-Strike 2 Statu",
+        "Is it where I purchased it at just wanted to make sure"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.wallet.balance",
+    "displayName": "Wallet or store balance question",
+    "family": "commerce.wallet",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [
+      "dynamic.user.overview"
+    ],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.payment.card_declined",
+      "case.payment.paypal_unavailable",
+      "case.payment.crypto_pending",
+      "case.payment.manual",
+      "case.payment.completed_missing_order",
+      "case.payment.failed_or_pending",
+      "case.order.fulfillment_delayed",
+      "case.order.wrong_delivery"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Exception (cs:155243): NullReferenceException: Object reference not set to an instance of an object. UnityEngine.Bindings.ThrowHelper.ThrowNullReferenceException (System.Object obj) (at [mention omitted]:0) UnityEngine.AnimationCurve.Evalua"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.aura.balance_or_adjustment",
+    "displayName": "Aura balance or adjustment question",
+    "family": "commerce.aura",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [
+      "dynamic.user.overview"
+    ],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.payment.card_declined",
+      "case.payment.paypal_unavailable",
+      "case.payment.crypto_pending",
+      "case.payment.manual",
+      "case.payment.completed_missing_order",
+      "case.payment.failed_or_pending",
+      "case.order.fulfillment_delayed",
+      "case.order.wrong_delivery"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "[embed title] todoroki\\.joe's Aura Your linked Cheater's Market Aura balance. [embed field] Available: <:aura:[platform identifier omitted]> `6,000` [embed field] Lifetime Earned: <:aura:[platform identifier omitted]> `6,000` [reply referen",
+        "[embed title] todoroki\\.joe's Aura Your linked Cheater's Market Aura balance. [embed field] Available: <:aura:[platform identifier omitted]> ` 6,000` [embed field] Lifetime Earned: <:aura:[platform identifier omitted]> ` 6,000` [reply refer",
+        "You can convert that aura to balance [reply reference omitted]"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.discount.coupon",
+    "displayName": "Discount or coupon question",
+    "family": "commerce.discount",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.payment.card_declined",
+      "case.payment.paypal_unavailable",
+      "case.payment.crypto_pending",
+      "case.payment.manual",
+      "case.payment.completed_missing_order",
+      "case.payment.failed_or_pending",
+      "case.order.fulfillment_delayed",
+      "case.order.wrong_delivery"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Card discount unavailable after processor switch",
+        "Recover discount",
+        "could i get a discount",
+        "btw any discounts if i buy bulk keys for me and my friends",
+        "also can i get sum coupon codes or nah?",
+        "and do yall got discount codes?",
+        "they had a discount code",
+        "can i get a discount of 0.80usd?",
+        "Is there an NFA discount?",
+        "do you have any account for 1.29 i only have 1.34 in my wallet or maybe a discount code"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.dashboard.verification",
+    "displayName": "Dashboard or purchase verification",
+    "family": "website.dashboard",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [
+      "dynamic.purchase_intent.status"
+    ],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.website.checkout_failure",
+      "case.website.login"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "bc all orders in the dashboard were created after order",
+        "Cheater's Market Secure order delivery Your order is ready. Your account access token is below. Your dashboard shows the matching loader, and the setup guide is linked below. Item CS2 Prime NFA Variant default Context Counter-Strike 2 Statu"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.website.checkout_failure",
+    "displayName": "Website checkout failure",
+    "family": "website.checkout",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.dashboard.verification",
+      "case.website.login"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Internet trouble during payment; card charged but checkout reported failure and delivered nothing",
+        "Second checkout page failed to load",
+        "VBS/core-isolation prerequisite error",
+        "PIN/Hyper-V prerequisite error",
+        "Card checkout stuck processing"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.website.login",
+    "displayName": "Website login or account-link problem",
+    "family": "website.account",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.dashboard.verification",
+      "case.website.checkout_failure"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.media.application",
+    "displayName": "Media or creator application",
+    "family": "business.application",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.reseller.application"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.reseller.application",
+    "displayName": "Reseller or partnership inquiry",
+    "family": "business.reseller",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.media.application"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "I would like to sell your product via an affiliate link, if possible, or through keys.",
+        "from the reviews left by the customers from the resellers, the most majority are positive reviews, stating easy setup and safe to use",
+        "todoroki i was wondering do you have resellers"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.catalog.availability_status",
+    "displayName": "Current product availability or status",
+    "family": "catalog.dynamic",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [
+      "dynamic.catalog.product_status"
+    ],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.catalog.pricing_duration"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Understand an apparent product status/error",
+        "Spoofer detected iaStor/RAID condition despite no RAID usage",
+        "Previously working account and newly bought account both failed on customer's PC while friend's worked",
+        "Product not available after waiting a day",
+        "Are all the rust cheats down right now ?",
+        "I enter the product key, it downloads, and then it just stays there.",
+        "but what would be the reason for that ban does it mean the cheats got detected or the wpoofer",
+        "im waiting for one of my cheats to come back from updating",
+        "Token is working and account is working",
+        "Owhh Damm venom external was updating",
+        "[embed title] todoroki\\.joe's Aura Your linked Cheater's Market Aura balance. [embed field] Available: <:aura:[platform identifier omitted]> `6,000` [embed field] Lifetime Earned: <:aura:[platform identifier omitted]> `6,000` [reply referen",
+        "[embed title] todoroki\\.joe's Aura Your linked Cheater's Market Aura balance. [embed field] Available: <:aura:[platform identifier omitted]> ` 6,000` [embed field] Lifetime Earned: <:aura:[platform identifier omitted]> ` 6,000` [reply refer"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.catalog.pricing_duration",
+    "displayName": "Product pricing or duration question",
+    "family": "catalog.commercial",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [
+      "dynamic.catalog.product_status"
+    ],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.catalog.availability_status"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Obtain a spoofer license without consuming its duration immediately",
+        "alr ima buy a month key for it tomorrow",
+        "well im a ex chease dev for rust and stuff, which is why im using cheaser market so much, just testing new stuff out, i found somthing that honestly worth it and can chease for about 10 days without being banned, untill i was, wich is good ",
+        "need help getting 1 month key for sploofer",
+        "KEY_LHXPTTTH40HT8EJ5A5R120J0 Its a week key",
+        "Ahh hmm, cause I half installed bsttlenet cause I was about play cod, then a day or 2 later after not using one of my cheats from another provider I tried again after buying a month key snd it don't wana work, they telling me to reinstall w",
+        "i bought 2 two week keys"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.product.requirements",
+    "displayName": "Exact product requirements",
+    "family": "product.requirements",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [
+      {
+        "procedureId": "procedure.product.read_exact_requirements",
+        "onSuccess": "outcome.context_resolved",
+        "onFailure": "escalation.entity_ambiguous"
+      }
+    ],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.product.compatibility",
+      "case.license.activation",
+      "case.license.expired_time"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Windows 11 25H2 unsupported",
+        "Product still requested virtualization be disabled after customer believed it was disabled",
+        "Virtualization warning persisted",
+        "Required DMA/virtualization state could not be changed on HP firmware",
+        "Windows 11 concern",
+        "Understand requirements and repeated kicks",
+        "Hi for venom cheese is obligatory disable virtualization",
+        "shit i bought a woofer of u and it says aes instruction not supported",
+        "do i have to disable the secure boot",
+        "i can leave secure boot on sir ? [reply reference omitted]",
+        "do i need secure boot on for rust to not get banned?",
+        "just completely removed my damn DeviceGuard folder in the registrys and turned secure boot off"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.product.compatibility",
+    "displayName": "Product compatibility question",
+    "family": "product.compatibility",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [
+      {
+        "procedureId": "procedure.product.read_exact_requirements",
+        "onSuccess": "outcome.context_resolved",
+        "onFailure": "escalation.entity_ambiguous"
+      }
+    ],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.product.requirements",
+      "case.license.activation",
+      "case.license.expired_time"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Customer expected PlayStation 5 compatibility",
+        "Unsupported Windows build",
+        "Spoofer detected iaStor/RAID condition despite no RAID usage",
+        "RAID-related block",
+        "RAID enabled/incompatible",
+        "Later license needed reset after incompatible software state",
+        "Bundled cleaner incompatible with Fortnite",
+        "incompatibale hwid",
+        "arc-raiders-30-b105494c",
+        "arc-raiders-23-ddb78b09",
+        "Arc Raiders nfa meaning?",
+        "but my device was incompatible"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.license.activation",
+    "displayName": "License or key activation problem",
+    "family": "product.license",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.product.requirements",
+      "case.product.compatibility",
+      "case.license.expired_time"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "License activated on spoofed serials",
+        "Spoofer key appeared invalid and clipboard paste unclear",
+        "When i want to use 2 keys i just bought, it say \"Invalid_key\"",
+        "How do I activate the key?",
+        "I tried to spoof after i login with key but i get an error",
+        "i got the app to open but its saying the key is invalid is there any chance its already pulled back and how can i tell for sure?",
+        "and both keys are invalid",
+        "debug key is not workign",
+        "im in, and now the key from cheaters.market is invalid it says"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.license.expired_time",
+    "displayName": "License expiry or consumed time dispute",
+    "family": "product.license",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [
+      "policy.refund_or_replacement.current_state_required"
+    ],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.product.requirements",
+      "case.product.compatibility",
+      "case.license.activation"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [
+      "escalation.known_flow_exhausted"
+    ],
+    "escalate": [
+      "Human review or current authoritative state is required."
+    ],
+    "match": {
+      "phrases": [
+        "Obtain a spoofer license without consuming its duration immediately",
+        "License time expired",
+        "License expired during incident",
+        "One-day key expired unused",
+        "and well my keys expired so i want to try other",
+        "Well can I maybe get another key for compensation I have proof",
+        "cuz i only bought a day key im considering lifetime i js need a woofer",
+        "its alr, i got it setup, but i bought exodus right before they started updating it, and now it says my key is expired even tho i couldnt even use it cuz it was down becuase they were updating it",
+        "so it still doesnt work so when do i get my money back? its been over 50% of my key time now thats ridiculous"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.loader.closes_runtime",
+    "displayName": "Loader closes immediately or runtime is missing",
+    "family": "technical.loader",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [
+      "diagnostic.loader.webview_present"
+    ],
+    "causes": [],
+    "flow": [
+      {
+        "procedureId": "procedure.loader.install_webview_runtime",
+        "onSuccess": "outcome.resolved",
+        "onFailure": "escalation.known_flow_exhausted"
+      }
+    ],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.rust.nfa.server_load_crash.continue",
+      "case.rust.nfa.server_load_crash",
+      "case.loader.connection",
+      "case.loader.update",
+      "case.loader.key_error",
+      "case.product.launch_failure",
+      "case.game.crash_loading",
+      "case.game.crash_general"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [
+      "escalation.known_flow_exhausted"
+    ],
+    "escalate": [],
+    "match": {
+      "phrases": [],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.loader.connection",
+    "displayName": "Loader connection or authentication failure",
+    "family": "technical.loader",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [
+      {
+        "procedureId": "procedure.loader.restart_and_retry",
+        "onSuccess": "outcome.resolved",
+        "onFailure": "escalation.known_flow_exhausted"
+      }
+    ],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.rust.nfa.server_load_crash.continue",
+      "case.rust.nfa.server_load_crash",
+      "case.loader.closes_runtime",
+      "case.loader.update",
+      "case.loader.key_error",
+      "case.product.launch_failure",
+      "case.game.crash_loading",
+      "case.game.crash_general"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Test loader stuck",
+        "Loader/server access failed across several loader builds",
+        "Loader stuck loading user data",
+        "the loader recongnizes it but when i click for it to login to steam it doesnt"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.loader.update",
+    "displayName": "Loader update or download failure",
+    "family": "technical.loader",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [
+      {
+        "procedureId": "procedure.loader.restart_and_retry",
+        "onSuccess": "outcome.resolved",
+        "onFailure": "escalation.known_flow_exhausted"
+      }
+    ],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.rust.nfa.server_load_crash.continue",
+      "case.rust.nfa.server_load_crash",
+      "case.loader.closes_runtime",
+      "case.loader.connection",
+      "case.loader.key_error",
+      "case.product.launch_failure",
+      "case.game.crash_loading",
+      "case.game.crash_general"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "did they ever update the matrix? every site says its up but loader still says down"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.loader.key_error",
+    "displayName": "Loader key or license error",
+    "family": "technical.loader",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.rust.nfa.server_load_crash.continue",
+      "case.rust.nfa.server_load_crash",
+      "case.loader.closes_runtime",
+      "case.loader.connection",
+      "case.loader.update",
+      "case.product.launch_failure",
+      "case.game.crash_loading",
+      "case.game.crash_general"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.product.launch_failure",
+    "displayName": "Product does not launch or initialize",
+    "family": "technical.product",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.rust.nfa.server_load_crash.continue",
+      "case.rust.nfa.server_load_crash",
+      "case.loader.closes_runtime",
+      "case.loader.connection",
+      "case.loader.update",
+      "case.loader.key_error",
+      "case.game.crash_loading",
+      "case.game.crash_general"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Understand an apparent product status/error",
+        "Injection error persisted through prerequisites and overlay reinstall",
+        "Later generic injection failure",
+        "Later restart did not clear injection error",
+        "Injection error with game open",
+        "Attachment-shown injection error",
+        "hey so now im just trying it without the woofer with discord overlay and when i hit inject nothing happens",
+        "yea ive tried it like 3 times i inject then spoof then open rust and then i hit insert and nothing happens"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.game.crash_loading",
+    "displayName": "Game crashes while loading a server or world",
+    "family": "technical.game",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [
+        "game.cs2",
+        "game.apex_legends",
+        "game.rust",
+        "game.fortnite"
+      ],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.rust.nfa.server_load_crash.continue",
+      "case.rust.nfa.server_load_crash",
+      "case.loader.closes_runtime",
+      "case.loader.connection",
+      "case.loader.update",
+      "case.loader.key_error",
+      "case.product.launch_failure",
+      "case.game.crash_general"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Game crashed after loading",
+        "it gets to downloading data and then nothing happens and it closes",
+        "so basically its a tool for lagging/ crashing game servers"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.game.crash_general",
+    "displayName": "Game crashes during product use",
+    "family": "technical.game",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [
+        "game.valorant",
+        "game.cs2",
+        "game.apex_legends",
+        "game.rainbow_six_siege",
+        "game.rust",
+        "game.escape_from_tarkov",
+        "game.fortnite",
+        "game.arc_raiders"
+      ],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.rust.nfa.server_load_crash.continue",
+      "case.rust.nfa.server_load_crash",
+      "case.loader.closes_runtime",
+      "case.loader.connection",
+      "case.loader.update",
+      "case.loader.key_error",
+      "case.product.launch_failure",
+      "case.game.crash_loading"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Game crash/PC restart on exit",
+        "Fortnite crash and ban after 30 minutes",
+        "Game crashed after loading",
+        "u got any clue why when i load into a server my rust freezes and says not reponding?",
+        "And when i start my game it closes"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.game.overlay_menu",
+    "displayName": "Overlay or menu is missing or frozen",
+    "family": "technical.game",
+    "scope": {
+      "global": false,
+      "categories": [],
+      "games": [
+        "game.apex_legends",
+        "game.rainbow_six_siege",
+        "game.rust",
+        "game.escape_from_tarkov",
+        "game.fortnite"
+      ],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.rust.nfa.server_load_crash.continue",
+      "case.rust.nfa.server_load_crash",
+      "case.loader.closes_runtime",
+      "case.loader.connection",
+      "case.loader.update",
+      "case.loader.key_error",
+      "case.product.launch_failure",
+      "case.game.crash_loading"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Menu later did not open"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.game.feature_behavior",
+    "displayName": "Product feature or configuration problem",
+    "family": "technical.product",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.rust.nfa.server_load_crash.continue",
+      "case.rust.nfa.server_load_crash",
+      "case.loader.closes_runtime",
+      "case.loader.connection",
+      "case.loader.update",
+      "case.loader.key_error",
+      "case.product.launch_failure",
+      "case.game.crash_loading"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Performance setting appeared to reset",
+        "Per-weapon configuration did not work",
+        "Loot visualization did not work while player visualization and aim features did",
+        "Btw on venom external npc esp was not working on oil rigs npc and cargo!!",
+        "[mention omitted] aimbot does not work",
+        "like when i finally make it work the esp lagg so much aimbot does not work triggerbot start shotting the fucking trees"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.network.vpn",
+    "displayName": "VPN or network-path troubleshooting",
+    "family": "technical.network",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [
+      {
+        "procedureId": "procedure.loader.restart_and_retry",
+        "onSuccess": "outcome.resolved",
+        "onFailure": "escalation.known_flow_exhausted"
+      }
+    ],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.rust.nfa.server_load_crash.continue",
+      "case.rust.nfa.server_load_crash",
+      "case.loader.closes_runtime",
+      "case.loader.connection",
+      "case.loader.update",
+      "case.loader.key_error",
+      "case.product.launch_failure",
+      "case.game.crash_loading"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Same screenshot-based error after VPN, Defender/prerequisite steps, restart, and alternate RivaTuner version",
+        "Website down despite VPN",
+        "Repeated VPN kicks despite multiple cleaners/spoofer",
+        "Connection failed during injection",
+        "BSOD when exiting the game or disconnecting VPN",
+        "Connection failed in loader",
+        "it was my vpn",
+        "my network keeps blocking the connection so i cant get it myself",
+        "vpn wouldn t work?",
+        "tried with vpn and still stuck on downloading",
+        "I'm pretty sure hopping on my mobile Hotspot would do the same thing as a VPN ngl",
+        "there now i just bought another fucking account, I need a working vpn"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.windows.activation_after_spoofer",
+    "displayName": "Windows activation after temporary spoofer use",
+    "family": "technical.windows",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.rust.nfa.server_load_crash.continue",
+      "case.rust.nfa.server_load_crash",
+      "case.loader.closes_runtime",
+      "case.loader.connection",
+      "case.loader.update",
+      "case.loader.key_error",
+      "case.product.launch_failure",
+      "case.game.crash_loading"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [],
+    "escalate": [],
+    "match": {
+      "phrases": [
+        "Windows activation failed after restart",
+        "Activation error 0xC004F211"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.spoofer.reversal_reset",
+    "displayName": "Temporary spoofer reversal or reset",
+    "family": "technical.spoofer",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.rust.nfa.server_load_crash.continue",
+      "case.rust.nfa.server_load_crash",
+      "case.loader.closes_runtime",
+      "case.loader.connection",
+      "case.loader.update",
+      "case.loader.key_error",
+      "case.product.launch_failure",
+      "case.game.crash_loading"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [
+      "escalation.known_flow_exhausted"
+    ],
+    "escalate": [
+      "Human review or current authoritative state is required."
+    ],
+    "match": {
+      "phrases": [
+        "HWID error after running spoofer while already temporarily spoofed, then restarting",
+        "Temporary spoof reset after reboot",
+        "Spoofer/cleaner restart behavior confused customer",
+        "So let's say I'm playing Modern Warfare 3 but then I switch the bo7 same spoof right I don't have to reset the computer spoof then play a different game",
+        "when i use the exodus spoof i load rust then it turns my wifi off and i gotta restart",
+        "no need to spoof when it takes 30sec and a restart to start testing again"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.spoofer.hwid_state",
+    "displayName": "HWID or spoofer state question",
+    "family": "technical.spoofer",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.rust.nfa.server_load_crash.continue",
+      "case.rust.nfa.server_load_crash",
+      "case.loader.closes_runtime",
+      "case.loader.connection",
+      "case.loader.update",
+      "case.loader.key_error",
+      "case.product.launch_failure",
+      "case.game.crash_loading"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [
+      "escalation.known_flow_exhausted"
+    ],
+    "escalate": [
+      "Human review or current authoritative state is required."
+    ],
+    "match": {
+      "phrases": [
+        "Prior free HWID-changing/spoofer use was associated by the customer with bans across accounts",
+        "Spoofer auto delivery failed",
+        "HWID error after running spoofer while already temporarily spoofed, then restarting",
+        "License activated on spoofed serials",
+        "Auto spoofer key generation failed",
+        "Spoofer/cleaner restart behavior confused customer",
+        "The program got me banned after 2 hours and this is my first time cheating so it's not like they read my hwid from a last ban",
+        "how does it become a hwid ban",
+        "oh yea i had a quick question i have gotten game banned like 2-3 times on my actual hwid but i havent gotten hwid banned from rust how is that possible?",
+        "im def hwid banned now though",
+        "do you think it’s possible to hop on another nfa and not get insta banned? or do you think i’m most likely fully hwid banned",
+        "hey guys. so i got 3 days banned on rust after spoofing. and today the 3 day ban is gone. what should i do next"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.restricted.technical",
+    "displayName": "Restricted bypass or evasion request",
+    "family": "restricted",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [
+      "escalation.known_flow_exhausted"
+    ],
+    "escalate": [
+      "Human review or current authoritative state is required."
+    ],
+    "match": {
+      "phrases": [
+        "PC restarted/crashed during injection",
+        "PC restarted during injection",
+        "Injection error persisted through prerequisites and overlay reinstall",
+        "After disabling core isolation, injection progressed but crashed the PC",
+        "PC bluescreen/restart on injection",
+        "'Your device ran into a problem' every time customer injected",
+        "Later generic injection failure",
+        "Injection later succeeded after Vanguard removal",
+        "Later restart did not clear injection error",
+        "Injection error with game open",
+        "Product later injected successfully",
+        "Attachment-shown injection error"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.support.followup",
+    "displayName": "Support follow-up or no-response request",
+    "family": "support.operations",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.attachment.review"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [
+      "escalation.known_flow_exhausted"
+    ],
+    "escalate": [
+      "Human review or current authoritative state is required."
+    ],
+    "match": {
+      "phrases": [
+        "so i cant get support if i dont give my email or what? [reply reference omitted]",
+        "so i cant get support now? [reply reference omitted]",
+        "any updates? [reply reference omitted]",
+        "oh and also any updates on exodus and when they gonna fix it?",
+        "any updates?"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  },
+  {
+    "id": "case.attachment.review",
+    "displayName": "Attachment-dependent support",
+    "family": "support.attachment",
+    "scope": {
+      "global": true,
+      "categories": [],
+      "games": [],
+      "vendors": [],
+      "products": [],
+      "variants": [],
+      "accountModels": [],
+      "accountListings": []
+    },
+    "ask": [
+      "diagnostic.attachment.visual_required"
+    ],
+    "causes": [],
+    "flow": [],
+    "policies": [],
+    "dynamic": [],
+    "parentCaseIds": [],
+    "specializesCaseIds": [],
+    "relatedCaseIds": [
+      "case.support.followup"
+    ],
+    "onSuccessCaseId": null,
+    "onFailureCaseId": null,
+    "requiresClarificationCaseIds": [],
+    "escalationIds": [
+      "escalation.known_flow_exhausted"
+    ],
+    "escalate": [
+      "Human review or current authoritative state is required."
+    ],
+    "match": {
+      "phrases": [
+        "Promote the product in a video",
+        "Same screenshot-based error after VPN, Defender/prerequisite steps, restart, and alternate RivaTuner version",
+        "This is my problem: [attachment omitted]",
+        "wont go past this part [attachment omitted]",
+        "Order : [order ID omitted] [attachment omitted]",
+        "cant sign in [attachment omitted]",
+        "and u guys say [attachment omitted]",
+        "I create CS2 competitive gameplay videos on YouTube using cheats. Even though I’m new, my videos appear in the “Suggested” section. However, many people are currently using temporary accounts to create “semi-cheated” videos in Premier mode.",
+        "problem? [attachment omitted]",
+        "and [attachment omitted]",
+        "ok? [attachment omitted]",
+        "can i buy this nfa [attachment omitted]"
+      ],
+      "symptoms": [],
+      "errors": []
+    }
+  }
+]

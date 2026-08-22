@@ -4,7 +4,7 @@ import { sanitizeSupportText, sanitizeTriagePlannerPayload } from "../../src/ai/
 
 test("sanitizes common customer identifiers and secrets", () => {
   const text = sanitizeSupportText(
-    "email Me@Example.com order 550e8400-e29b-41d4-a716-446655440000 CM-ORDER-12345 <@123456789012345678> https://example.com/x sk-or-v1-secretsecretsecret abcdefghijklmnopqrstuvwxyz123456"
+    "email Me@Example.com order 550e8400-e29b-41d4-a716-446655440000 CM-ORDER-12345 <@123456789012345678> https://example.com/x sk-or-v1-secretsecretsecret password=hunter2 account_token=short-token abcdefghijklmnopqrstuvwxyz123456"
   );
 
   assert.equal(text.includes("Me@Example.com"), false);
@@ -14,6 +14,8 @@ test("sanitizes common customer identifiers and secrets", () => {
   assert.equal(text.includes("https://example.com/x"), false);
   assert.equal(text.includes("sk-or-v1-secretsecretsecret"), false);
   assert.equal(text.includes("abcdefghijklmnopqrstuvwxyz123456"), false);
+  assert.equal(text.includes("hunter2"), false);
+  assert.equal(text.includes("short-token"), false);
 });
 
 test("planner sanitizer preserves canonical IDs while omitting sensitive context", () => {
@@ -21,12 +23,14 @@ test("planner sanitizer preserves canonical IDs while omitting sensitive context
     customerText: "my account broke, email user@example.com",
     state: {
       resolvedEntities: ["account_model.nfa", "game.rust"],
-      candidateCaseIds: ["case.nfa.invalid_first_use"],
+      candidateCaseIds: ["case.payment.completed_fulfillment_pending", "case.nfa.invalid_first_use"],
       knownContext: {
         workedBefore: false,
         orderId: "550e8400-e29b-41d4-a716-446655440000",
         nested: { email: "user@example.com" }
-      }
+      },
+      answersReceived: { "clarify.order": "CM-PRIVATE-1234" },
+      policyState: { customerEmail: "policy@example.com" }
     },
     allowed: {
       caseIds: ["case.nfa.invalid_first_use"]
@@ -34,9 +38,12 @@ test("planner sanitizer preserves canonical IDs while omitting sensitive context
   });
 
   assert.deepEqual(payload.state.resolvedEntities, ["account_model.nfa", "game.rust"]);
-  assert.deepEqual(payload.state.candidateCaseIds, ["case.nfa.invalid_first_use"]);
+  assert.deepEqual(payload.state.candidateCaseIds, ["case.payment.completed_fulfillment_pending", "case.nfa.invalid_first_use"]);
   assert.equal(payload.state.knownContext.workedBefore, false);
   assert.equal(payload.state.knownContext.orderId, "[sensitive context omitted]");
   assert.equal(payload.state.knownContext.nested.email, "[sensitive context omitted]");
   assert.equal(payload.customerText.includes("user@example.com"), false);
+  assert.equal(payload.state.answersReceived["clarify.order"], "[order reference omitted]");
+  assert.equal(payload.state.policyState.customerEmail, "[sensitive context omitted]");
+  assert.equal(JSON.stringify(payload).includes("case.nfa.invalid_first_use"), true);
 });

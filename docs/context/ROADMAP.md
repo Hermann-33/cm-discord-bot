@@ -1,6 +1,6 @@
 # Project Roadmap
 
-Updated: 2026-08-19
+Updated: 2026-08-23
 
 ## Completion rule
 
@@ -145,3 +145,15 @@ The historical facts now have exact disposition coverage and compile into canoni
 ### Transcript Phase T3b — Exhaustive case-coverage remediation — PARTIAL
 
 The compiler now derives the emitted runtime case inventory from all 1,578 reviewed ticket ledgers, writes exact ticket/fact usage ledgers, and separates a source-grounded historical holdout from synthetic adversarial tests. Coverage and structural gates pass. The local hybrid ranker improves substantially over lexical retrieval but remains below the directional historical Recall@3/Recall@5/MRR targets, so production integration remains blocked.
+
+### Phase 8 — AI support runtime integration — SCAFFOLDED / BENCHMARK GATED
+
+ADR-0012 establishes the sanitized bundled runtime and constrained optional OpenRouter planner. Configuration, privacy filtering, strict decision validation, deterministic fallback, explicit conversation state, pending-answer handling, and an allowlist runtime-pack importer are implemented without customer-facing Discord wiring.
+
+Remaining activation gates:
+
+1. operator supplies `OPENROUTER_API_KEY` outside Git;
+2. run the controlled 20-record consumed-development smoke benchmark;
+3. inspect structured acceptance, optimal action, safety classes, scope leakage, fallback rate and latency;
+4. remediate benchmark findings without consuming a new final holdout;
+5. separately review and authorize Discord activation/grounded reply rendering.
