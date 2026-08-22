@@ -174,7 +174,7 @@ function privacyPatterns() {
   return [
     { name: 'email', regex: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi },
     { name: 'raw-url', regex: /https?:\/\/[^\s<>)\]}"']+/gi },
-    { name: 'discord-snowflake-like', regex: /(?<!\d)\d{17,20}(?!\d)/g },
+    { name: 'discord-snowflake-like', regex: /(?<![\d.])\d{17,20}(?![\d.])/g },
     { name: 'ethereum-wallet-like', regex: /\b0x[a-fA-F0-9]{40}\b/g },
     { name: 'bitcoin-wallet-like', regex: /\b(?:bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}\b/g },
     { name: 'long-secret-like-token', regex: /\b[A-Za-z0-9_-]{48,}\b/g }
@@ -238,6 +238,34 @@ export async function validateWikilinks(root) {
   return { ok: issues.length === 0, issues, markdownFiles: markdownFiles.length, wikilinks };
 }
 
+async function validateCanonicalGraph(canonicalDir) {
+  const issues = [];
+  const entitiesPath = join(canonicalDir, 'Audit', 'entities.json');
+  const graphPath = join(canonicalDir, 'Audit', 'canonical-graph.json');
+  const factsPath = join(canonicalDir, 'Audit', 'canonical-facts.jsonl');
+  if (!(await pathExists(entitiesPath)) || !(await pathExists(graphPath)) || !(await pathExists(factsPath))) {
+    return { ok: true, issues, nodeCount: 0, relationshipTargetsBroken: 0 };
+  }
+  const entityDocument = await readJson(entitiesPath);
+  const graph = await readJson(graphPath);
+  const facts = await readJsonl(factsPath);
+  const entities = entityDocument.entities ?? entityDocument;
+  const nodeCollections = ['symptoms', 'causes', 'diagnostics', 'procedures', 'outcomes', 'policies', 'exceptions', 'requirements', 'compatibility', 'contradictions', 'cases'];
+  const allNodes = [...entities, ...nodeCollections.flatMap((key) => Array.isArray(graph[key]) ? graph[key] : [])];
+  const ids = collectIds(allNodes, 'canonical nodes', issues);
+  for (const fact of facts) ids.add(fact.id);
+  const references = [];
+  for (const entity of entities) for (const relationship of entity.relationships ?? []) references.push(['entity relationship', relationship.targetId]);
+  for (const fact of facts) {
+    references.push(['canonical fact subject', fact.subjectId]);
+    if (fact.object?.entityId) references.push(['canonical fact object', fact.object.entityId]);
+    for (const value of Object.values(fact.scope ?? {})) if (Array.isArray(value)) for (const id of value) references.push(['canonical fact scope', id]);
+  }
+  let broken = 0;
+  for (const [source, id] of references) if (typeof id === 'string' && !ids.has(id)) { issues.push(`${source} has broken target: ${id}`); broken += 1; }
+  return { ok: issues.length === 0, issues, nodeCount: allNodes.length + facts.length, relationshipTargetsBroken: broken };
+}
+
 async function validateRuntimePack(runtimeDir) {
   const issues = [];
   const requiredJson = [
@@ -280,7 +308,40 @@ async function validateRuntimePack(runtimeDir) {
     }
   }
 
-  return { ok: issues.length === 0, issues, caseCount: cases.length, filesParsed: Object.keys(parsed).length };
+  let referencesBroken = 0;
+  if (cases.length > 0 && Object.keys(parsed).length === requiredJson.length) {
+    const arrays = (name) => Array.isArray(parsed[name]) ? parsed[name] : [];
+    const catalog = parsed['catalog.json'];
+    const entityIds = new Set(['store.cm']);
+    for (const key of ['games', 'vendors', 'categories', 'accountModels', 'accountListings']) for (const item of catalog[key] ?? []) if (item?.id) entityIds.add(item.id);
+    const profiles = arrays('product-profiles.json');
+    for (const profile of profiles) { entityIds.add(profile.id); for (const id of profile.variantIds ?? []) entityIds.add(id); }
+    const caseIds = new Set(cases.map((item) => item.id));
+    const procedureIds = new Set(arrays('procedures.json').map((item) => item.id));
+    const policyIds = new Set(arrays('policies.json').map((item) => item.id));
+    const dynamicIds = new Set(arrays('dynamic-lookups.json').map((item) => item.id));
+    const escalationIds = new Set(arrays('escalations.json').map((item) => item.id));
+    const check = (source, id, allowed) => { if (typeof id === 'string' && !allowed.has(id)) { issues.push(`${source} has broken runtime reference: ${id}`); referencesBroken += 1; } };
+    for (const alias of arrays('aliases.json')) for (const id of alias.targets ?? []) check('alias', id, new Set([...entityIds, ...caseIds]));
+    for (const profile of profiles) {
+      if (profile.gameId) check('product profile game', profile.gameId, entityIds);
+      check('product profile vendor', profile.vendorId, entityIds);
+      for (const id of [...(profile.categoryIds ?? []), ...(profile.variantIds ?? []), ...(profile.accountModelIds ?? [])]) check('product profile scope', id, entityIds);
+      for (const id of profile.caseIds ?? []) check('product profile case', id, caseIds);
+      for (const id of profile.policyIds ?? []) check('product profile policy', id, policyIds);
+    }
+    for (const record of cases) {
+      for (const value of Object.values(record.scope ?? {})) if (Array.isArray(value)) for (const id of value) check('case scope', id, entityIds);
+      for (const id of record.ask ?? []) check('case diagnostic', id, new Set(arrays('procedures.json').flatMap((item) => item.steps ?? []).map((item) => item.id).concat(['diagnostic.rust.graphics_level', 'diagnostic.system.available_resources', 'diagnostic.loader.webview_present', 'diagnostic.order.reference_available', 'diagnostic.attachment.visual_required'])));
+      for (const flow of record.flow ?? []) if (flow.procedureId) check('case procedure', flow.procedureId, procedureIds);
+      for (const id of record.policies ?? []) check('case policy', id, policyIds);
+      for (const id of record.dynamic ?? []) check('case dynamic lookup', id, dynamicIds);
+    }
+    for (const route of parsed['routing.json'].caseRoutes ?? []) { check('route case', route.caseId, caseIds); for (const id of route.dynamicLookupIds ?? []) check('route dynamic lookup', id, dynamicIds); }
+    for (const topic of arrays('restricted-topics.json')) if (topic.escalationId) check('restricted topic escalation', topic.escalationId, escalationIds);
+  }
+
+  return { ok: issues.length === 0, issues, caseCount: cases.length, filesParsed: Object.keys(parsed).length, referencesBroken };
 }
 
 export async function validateCanonicalSupportKb(options) {
@@ -304,6 +365,9 @@ export async function validateCanonicalSupportKb(options) {
   const wikilinks = await validateWikilinks(canonicalDir);
   issues.push(...wikilinks.issues);
 
+  const canonicalRelationships = await validateCanonicalGraph(canonicalDir);
+  issues.push(...canonicalRelationships.issues);
+
   const runtime = await validateRuntimePack(runtimeDir);
   issues.push(...runtime.issues);
 
@@ -321,6 +385,7 @@ export async function validateCanonicalSupportKb(options) {
     issues,
     factDispositions: dispositions,
     canonicalWikilinks: wikilinks,
+    canonicalRelationships,
     runtime,
     privacy
   };

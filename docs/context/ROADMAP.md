@@ -137,3 +137,7 @@ Potential follow-up only after T1: schema stabilization, deduplication/integrity
 ### Transcript Phase T3 — Analysis / product use — NOT STARTED
 
 Any analytics/support intelligence or production integration built from the corpus is separately scoped. Existence of the corpus does not authorize a production bot dependency.
+
+### Transcript Phase T3a — Canonical support KB — COMPLETE (offline tooling/data artifacts)
+
+The historical facts now have exact disposition coverage and compile into canonical and compact runtime artifacts in the private repository. Structural/privacy validation and a 300-query local lexical baseline are available. Production runtime integration remains not started and requires separate architecture review/ADR.

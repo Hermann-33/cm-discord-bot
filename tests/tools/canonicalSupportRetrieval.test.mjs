@@ -82,3 +82,12 @@ test('evaluation computes recall and reciprocal rank from expected cases', () =>
   assert.equal(result.recallAt5, 1);
   assert.equal(result.mrr, 1);
 });
+
+test('runtime match fields participate in lexical ranking', () => {
+  const cases = [
+    { id: 'case.alpha', scope: {}, match: { phrases: ['unrelated account question'] } },
+    { id: 'case.delivery', scope: {}, match: { phrases: ['payment completed but delivery missing'] } }
+  ];
+  const ranked = rankCases('payment went through but delivery is missing', cases, [], 2);
+  assert.equal(ranked.results[0].id, 'case.delivery');
+});

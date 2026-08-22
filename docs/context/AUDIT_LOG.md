@@ -166,3 +166,9 @@ git diff --check: PASS
 No website/database write, live mutation, deployment or command registration was performed. The slash-command definition is unchanged. Production pending lookup additionally requires the website bot client's `allowedOperations` to include `purchase-intents.lookup.read`.
 
 Verdict: `COMPLETE` for repository implementation/source verification; merge/deployment remain separate authorized gates.
+
+---
+
+## 2026-08-22 — Canonical support knowledge tooling
+
+Added an offline compiler, canonical/reference/privacy validators, a sanitized evaluation validator, and a deterministic exact-alias + scope-aware BM25-style evaluator. The private corpus produced 3,949/3,949 unique fact dispositions, zero missing/duplicate source fact IDs, zero broken canonical relationship targets/wikilinks, zero remediable privacy findings, and 300 queries across all ten required behavior families. The corrected lexical baseline is recorded in the private evaluation artifacts. No production `src/`, command registration, deployment, bot execution, login, private customer API, or external embedding service was used.

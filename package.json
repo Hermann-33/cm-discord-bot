@@ -16,6 +16,7 @@
     "chunk:ticket-transcript-analysis": "node tools/ticket-transcript-exporter/chunk-knowledge-analysis.mjs",
     "mine:ticket-support-knowledge": "node tools/ticket-transcript-exporter/mine-support-knowledge.mjs",
     "build:ticket-support-graph": "node tools/ticket-transcript-exporter/build-obsidian-knowledge-graph.mjs",
+    "build:canonical-support-kb": "node tools/ticket-transcript-exporter/build-canonical-support-kb.mjs",
     "validate:canonical-support-kb": "node tools/ticket-transcript-exporter/validate-canonical-support-kb.mjs",
     "validate:canonical-support-evaluation": "node tools/ticket-transcript-exporter/validate-canonical-support-evaluation.mjs",
     "evaluate:canonical-support-retrieval": "node tools/ticket-transcript-exporter/evaluate-canonical-support-retrieval.mjs",

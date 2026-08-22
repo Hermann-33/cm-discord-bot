@@ -132,3 +132,7 @@ If interrupted, rerun the same command; valid schema-v2 records are skipped.
 No transcript tooling is imported by `src/`, emitted by the production TypeScript build, started with the bot, or connected to the Internal Integrations API/database. Generated transcript artifacts belong only in the private `CM-Ticket-Transcripts` repository.
 
 Normal Discord bot work can continue independently from the transcript corpus acquisition workstream.
+
+## Canonical support KB handoff
+
+Use `npm.cmd run build:canonical-support-kb -- --data-dir <private-data-repo>`, followed by the two canonical validators and the retrieval evaluator. These commands operate only on the supplied private data repository. They are not imported by `src/`, do not call live APIs, and do not authorize production integration.

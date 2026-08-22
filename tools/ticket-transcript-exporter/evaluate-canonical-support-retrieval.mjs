@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -16,7 +16,8 @@ function parseInteger(value, label, { min = 1, max = Number.MAX_SAFE_INTEGER } =
 export function parseArgs(argv) {
   const options = {
     dataDir: undefined,
-    topK: 5
+    topK: 5,
+    output: undefined
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -33,6 +34,9 @@ export function parseArgs(argv) {
         break;
       case '--top-k':
         options.topK = parseInteger(next(), '--top-k', { min: 1, max: 100 });
+        break;
+      case '--output':
+        options.output = resolve(next());
         break;
       case '--help':
       case '-h':
@@ -52,7 +56,7 @@ export function helpText() {
     'CM Canonical Support Retrieval Evaluator',
     '',
     'Usage:',
-    '  node evaluate-canonical-support-retrieval.mjs --data-dir <CM-Ticket-Transcripts> [--top-k 5]',
+    '  node evaluate-canonical-support-retrieval.mjs --data-dir <CM-Ticket-Transcripts> [--top-k 5] [--output <path>]',
     '',
     'Reads runtime-kb/cases.jsonl, runtime-kb/aliases.json and',
     'knowledge-canonical/Evaluation/queries.jsonl. It performs a deterministic',
@@ -109,7 +113,7 @@ function collectStrings(value, output = []) {
 
 export function caseDocument(record) {
   const parts = [];
-  for (const key of ['id', 'display_name', 'displayName', 'title', 'name', 'description', 'recognition', 'symptoms', 'errors', 'required_context', 'requiredContext']) {
+  for (const key of ['id', 'display_name', 'displayName', 'title', 'name', 'description', 'recognition', 'match', 'symptoms', 'errors', 'required_context', 'requiredContext', 'ask', 'causes', 'flow', 'policies', 'dynamic', 'escalate']) {
     if (record?.[key] !== undefined) collectStrings(record[key], parts);
   }
   return parts.join(' ');
@@ -302,6 +306,10 @@ async function main() {
     return;
   }
   const result = await evaluateCanonicalSupportRetrieval(options);
+  if (options.output) {
+    await mkdir(resolve(options.output, '..'), { recursive: true });
+    await writeFile(options.output, `${JSON.stringify(result, null, 2)}\n`);
+  }
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 

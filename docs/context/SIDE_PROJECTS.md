@@ -263,3 +263,5 @@ T2 first gate:         generate analysis-input pack from complete local corpus
 T2 final view:         Obsidian Markdown graph with wikilinks
 Later runtime target:  compact chatbot context derived from canonical graph
 ```
+
+Canonicalization is now implemented as an offline, data-repository-targeted phase. The public tools build, validate, privacy-scan, and evaluate `knowledge-canonical/` plus `runtime-kb/`; the production bot does not read either output.
