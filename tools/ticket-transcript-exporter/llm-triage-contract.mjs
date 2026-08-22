@@ -109,6 +109,7 @@ export function buildLlmTriageInput({
       dynamicLookupResults: state.dynamicLookupResults ?? {}
     },
     allowed: {
+      entityIds: unique(resolvedEntities),
       caseIds: cases.map((item) => item.id),
       cases,
       familyIds,
@@ -134,12 +135,16 @@ function scopeConflicts(caseRecord, resolvedEntities) {
   return false;
 }
 
-function validateObservations(observations, errors) {
+function validateObservations(observations, input, errors) {
   if (!observations || typeof observations !== 'object' || Array.isArray(observations)) {
     errors.push('observations_invalid');
     return;
   }
   if (!stringArray(observations.explicitEntities ?? [])) errors.push('observation_entities_invalid');
+  else {
+    const allowed = new Set(input?.allowed?.entityIds ?? []);
+    for (const id of observations.explicitEntities ?? []) if (!allowed.has(id)) errors.push(`ungrounded_observation_entity:${id}`);
+  }
   if (observations.supportSurface !== null && observations.supportSurface !== undefined && typeof observations.supportSurface !== 'string') errors.push('support_surface_invalid');
   if (!stringArray(observations.knownFacts ?? [])) errors.push('known_facts_invalid');
   if (!stringArray(observations.missingFacts ?? [])) errors.push('missing_facts_invalid');
@@ -149,7 +154,7 @@ export function validateLlmTriageOutput(output, input, options = {}) {
   const errors = [];
   const directCaseConfidence = options.directCaseConfidence ?? 0.8;
   if (!output || typeof output !== 'object' || Array.isArray(output)) return { valid: false, errors: ['output_not_object'] };
-  validateObservations(output.observations, errors);
+  validateObservations(output.observations, input, errors);
   if (!NEXT_ACTIONS.has(output.nextAction)) errors.push('unknown_next_action');
   if (!stringArray(output.caseIds ?? [])) errors.push('case_ids_not_string_array');
   if (!stringArray(output.dynamicLookupIds ?? [])) errors.push('dynamic_lookup_ids_not_string_array');
