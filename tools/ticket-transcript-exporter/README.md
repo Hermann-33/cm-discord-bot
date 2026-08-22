@@ -196,3 +196,23 @@ npm.cmd run evaluate:canonical-support-state -- --data-dir ..\CM-Ticket-Transcri
 ```
 
 `resolve-canonical-support-state.mjs` is an offline reference resolver. It carries resolved entities and known context across turns, interprets ordinary negation and short follow-up answers against a pending diagnostic/procedure, follows valid case success/failure edges before retrieval, and suppresses repeated known diagnostics or failed procedures. `evaluate-canonical-support-state.mjs` runs the private synthetic conversation set and reports transition, carry-forward, repeat, and reference-validity metrics. Neither module is imported by production `src/`.
+
+### Hierarchical first-turn router benchmark
+
+The holdout-aware partition builder requires a private semantic-review manifest and writes sanitized TRAIN, DEV, and final-test artifacts without exposing transcript provenance in the runtime exemplar index:
+
+```powershell
+npm.cmd run build:hierarchical-router-partitions -- --data-dir ..\CM-Ticket-Transcripts
+```
+
+The JavaScript reference module implements control-plane classification, strict entity/scope compatibility, family-informed candidate generation, class-frequency normalization, and safe confidence dispositions. Experimental sparse, local embedding, and cross-encoder benchmarks live under `benchmarks/`; run them only from an isolated Python virtual environment. Scikit-learn, Torch, Sentence Transformers, and downloaded model weights are intentionally not production dependencies.
+
+After a configuration is selected on DEV and its hash is written to the private audit directory, the final holdout runner verifies the hash before its single evaluation:
+
+```powershell
+npm.cmd run evaluate:frozen-first-turn-router -- `
+  --data-dir ..\CM-Ticket-Transcripts `
+  --config ..\CM-Ticket-Transcripts\knowledge-canonical\Audit\router-final-config.json
+```
+
+These modules remain offline tooling and are not imported by `src/`.

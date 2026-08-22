@@ -94,6 +94,20 @@ test('privacy scan detects obvious email and URL leakage in derived artifacts', 
   }
 });
 
+test('privacy scan recognizes explicitly keyed hashes and public model revisions as non-secrets', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'cm-canonical-hashes-'));
+  try {
+    await writeFile(join(root, 'manifest.json'), JSON.stringify({
+      configHash: 'cbe2c8106760da6288244a397338b6bef2276ccd8bf580e5a978a0b77cf7f800',
+      datasetSha256: '0e0caf0a52ecbba6d880b10241c601e2af4547e6641bb4f068828e8494be3dfc',
+      revision: '1110a243fdf4706b3f48f1d95db1a4f5529b4d41'
+    }));
+    assert.deepEqual(await scanPrivacy(root), []);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test('full validator accepts a minimal synthetic canonical/runtime pack', async () => {
   const root = await mkdtemp(join(tmpdir(), 'cm-canonical-validator-'));
   try {

@@ -192,6 +192,10 @@ export async function scanPrivacy(root) {
       pattern.regex.lastIndex = 0;
       let match;
       while ((match = pattern.regex.exec(text)) !== null) {
+        const prefix = text.slice(Math.max(0, match.index - 80), match.index);
+        const knownDigest = /^[a-f0-9]{64}$/i.test(match[0]) && /"(?:configHash|frozenConfigHash|datasetSha256)"\s*:\s*"$/u.test(prefix);
+        const knownRevision = /^[a-f0-9]{40}$/i.test(match[0]) && /"revision"\s*:\s*"$/u.test(prefix);
+        if (knownDigest || knownRevision) continue;
         findings.push({
           file: slash(relative(root, file)),
           type: pattern.name,

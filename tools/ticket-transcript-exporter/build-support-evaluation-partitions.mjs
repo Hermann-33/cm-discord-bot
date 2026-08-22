@@ -46,6 +46,7 @@ export function sanitizeCustomerText(value) {
     .replace(/https?:\/\/\S+/gi, '[URL omitted]')
     .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, '[email omitted]')
     .replace(/<@!?\d{17,20}>/g, '[mention omitted]')
+    .replace(/\bCM-NFA-[A-Z0-9-]{12,}\b/gi, '[account token omitted]')
     .replace(/\bCM-\d{6}-[A-Z0-9]{12,}\b/gi, '[order identifier omitted]')
     .replace(/\b\d{17,20}\b/g, '[identifier omitted]')
     .replace(/\b(?:bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}\b/g, '[wallet omitted]')

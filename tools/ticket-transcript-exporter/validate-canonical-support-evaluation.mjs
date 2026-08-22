@@ -250,6 +250,26 @@ export function validateRoutingExemplars(records, runtimeCaseIds, leakageAudit) 
   return { ok: issues.length === 0, issues, exemplarCount: records.length, uniqueIds: ids.size, leakage: leakageAudit?.finalLeakage ?? null };
 }
 
+export function validateRouterSplit(v1, v2, provenance, leakageAudit) {
+  const issues = [];
+  const devTranscripts = new Set(v1.filter((record) => record.goldStatus === 'reviewed').flatMap((record) => asStrings(record.sourceTranscriptIds)));
+  const finalTranscripts = new Set(v2.flatMap((record) => asStrings(record.sourceTranscriptIds)));
+  const trainTranscripts = new Set(provenance.map((record) => record.sourceTranscriptId).filter(Boolean));
+  for (const id of finalTranscripts) {
+    if (devTranscripts.has(id)) issues.push(`V2 transcript also occurs in DEV: ${id}`);
+    if (trainTranscripts.has(id)) issues.push(`V2 transcript also occurs in TRAIN: ${id}`);
+  }
+  for (const key of ['sameTranscript', 'exactQuery', 'nearDuplicate']) if (leakageAudit?.[key] !== 0) issues.push(`V2 ${key} leakage must be zero.`);
+  return {
+    ok: issues.length === 0,
+    issues,
+    trainTranscripts: trainTranscripts.size,
+    developmentTranscripts: devTranscripts.size,
+    finalTestTranscripts: finalTranscripts.size,
+    leakage: leakageAudit
+  };
+}
+
 export async function validateCanonicalSupportEvaluation(options) {
   const evaluationDir = join(options.dataDir, 'knowledge-canonical', 'Evaluation');
   const casesPath = join(options.dataDir, 'runtime-kb', 'cases.jsonl');
@@ -257,27 +277,34 @@ export async function validateCanonicalSupportEvaluation(options) {
   const historicalGold = await readJsonl(join(evaluationDir, 'historical-utterance-gold.jsonl'));
   const adversarial = await readJsonl(join(evaluationDir, 'adversarial-behavior.jsonl'));
   const firstTurn = await readJsonl(join(evaluationDir, 'historical-first-turn-gold.jsonl'));
+  const firstTurnV2 = await readJsonl(join(evaluationDir, 'historical-first-turn-gold-v2.jsonl'));
   const replay = await readJsonl(join(evaluationDir, 'historical-state-replay.jsonl'));
   const exemplars = await readJsonl(join(options.dataDir, 'runtime-kb', 'routing-exemplars.jsonl'));
   const leakageAudit = await readJson(join(options.dataDir, 'knowledge-canonical', 'Audit', 'routing-exemplar-leakage-audit.json'));
+  const v2LeakageAudit = await readJson(join(options.dataDir, 'knowledge-canonical', 'Audit', 'router-v2-leakage-audit.json'));
+  const exemplarProvenance = await readJsonl(join(options.dataDir, 'knowledge-canonical', 'Audit', 'routing-exemplar-provenance.jsonl'));
   const cases = await readJsonl(casesPath);
   const runtimeCaseIds = new Set(cases.map((record) => record?.id).filter((id) => typeof id === 'string' && id.trim()));
   const historicalRuleResult = validateEvaluationRecords(historicalRule, runtimeCaseIds, options.minQueries, 'historical-rule');
   const historicalGoldResult = validateEvaluationRecords(historicalGold, runtimeCaseIds, options.minQueries, 'historical-gold');
   const adversarialResult = validateEvaluationRecords(adversarial, runtimeCaseIds, 10, 'adversarial');
   const firstTurnResult = validateFirstTurnGold(firstTurn, runtimeCaseIds, options.minQueries);
+  const firstTurnV2Result = validateFirstTurnGold(firstTurnV2, runtimeCaseIds, 300);
   const replayResult = validateHistoricalReplay(replay, runtimeCaseIds, 150);
   const exemplarResult = validateRoutingExemplars(exemplars, runtimeCaseIds, leakageAudit);
+  const routerSplitResult = validateRouterSplit(firstTurn, firstTurnV2, exemplarProvenance, v2LeakageAudit);
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     validatedAt: new Date().toISOString(),
     runtimeCaseCount: runtimeCaseIds.size,
-    ok: historicalRuleResult.ok && historicalGoldResult.ok && adversarialResult.ok && firstTurnResult.ok && replayResult.ok && exemplarResult.ok,
-    issues: [...historicalRuleResult.issues, ...historicalGoldResult.issues, ...adversarialResult.issues, ...firstTurnResult.issues, ...replayResult.issues, ...exemplarResult.issues],
+    ok: historicalRuleResult.ok && historicalGoldResult.ok && adversarialResult.ok && firstTurnResult.ok && firstTurnV2Result.ok && replayResult.ok && exemplarResult.ok && routerSplitResult.ok,
+    issues: [...historicalRuleResult.issues, ...historicalGoldResult.issues, ...adversarialResult.issues, ...firstTurnResult.issues, ...firstTurnV2Result.issues, ...replayResult.issues, ...exemplarResult.issues, ...routerSplitResult.issues],
     historicalRule: historicalRuleResult,
     historicalGold: historicalGoldResult,
     adversarial: adversarialResult,
     firstTurn: firstTurnResult,
+    firstTurnV2: firstTurnV2Result,
+    routerSplit: routerSplitResult,
     historicalReplay: replayResult,
     routingExemplars: exemplarResult
   };

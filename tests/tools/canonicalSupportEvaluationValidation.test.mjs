@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  validateEvaluationRecords
+  validateEvaluationRecords,
+  validateRouterSplit
 } from '../../tools/ticket-transcript-exporter/validate-canonical-support-evaluation.mjs';
 
 function baseExpected(caseId) {
@@ -85,4 +86,15 @@ test('historical rule holdout requires transcript provenance and rejects padding
 test('literal historical gold requires independent review metadata', () => {
   const valid = validateEvaluationRecords([{ id: 'gold.1', query: 'ldr wont open', expected: baseExpected('case.synthetic'), sourceTranscriptIds: ['transcript-a'], sourceTicketNumbers: [1], sourceType: 'historical_utterance_gold', querySource: 'literal_customer_turn', goldStatus: 'reviewed', goldReason: 'Full reviewed ticket semantics map to the expected case.' }], new Set(['case.synthetic']), 1, 'historical-gold');
   assert.equal(valid.ok, true, JSON.stringify(valid, null, 2));
+});
+
+test('router split validation rejects transcript crossover and requires zero leakage', () => {
+  const v1 = [{ goldStatus: 'reviewed', sourceTranscriptIds: ['dev'] }];
+  const v2 = [{ sourceTranscriptIds: ['final'] }];
+  const safe = validateRouterSplit(v1, v2, [{ sourceTranscriptId: 'train' }], { sameTranscript: 0, exactQuery: 0, nearDuplicate: 0, threshold: 0.9 });
+  assert.equal(safe.ok, true, JSON.stringify(safe, null, 2));
+  const unsafe = validateRouterSplit(v1, v2, [{ sourceTranscriptId: 'final' }], { sameTranscript: 1, exactQuery: 0, nearDuplicate: 0, threshold: 0.9 });
+  assert.equal(unsafe.ok, false);
+  assert.ok(unsafe.issues.some((issue) => issue.includes('TRAIN')));
+  assert.ok(unsafe.issues.some((issue) => issue.includes('sameTranscript')));
 });

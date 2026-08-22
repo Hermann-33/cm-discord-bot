@@ -193,13 +193,14 @@ export async function evaluateFirstTurnRouting(options) {
   const cases = await readJsonl(join(runtimeDir, 'cases.jsonl'));
   const aliases = buildAliasIndex(await readJson(join(runtimeDir, 'aliases.json')));
   const exemplars = await readJsonl(join(runtimeDir, 'routing-exemplars.jsonl'));
-  const gold = await readJsonl(join(evaluationDir, 'historical-first-turn-gold.jsonl'));
+  const goldFile = options.goldFile ?? 'historical-first-turn-gold.jsonl';
+  const gold = await readJsonl(join(evaluationDir, goldFile));
   const indexes = buildRoutingIndexes(cases, exemplars);
   const methods = options.methods ?? ['case-document-bm25','exemplar-bm25-max','exemplar-bm25-top2','exemplar-bm25-top3','exemplar-character-max','exemplar-character-top2','exemplar-character-top3','fusion-max','fusion-top3','fusion-rrf','fusion-signals','classifier-local-knn'];
   const scoreCache = new Map();
   const results = methods.map((method) => evaluateRoutingMethod(gold, cases, aliases, indexes, method, scoreCache));
   const best = [...results].sort((a, b) => b.mrr - a.mrr || b.recallAt3 - a.recallAt3 || b.recallAt5 - a.recallAt5)[0];
-  const report = { schemaVersion: 1, evaluatedAt: new Date().toISOString(), dataset: 'historical-first-turn-gold', caseCount: cases.length, routingExemplarCount: exemplars.length, methods: results, bestMethod: best.method, targets: { recallAt3: 0.9, recallAt5: 0.95, mrr: 0.8 }, targetsMet: best.recallAt3 >= 0.9 && best.recallAt5 >= 0.95 && best.mrr >= 0.8 };
+  const report = { schemaVersion: 1, evaluatedAt: new Date().toISOString(), dataset: goldFile.replace(/\.jsonl$/u, ''), caseCount: cases.length, routingExemplarCount: exemplars.length, methods: results, bestMethod: best.method, targets: { recallAt3: 0.9, recallAt5: 0.95, mrr: 0.8 }, targetsMet: best.recallAt3 >= 0.9 && best.recallAt5 >= 0.95 && best.mrr >= 0.8 };
   if (options.output) await writeJson(resolve(options.output), report);
   return report;
 }

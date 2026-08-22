@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildRoutingExemplars, characterDice, partitionHistoricalRecords, verifyCustomerMessages } from '../../tools/ticket-transcript-exporter/build-support-evaluation-partitions.mjs';
+import { buildRoutingExemplars, characterDice, partitionHistoricalRecords, sanitizeCustomerText, verifyCustomerMessages } from '../../tools/ticket-transcript-exporter/build-support-evaluation-partitions.mjs';
+
+test('customer sanitizer removes NFA account tokens without polishing surrounding language', () => {
+  assert.equal(sanitizeCustomerText('yo CM-NFA-N52X1HS79PC2YR9RXM578G015 dont work'), 'yo [account token omitted] dont work');
+});
 
 test('structured authorship accepts only the inferred non-bot customer', () => {
   const raw = {
