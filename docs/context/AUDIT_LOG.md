@@ -172,3 +172,7 @@ Verdict: `COMPLETE` for repository implementation/source verification; merge/dep
 ## 2026-08-22 — Canonical support knowledge tooling
 
 Added an offline compiler, canonical/reference/privacy validators, a sanitized evaluation validator, and a deterministic exact-alias + scope-aware BM25-style evaluator. The private corpus produced 3,949/3,949 unique fact dispositions, zero missing/duplicate source fact IDs, zero broken canonical relationship targets/wikilinks, zero remediable privacy findings, and 300 queries across all ten required behavior families. The corrected lexical baseline is recorded in the private evaluation artifacts. No production `src/`, command registration, deployment, bot execution, login, private customer API, or external embedding service was used.
+
+### 2026-08-22 remediation addendum
+
+Independent review correctly found the first 13-case runtime layer and templated benchmark semantically incomplete. The remediation compiler now consumes all 1,578 reviewed ticket ledgers, emits only corpus-matched cases, writes exact ticket and fact-usage ledgers, withholds 341 distinct source-grounded transcript queries from recognition, and keeps 50 synthetic behavioral records separate. Structural, reference, and privacy gates pass. Historical hybrid retrieval improves materially but remains below directional acceptance targets, so the result is explicitly `PARTIAL` and not production-ready.

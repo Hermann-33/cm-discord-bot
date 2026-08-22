@@ -17,7 +17,9 @@ export function parseArgs(argv) {
   const options = {
     dataDir: undefined,
     topK: 5,
-    output: undefined
+    output: undefined,
+    dataset: 'historical-holdout',
+    method: 'lexical'
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -38,6 +40,14 @@ export function parseArgs(argv) {
       case '--output':
         options.output = resolve(next());
         break;
+      case '--dataset':
+        options.dataset = next();
+        if (!['historical-holdout', 'adversarial-behavior', 'queries'].includes(options.dataset)) throw new Error('--dataset must be historical-holdout, adversarial-behavior, or queries.');
+        break;
+      case '--method':
+        options.method = next();
+        if (!['lexical', 'hybrid'].includes(options.method)) throw new Error('--method must be lexical or hybrid.');
+        break;
       case '--help':
       case '-h':
         options.help = true;
@@ -56,7 +66,7 @@ export function helpText() {
     'CM Canonical Support Retrieval Evaluator',
     '',
     'Usage:',
-    '  node evaluate-canonical-support-retrieval.mjs --data-dir <CM-Ticket-Transcripts> [--top-k 5] [--output <path>]',
+    '  node evaluate-canonical-support-retrieval.mjs --data-dir <CM-Ticket-Transcripts> [--dataset historical-holdout] [--method lexical|hybrid] [--top-k 5] [--output <path>]',
     '',
     'Reads runtime-kb/cases.jsonl, runtime-kb/aliases.json and',
     'knowledge-canonical/Evaluation/queries.jsonl. It performs a deterministic',
@@ -90,6 +100,9 @@ export function normalizeText(value) {
     .toLowerCase()
     .replace(/[’']/g, '')
     .replace(/[^a-z0-9+._-]+/g, ' ')
+    .replace(/\bldr\b/g, 'loader')
+    .replace(/\bconnct\b/g, 'connect')
+    .replace(/\b(?:wont|wont)\b/g, 'will not')
     .trim()
     .replace(/\s+/g, ' ');
 }
@@ -113,7 +126,7 @@ function collectStrings(value, output = []) {
 
 export function caseDocument(record) {
   const parts = [];
-  for (const key of ['id', 'display_name', 'displayName', 'title', 'name', 'description', 'recognition', 'match', 'symptoms', 'errors', 'required_context', 'requiredContext', 'ask', 'causes', 'flow', 'policies', 'dynamic', 'escalate']) {
+  for (const key of ['id', 'family', 'display_name', 'displayName', 'title', 'name', 'description', 'recognition', 'match', 'symptoms', 'errors', 'required_context', 'requiredContext', 'ask', 'causes', 'flow', 'policies', 'dynamic', 'escalate']) {
     if (record?.[key] !== undefined) collectStrings(record[key], parts);
   }
   return parts.join(' ');
@@ -151,6 +164,20 @@ export function bm25Score(index, query, doc, { k1 = 1.2, b = 0.75 } = {}) {
     score += idf * ((frequency * (k1 + 1)) / denominator);
   }
   return score;
+}
+
+function characterNgrams(value, size = 3) {
+  const text = ` ${normalizeText(value).replace(/\s+/g, ' ')} `;
+  const grams = new Set();
+  for (let index = 0; index <= text.length - size; index += 1) grams.add(text.slice(index, index + size));
+  return grams;
+}
+
+function diceSimilarity(left, right) {
+  const a = characterNgrams(left); const b = characterNgrams(right);
+  if (!a.size || !b.size) return 0;
+  let overlap = 0; for (const gram of a) if (b.has(gram)) overlap += 1;
+  return (2 * overlap) / (a.size + b.size);
 }
 
 export function buildAliasIndex(value) {
@@ -194,7 +221,7 @@ function scopeIds(record) {
   return output;
 }
 
-export function rankCases(query, caseRecords, aliasEntries = [], topK = 5) {
+export function rankCases(query, caseRecords, aliasEntries = [], topK = 5, method = 'lexical') {
   const index = buildBm25Index(caseRecords);
   const aliasMatches = resolveAliases(query, aliasEntries);
   const resolvedTargets = new Set(aliasMatches.flatMap((entry) => entry.targetIds));
@@ -204,6 +231,7 @@ export function rankCases(query, caseRecords, aliasEntries = [], topK = 5) {
   const nonCaseTargets = [...resolvedTargets].filter((id) => !id.startsWith('case.'));
   if (nonCaseTargets.length > 0) {
     const compatible = index.docs.filter((doc) => {
+      if (doc.record?.scope?.global === true) return true;
       const ids = scopeIds(doc.record);
       return nonCaseTargets.some((target) => ids.has(target));
     });
@@ -212,6 +240,12 @@ export function rankCases(query, caseRecords, aliasEntries = [], topK = 5) {
 
   const ranked = scopedDocs.map((doc) => {
     let score = bm25Score(index, query, doc);
+    if (method === 'hybrid') {
+      const phrases = doc.record?.match?.phrases ?? doc.record?.recognition?.phrases ?? [];
+      const semanticLabel = `${doc.record?.displayName ?? ''} ${doc.record?.family ?? ''}`;
+      const semanticScore = Math.max(diceSimilarity(query, semanticLabel), ...phrases.map((phrase) => diceSimilarity(query, phrase)));
+      score += semanticScore * 80;
+    }
     if (directCases.has(doc.record?.id)) score += 100;
     const ids = scopeIds(doc.record);
     for (const target of nonCaseTargets) if (ids.has(target)) score += 5;
@@ -241,12 +275,13 @@ function reciprocalRank(resultIds, expectedIds) {
   return index === -1 ? 0 : 1 / (index + 1);
 }
 
-export function evaluateQueries(caseRecords, aliasEntries, queryRecords, topK = 5) {
+export function evaluateQueries(caseRecords, aliasEntries, queryRecords, topK = 5, method = 'lexical') {
   let eligible = 0;
   let hit1 = 0;
   let hit3 = 0;
   let hit5 = 0;
   let reciprocalRankSum = 0;
+  let ndcgSum = 0;
   const details = [];
 
   for (const record of queryRecords) {
@@ -254,13 +289,17 @@ export function evaluateQueries(caseRecords, aliasEntries, queryRecords, topK = 
     const expectedIds = expectedCaseIds(record);
     if (typeof query !== 'string' || !query.trim() || expectedIds.length === 0) continue;
     eligible += 1;
-    const ranked = rankCases(query, caseRecords, aliasEntries, Math.max(topK, 5));
+    const ranked = rankCases(query, caseRecords, aliasEntries, Math.max(topK, 5), method);
     const ids = ranked.results.map((item) => item.id);
     const expected = new Set(expectedIds);
     if (ids.slice(0, 1).some((id) => expected.has(id))) hit1 += 1;
     if (ids.slice(0, 3).some((id) => expected.has(id))) hit3 += 1;
     if (ids.slice(0, 5).some((id) => expected.has(id))) hit5 += 1;
     reciprocalRankSum += reciprocalRank(ids, expectedIds);
+    const dcg = ids.slice(0, 5).reduce((sum, id, index) => sum + (expected.has(id) ? 1 / Math.log2(index + 2) : 0), 0);
+    const idealHits = Math.min(expectedIds.length, 5);
+    const idcg = Array.from({ length: idealHits }, (_, index) => 1 / Math.log2(index + 2)).reduce((sum, value) => sum + value, 0);
+    ndcgSum += idcg ? dcg / idcg : 0;
     details.push({
       id: record?.id,
       query,
@@ -277,6 +316,9 @@ export function evaluateQueries(caseRecords, aliasEntries, queryRecords, topK = 
     recallAt3: hit3 / denominator,
     recallAt5: hit5 / denominator,
     mrr: reciprocalRankSum / denominator,
+    ndcgAt5: ndcgSum / denominator,
+    missedExpectedCaseRate: 1 - (hit5 / denominator),
+    averageCandidateSet: details.reduce((sum, item) => sum + item.retrievedCaseIds.length, 0) / denominator,
     details
   };
 }
@@ -286,12 +328,14 @@ export async function evaluateCanonicalSupportRetrieval(options) {
   const evaluationDir = join(options.dataDir, 'knowledge-canonical', 'Evaluation');
   const caseRecords = await readJsonl(join(runtimeDir, 'cases.jsonl'));
   const aliases = buildAliasIndex(await readJson(join(runtimeDir, 'aliases.json')));
-  const queries = await readJsonl(join(evaluationDir, 'queries.jsonl'));
-  const metrics = evaluateQueries(caseRecords, aliases, queries, options.topK);
+  const dataset = options.dataset ?? 'historical-holdout';
+  const queries = await readJsonl(join(evaluationDir, `${dataset}.jsonl`));
+  const metrics = evaluateQueries(caseRecords, aliases, queries, options.topK, options.method ?? 'lexical');
   return {
     schemaVersion: 1,
     evaluatedAt: new Date().toISOString(),
-    method: 'exact-alias+scope-filter+bm25-style',
+    dataset,
+    method: options.method === 'hybrid' ? 'exact-alias+scope-filter+bm25+local-character-trigram' : 'exact-alias+scope-filter+bm25-style',
     caseCount: caseRecords.length,
     aliasCount: aliases.length,
     queryCount: queries.length,

@@ -108,7 +108,7 @@ function privacyFindings(text) {
   return findings;
 }
 
-export function validateEvaluationRecords(records, runtimeCaseIds, minQueries = DEFAULT_MIN_QUERIES) {
+export function validateEvaluationRecords(records, runtimeCaseIds, minQueries = DEFAULT_MIN_QUERIES, mode = 'adversarial') {
   const issues = [];
   const ids = new Set();
   const behaviorFamilies = new Map();
@@ -147,6 +147,11 @@ export function validateEvaluationRecords(records, runtimeCaseIds, minQueries = 
     if (typeof family === 'string' && family.trim()) {
       behaviorFamilies.set(family, (behaviorFamilies.get(family) ?? 0) + 1);
     }
+    if (mode === 'historical') {
+      if (record?.sourceType !== 'historical_holdout') issues.push(`query ${id ?? index} must have sourceType historical_holdout.`);
+      if (asStrings(record?.sourceTranscriptIds).length === 0) issues.push(`query ${id ?? index} must have transcript provenance.`);
+      if (/\(support wording \d+\)/i.test(record?.query ?? '')) issues.push(`query ${id ?? index} contains artificial padding.`);
+    } else if (record?.sourceType && record.sourceType !== 'synthetic_adversarial') issues.push(`query ${id ?? index} has invalid adversarial sourceType.`);
 
     const sanitizedView = JSON.stringify({
       query: record?.query,
@@ -159,9 +164,7 @@ export function validateEvaluationRecords(records, runtimeCaseIds, minQueries = 
   }
 
   if (records.length < minQueries) issues.push(`evaluation query count ${records.length} is below required minimum ${minQueries}.`);
-  for (const family of REQUIRED_BEHAVIOR_FAMILIES) {
-    if ((behaviorFamilies.get(family) ?? 0) === 0) issues.push(`missing required behavior family: ${family}`);
-  }
+  if (mode === 'adversarial') for (const family of REQUIRED_BEHAVIOR_FAMILIES) if ((behaviorFamilies.get(family) ?? 0) === 0) issues.push(`missing required behavior family: ${family}`);
 
   return {
     ok: issues.length === 0,
@@ -176,16 +179,22 @@ export function validateEvaluationRecords(records, runtimeCaseIds, minQueries = 
 }
 
 export async function validateCanonicalSupportEvaluation(options) {
-  const queryPath = join(options.dataDir, 'knowledge-canonical', 'Evaluation', 'queries.jsonl');
+  const evaluationDir = join(options.dataDir, 'knowledge-canonical', 'Evaluation');
   const casesPath = join(options.dataDir, 'runtime-kb', 'cases.jsonl');
-  const queries = await readJsonl(queryPath);
+  const historical = await readJsonl(join(evaluationDir, 'historical-holdout.jsonl'));
+  const adversarial = await readJsonl(join(evaluationDir, 'adversarial-behavior.jsonl'));
   const cases = await readJsonl(casesPath);
   const runtimeCaseIds = new Set(cases.map((record) => record?.id).filter((id) => typeof id === 'string' && id.trim()));
+  const historicalResult = validateEvaluationRecords(historical, runtimeCaseIds, options.minQueries, 'historical');
+  const adversarialResult = validateEvaluationRecords(adversarial, runtimeCaseIds, 10, 'adversarial');
   return {
     schemaVersion: 1,
     validatedAt: new Date().toISOString(),
     runtimeCaseCount: runtimeCaseIds.size,
-    ...validateEvaluationRecords(queries, runtimeCaseIds, options.minQueries)
+    ok: historicalResult.ok && adversarialResult.ok,
+    issues: [...historicalResult.issues, ...adversarialResult.issues],
+    historical: historicalResult,
+    adversarial: adversarialResult
   };
 }
 

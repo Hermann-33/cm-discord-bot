@@ -3,6 +3,7 @@
 import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { basename, join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { synthesizeSupportCoverage } from './synthesize-support-cases.mjs';
 
 const EXPECTED_FACTS = 3949;
 const VERSION = '1.0.0';
@@ -231,7 +232,12 @@ function canonicalizeFacts(facts, entities) {
     const conditions = [];
     if (/if |when |after |before |unless |while /.test(normalize(fact.statement))) conditions.push('Conditions remain embedded in the normalized historical claim; review before widening scope.');
     const validity = { state: initialDisposition === 'dynamic' ? 'dynamic' : 'historical', validFrom: null, validUntil: null, lastObservedAt: null };
-    const key = JSON.stringify({ subjectId, relation, statement: normalize(fact.statement), conditions, scope, validity: validity.state });
+    const semanticObject = normalize(fact.statement)
+      .replace(/\b(close and reopen|close reopen|relaunch)\b/g, 'restart')
+      .replace(/\bweb site\b/g, 'website')
+      .replace(/\b(log in|sign in)\b/g, 'login')
+      .replace(/\bnot working\b/g, 'fails');
+    const key = JSON.stringify({ subjectId, relation, semanticObject, conditions, scope, validity: validity.state });
     const duplicateTarget = identity.get(key);
     let disposition = initialDisposition;
     let targetId = duplicateTarget;
@@ -319,7 +325,9 @@ function buildPolicies(snapshot, contradictions) {
   return [...byId.values()];
 }
 
-function buildCases() {
+// Historical first-pass seeds retained only as readable regression references.
+// Runtime compilation uses synthesizeSupportCoverage over all ticket ledgers.
+function legacySeedRegressionCases() {
   const scope = (values = {}) => ({ ...emptyScope(), ...values });
   return [
     { id: 'case.rust.nfa.server_load_crash', displayName: 'Rust NFA crashes while loading a server or world', scope: scope({ games: ['game.rust'], accountModels: ['account_model.nfa'], accountListings: ['account_listing.rust.nfa'] }), recognition: { phrases: ['rust crashes loading server', 'crash while loading world', 'rust server load crash', 'world loading closes'], symptomIds: ['symptom.rust.server_load_crash'], errorSignals: [], contextSignals: ['server loading', 'world loading'] }, requiredContext: ['graphicsLevel', 'resourcePressure', 'proceduresAttempted'], possibleCauseIds: ['cause.rust.server_load_resource_pressure'], diagnosticIds: ['diagnostic.rust.graphics_level', 'diagnostic.system.available_resources'], resolutionFlow: [{ when: ['graphicsLevel=high'], procedureId: 'procedure.system.reduce_resource_pressure', onSuccess: 'outcome.resolved', onFailure: 'case.rust.nfa.server_load_crash.continue' }, { when: ['graphicsLevel=low', 'or previous procedure failed'], action: 'continue diagnosis', onFailure: 'escalation.known_flow_exhausted' }], policyIds: [], relatedCaseIds: ['case.rust.nfa.server_load_crash.continue'], escalateWhen: ['ordinary resource-pressure branch fails'], confidence: 'operator-approved-with-historical-analogue', provenance: { sourceClass: 'operator_approved', sourceCount: 1, transcriptIds: [], historicalFactIds: [], currentSourceRefs: [], contradictionIds: [] } },
@@ -462,10 +470,18 @@ export async function buildCanonicalSupportKb(dataDir) {
     resolutionState: 'unresolved', resolution: null, resolutionSources: [], topic: item.topic ?? item.id
   }));
   const policies = buildPolicies(snapshot, contradictions);
-  const cases = buildCases();
   const dynamicLookups = buildDynamicLookups();
+  const synthesis = await synthesizeSupportCoverage(dataDir, entities, historicalFacts, dispositions);
+  const cases = synthesis.cases;
+  const rustCase = cases.find((item) => item.id === 'case.rust.nfa.server_load_crash');
+  if (rustCase) {
+    rustCase.diagnosticIds = ['diagnostic.rust.graphics_level', 'diagnostic.system.available_resources'];
+    rustCase.possibleCauseIds = ['cause.rust.server_load_resource_pressure'];
+    rustCase.resolutionFlow = [{ when: ['graphicsLevel=high'], procedureId: 'procedure.system.reduce_resource_pressure', onSuccess: 'outcome.resolved', onFailure: 'case.rust.nfa.server_load_crash.continue' }];
+    rustCase.relatedCaseIds = ['case.rust.nfa.server_load_crash.continue'];
+  }
   const aliases = runtimeAliases(snapshot, cases);
-  const queries = evaluationQueries(cases, snapshot);
+  const queries = synthesis.historicalHoldout;
   const requirements = snapshot.staticRequirements.map((item) => ({ id: `requirement.${item.productId.slice('product.'.length)}`, displayName: `${entities.find((entity) => entity.id === item.productId)?.displayName ?? item.productId} current requirements`, productId: item.productId, claims: item.requirements, truthLayer: 'L1_CURRENT_AUTHORITATIVE', validity: { state: 'current', lastObservedAt: snapshot.capturedAt }, provenance: { sourceClass: 'current_authoritative', sourceCount: 1, currentSourceRefs: [`cm.public.path.${slug(item.sourcePath)}`], transcriptIds: [], historicalFactIds: [], contradictionIds: [] } }));
   const compatibility = requirements.map((item) => ({ id: `compatibility.${item.productId.slice('product.'.length)}.documented`, displayName: `${item.displayName} compatibility boundary`, productId: item.productId, requirementId: item.id, rule: 'Compatibility is limited to the exact current product requirements; do not inherit across sibling products or variants.', provenance: item.provenance }));
 
@@ -473,16 +489,26 @@ export async function buildCanonicalSupportKb(dataDir) {
   await writeJsonl(join(canonicalDir, 'Audit', 'entity-resolution.jsonl'), entityResolution);
   await writeJsonl(join(canonicalDir, 'Audit', 'canonical-facts.jsonl'), canonicalFacts);
   await writeJsonl(join(canonicalDir, 'Audit', 'fact-disposition.jsonl'), dispositions);
+  await writeJsonl(join(canonicalDir, 'Audit', 'case-coverage.jsonl'), synthesis.caseCoverage);
+  await writeJsonl(join(canonicalDir, 'Audit', 'fact-runtime-usage.jsonl'), synthesis.factRuntimeUsage);
   await writeJson(join(canonicalDir, 'Audit', 'canonical-graph.json'), { schemaVersion: 1, symptoms: nodes.symptoms, causes: nodes.causes, diagnostics: nodes.diagnostics, procedures: nodes.procedures, outcomes: nodes.outcomes, policies, exceptions: [{ id: 'exception.historical_discretionary_remedy', displayName: 'Historical discretionary remedy', currentEntitlement: false }], requirements, compatibility, contradictions, cases });
   const dispositionCounts = Object.fromEntries([...new Set(dispositions.map((item) => item.disposition))].sort().map((key) => [key, dispositions.filter((item) => item.disposition === key).length]));
-  await writeJson(join(canonicalDir, 'Audit', 'canonicalization-summary.json'), { schemaVersion: 1, generatedAt: new Date().toISOString(), inputHistoricalFacts: historicalFacts.length, dispositionRecords: dispositions.length, uniqueOriginalFactIds: new Set(dispositions.map((item) => item.originalFactId)).size, missing: [], duplicates: [], canonicalFacts: canonicalFacts.length, dispositionCounts, entities: entities.length, entityResolutionRecords: entityResolution.length, unresolvedEntityMappings: entityResolution.filter((item) => ['unknown', 'ambiguous'].includes(item.resolution)).length, contradictionSets: contradictions.length, cases: cases.length });
-  await writeJson(join(canonicalDir, 'Audit', 'build-state.json'), { schemaVersion: 1, checkpoint: 10, status: 'generated_pending_validation', completed: ['current-domain-snapshot', 'entity-resolution', 'facts-0001-1000', 'facts-1001-2000', 'facts-2001-3000', 'facts-3001-3949', 'canonical-graph', 'support-cases', 'runtime-pack', 'evaluation-set'] });
-  await writeJsonl(join(canonicalDir, 'Evaluation', 'queries.jsonl'), queries);
+  await writeJson(join(canonicalDir, 'Audit', 'canonicalization-summary.json'), { schemaVersion: 2, generatedAt: new Date().toISOString(), inputHistoricalFacts: historicalFacts.length, dispositionRecords: dispositions.length, uniqueOriginalFactIds: new Set(dispositions.map((item) => item.originalFactId)).size, missing: [], duplicates: [], canonicalFacts: canonicalFacts.length, dispositionCounts, entities: entities.length, entityResolutionRecords: entityResolution.length, unresolvedEntityMappings: entityResolution.filter((item) => ['unknown', 'ambiguous'].includes(item.resolution)).length, contradictionSets: contradictions.length, cases: cases.length, ticketCoverageRecords: synthesis.caseCoverage.length, factRuntimeUsageRecords: synthesis.factRuntimeUsage.length, historicalHoldoutQueries: synthesis.historicalHoldout.length, adversarialQueries: synthesis.adversarial.length });
+  await writeJson(join(canonicalDir, 'Audit', 'build-state.json'), { schemaVersion: 2, checkpoint: 'remediation-generated', status: 'generated_pending_validation', completed: ['preserved-first-pass-foundation', 'complete-ticket-ledger-ingestion', 'corpus-derived-case-synthesis', 'ticket-case-coverage-ledger', 'fact-runtime-usage-ledger', 'historical-holdout', 'separate-adversarial-set', 'runtime-pack'] });
+  await writeJsonl(join(canonicalDir, 'Evaluation', 'historical-holdout.jsonl'), synthesis.historicalHoldout);
+  await writeJsonl(join(canonicalDir, 'Evaluation', 'adversarial-behavior.jsonl'), synthesis.adversarial);
+  await writeJsonl(join(canonicalDir, 'Evaluation', 'queries.jsonl'), synthesis.historicalHoldout);
   await writeMarkdownGraph(canonicalDir, entities, cases, nodes, policies, contradictions, requirements, compatibility);
 
   await mkdir(runtimeDir, { recursive: true });
   const productProfiles = snapshot.products.map((product) => ({ id: product.id, displayName: product.displayName, gameId: product.gameId ?? null, vendorId: product.vendorId, categoryIds: [product.categoryId], variantIds: product.durations.map((duration) => `variant.${product.id.slice('product.'.length)}.${slug(duration)}`), accountModelIds: [], currentStaticAttributes: {}, dynamicAttributeIds: ['dynamic.catalog.price', 'dynamic.catalog.stock', 'dynamic.catalog.product_status'], caseIds: ['case.product.requirements'], policyIds: [], requirementIds: snapshot.staticRequirements.filter((item) => item.productId === product.id).map((item) => `requirement.${product.id.slice('product.'.length)}`), compatibilityIds: [] }));
-  const runtimeCases = cases.map((item) => ({ id: item.id, scope: item.scope, match: { phrases: item.recognition.phrases, symptoms: item.recognition.symptomIds, errors: item.recognition.errorSignals, context: item.recognition.contextSignals }, ask: item.diagnosticIds, causes: item.possibleCauseIds, flow: item.resolutionFlow, policies: item.policyIds, dynamic: item.id === 'case.payment.completed_fulfillment_pending' ? ['dynamic.order.status', 'dynamic.fulfillment.status', 'dynamic.purchase_intent.status'] : item.id === 'case.order.current_state' ? ['dynamic.order.status'] : item.id === 'case.catalog.current_stock_or_status' ? ['dynamic.catalog.stock', 'dynamic.catalog.price', 'dynamic.catalog.product_status'] : [], escalate: item.escalateWhen, confidence: item.confidence, canonicalRefs: [item.id] }));
+  const runtimeCases = cases.map((item) => {
+    let dynamic = [];
+    if (item.runtimeDisposition === 'dynamic_lookup_case') {
+      dynamic = item.family.startsWith('commerce.order') ? ['dynamic.order.status'] : item.family.startsWith('commerce.fulfillment') ? ['dynamic.fulfillment.status'] : item.family.startsWith('commerce.aura') || item.family.startsWith('commerce.wallet') ? ['dynamic.user.overview'] : item.family.startsWith('catalog') ? ['dynamic.catalog.product_status'] : ['dynamic.purchase_intent.status'];
+    }
+    return { id: item.id, displayName: item.displayName, family: item.family, scope: item.scope, match: { phrases: item.recognition.phrases.slice(0, 12), symptoms: item.recognition.symptomIds, errors: item.recognition.errorSignals, context: item.recognition.contextSignals.slice(0, 5) }, ask: item.diagnosticIds, causes: item.possibleCauseIds, flow: item.resolutionFlow, policies: item.policyIds, dynamic, escalate: item.escalateWhen, confidence: item.confidence, canonicalRefs: [item.id], provenance: { transcriptEvidenceCount: item.provenance.transcriptIds.length, historicalFactCount: item.provenance.historicalFactIds.length, sampleTranscriptIds: item.provenance.transcriptIds.slice(0, 1), sampleHistoricalFactIds: item.provenance.historicalFactIds.slice(0, 2) } };
+  });
   await writeJson(join(runtimeDir, 'catalog.json'), { schemaVersion: 1, games: snapshot.games, vendors: snapshot.vendors, categories: snapshot.categories, accountModels: snapshot.accountModels, accountListings: snapshot.accountListings });
   await writeJson(join(runtimeDir, 'aliases.json'), aliases);
   await writeJson(join(runtimeDir, 'product-profiles.json'), productProfiles);

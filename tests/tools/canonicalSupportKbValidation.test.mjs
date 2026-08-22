@@ -109,6 +109,11 @@ test('full validator accepts a minimal synthetic canonical/runtime pack', async 
       JSON.stringify({ original_fact_id: 'fact-a', disposition: 'canonical', canonical_target_ids: ['fact.a'], reason: 'retained' }),
       JSON.stringify({ original_fact_id: 'fact-b', disposition: 'linked_related', canonical_target_ids: ['fact.a'], reason: 'related but distinct' })
     ].join('\n'));
+    await writeFile(join(audit, 'case-coverage.jsonl'), JSON.stringify({ ticketNumber: 1, transcriptId: 'transcript-a' }));
+    await writeFile(join(audit, 'fact-runtime-usage.jsonl'), [
+      JSON.stringify({ originalFactId: 'fact-a', roles: ['case_context'] }),
+      JSON.stringify({ originalFactId: 'fact-b', roles: ['historical_only'] })
+    ].join('\n'));
     await writeFile(join(cases, 'Case A.md'), '# Case A\n');
 
     for (const file of [
@@ -127,7 +132,7 @@ test('full validator accepts a minimal synthetic canonical/runtime pack', async 
     }
     await writeFile(join(runtime, 'cases.jsonl'), JSON.stringify({ id: 'case.synthetic' }));
 
-    const result = await validateCanonicalSupportKb({ dataDir: root, expectedFacts: 2 });
+    const result = await validateCanonicalSupportKb({ dataDir: root, expectedFacts: 2, expectedTickets: 1 });
     assert.equal(result.ok, true, JSON.stringify(result, null, 2));
     assert.equal(result.runtime.caseCount, 1);
   } finally {

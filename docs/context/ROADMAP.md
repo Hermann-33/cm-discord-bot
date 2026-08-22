@@ -141,3 +141,7 @@ Any analytics/support intelligence or production integration built from the corp
 ### Transcript Phase T3a — Canonical support KB — COMPLETE (offline tooling/data artifacts)
 
 The historical facts now have exact disposition coverage and compile into canonical and compact runtime artifacts in the private repository. Structural/privacy validation and a 300-query local lexical baseline are available. Production runtime integration remains not started and requires separate architecture review/ADR.
+
+### Transcript Phase T3b — Exhaustive case-coverage remediation — PARTIAL
+
+The compiler now derives the emitted runtime case inventory from all 1,578 reviewed ticket ledgers, writes exact ticket/fact usage ledgers, and separates a source-grounded historical holdout from synthetic adversarial tests. Coverage and structural gates pass. The local hybrid ranker improves substantially over lexical retrieval but remains below the directional historical Recall@3/Recall@5/MRR targets, so production integration remains blocked.

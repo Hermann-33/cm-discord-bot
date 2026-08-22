@@ -266,6 +266,20 @@ async function validateCanonicalGraph(canonicalDir) {
   return { ok: issues.length === 0, issues, nodeCount: allNodes.length + facts.length, relationshipTargetsBroken: broken };
 }
 
+function validateUniqueLedger(records, idField, expected, label) {
+  const issues = [];
+  const ids = new Set();
+  for (let index = 0; index < records.length; index += 1) {
+    const id = records[index]?.[idField];
+    if (id === undefined || id === null || id === '') issues.push(`${label}[${index}] missing ${idField}.`);
+    else if (ids.has(String(id))) issues.push(`${label} duplicate ${idField}: ${id}`);
+    else ids.add(String(id));
+  }
+  if (records.length !== expected) issues.push(`${label} count ${records.length} does not equal ${expected}.`);
+  if (ids.size !== expected) issues.push(`${label} unique ${idField} count ${ids.size} does not equal ${expected}.`);
+  return { ok: issues.length === 0, issues, recordCount: records.length, uniqueIds: ids.size };
+}
+
 async function validateRuntimePack(runtimeDir) {
   const issues = [];
   const requiredJson = [
@@ -368,6 +382,13 @@ export async function validateCanonicalSupportKb(options) {
   const canonicalRelationships = await validateCanonicalGraph(canonicalDir);
   issues.push(...canonicalRelationships.issues);
 
+  const caseCoverageRecords = await readJsonl(join(canonicalDir, 'Audit', 'case-coverage.jsonl'));
+  const expectedTickets = options.expectedTickets ?? 1578;
+  const caseCoverage = validateUniqueLedger(caseCoverageRecords, 'ticketNumber', expectedTickets, 'case coverage');
+  const transcriptCoverage = validateUniqueLedger(caseCoverageRecords, 'transcriptId', expectedTickets, 'case coverage transcripts');
+  const factRuntimeUsage = validateUniqueLedger(await readJsonl(join(canonicalDir, 'Audit', 'fact-runtime-usage.jsonl')), 'originalFactId', options.expectedFacts, 'fact runtime usage');
+  issues.push(...caseCoverage.issues, ...transcriptCoverage.issues, ...factRuntimeUsage.issues);
+
   const runtime = await validateRuntimePack(runtimeDir);
   issues.push(...runtime.issues);
 
@@ -386,6 +407,9 @@ export async function validateCanonicalSupportKb(options) {
     factDispositions: dispositions,
     canonicalWikilinks: wikilinks,
     canonicalRelationships,
+    caseCoverage,
+    transcriptCoverage,
+    factRuntimeUsage,
     runtime,
     privacy
   };

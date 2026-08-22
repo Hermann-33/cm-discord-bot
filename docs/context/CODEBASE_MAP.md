@@ -135,6 +135,7 @@ Side-project tooling coverage:
 - `tests/tools/ticketTranscriptPayloadExporter.test.mjs`
 - `tests/tools/ticketTranscriptKnowledgeAnalysis.test.mjs`
 - `tools/ticket-transcript-exporter/build-canonical-support-kb.mjs` — offline canonical graph/runtime-pack compiler for an explicitly supplied private data directory.
+- `tools/ticket-transcript-exporter/synthesize-support-cases.mjs` — corpus-wide ticket-to-case synthesis, exact coverage ledgers, real-language holdout selection, and separate adversarial generation.
 - `tools/ticket-transcript-exporter/validate-canonical-support-kb.mjs` — disposition, relationship, wikilink, runtime-shape, and privacy validation.
 - `tools/ticket-transcript-exporter/validate-canonical-support-evaluation.mjs` — sanitized gold-set validation.
 - `tools/ticket-transcript-exporter/evaluate-canonical-support-retrieval.mjs` — local exact-alias, scope-aware BM25-style baseline evaluator.

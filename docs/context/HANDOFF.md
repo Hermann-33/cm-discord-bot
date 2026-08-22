@@ -136,3 +136,5 @@ Normal Discord bot work can continue independently from the transcript corpus ac
 ## Canonical support KB handoff
 
 Use `npm.cmd run build:canonical-support-kb -- --data-dir <private-data-repo>`, followed by the two canonical validators and the retrieval evaluator. These commands operate only on the supplied private data repository. They are not imported by `src/`, do not call live APIs, and do not authorize production integration.
+
+For remediation evaluation, run the evaluator separately with `--dataset historical-holdout --method lexical`, `--dataset historical-holdout --method hybrid`, and `--dataset adversarial-behavior --method hybrid`. Do not combine historical and synthetic metrics. Current status is partial because historical directional retrieval targets are not yet met.

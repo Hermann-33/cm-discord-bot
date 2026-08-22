@@ -91,3 +91,12 @@ test('runtime match fields participate in lexical ranking', () => {
   const ranked = rankCases('payment went through but delivery is missing', cases, [], 2);
   assert.equal(ranked.results[0].id, 'case.delivery');
 });
+
+test('local hybrid ranking improves tolerance for misspelled wording', () => {
+  const cases = [
+    { id: 'case.loader', scope: {}, match: { phrases: ['loader connection failed'] } },
+    { id: 'case.account', scope: {}, match: { phrases: ['account ownership question'] } }
+  ];
+  const ranked = rankCases('ldr connection faild', cases, [], 2, 'hybrid');
+  assert.equal(ranked.results[0].id, 'case.loader');
+});

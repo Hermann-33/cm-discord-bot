@@ -265,3 +265,5 @@ Later runtime target:  compact chatbot context derived from canonical graph
 ```
 
 Canonicalization is now implemented as an offline, data-repository-targeted phase. The public tools build, validate, privacy-scan, and evaluate `knowledge-canonical/` plus `runtime-kb/`; the production bot does not read either output.
+
+The exhaustive remediation layer adds corpus-derived case synthesis, 1,578-ticket runtime-disposition coverage, 3,949-fact runtime-usage coverage, and separate historical/adversarial benchmarks. Retrieval quality remains a measured follow-up; structural completion does not imply production readiness.
