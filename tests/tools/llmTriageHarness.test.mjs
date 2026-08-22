@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildLlmTriageInput, chooseSafeTriageFallback, runLlmTriage, validateLlmTriageOutput } from '../../tools/ticket-transcript-exporter/llm-triage-contract.mjs';
+import { buildTriageMessages, estimatePlannerTokens } from '../../tools/ticket-transcript-exporter/llm-triage-prompt.mjs';
+import { isLocalTriageEndpoint } from '../../tools/ticket-transcript-exporter/llm-triage-provider.mjs';
 
 const cases = [
   { id: 'case.nfa.invalid_first_use', displayName: 'NFA invalid at first use', family: 'accounts.nfa', scope: { games: [], vendors: [], products: [], variants: [], accountModels: ['account_model.nfa'], accountListings: [] }, ask: [], policies: [], dynamic: [], escalationIds: [] },
@@ -84,4 +86,19 @@ test('safe fallback prefers active case, then clarification, then human escalati
 
   const none = buildLlmTriageInput({ customerText: 'x', state: { questionsAsked: [] }, candidateCases: [], clarifications: [], dynamicLookups: [], policies: [] });
   assert.equal(chooseSafeTriageFallback(none).nextAction, 'human_escalation');
+});
+
+test('prompt builder stays compact and instructs the model to choose a next action only', () => {
+  const triageInput = input();
+  const messages = buildTriageMessages(triageInput);
+  assert.equal(messages.length, 2);
+  assert.match(messages[0].content, /safest next action/i);
+  assert.ok(estimatePlannerTokens(triageInput) > 0);
+  assert.ok(estimatePlannerTokens(triageInput) < 2000);
+});
+
+test('local provider guard refuses non-local endpoints', () => {
+  assert.equal(isLocalTriageEndpoint('http://127.0.0.1:11434/v1'), true);
+  assert.equal(isLocalTriageEndpoint('http://localhost:1234/v1'), true);
+  assert.equal(isLocalTriageEndpoint('https://example.com/v1'), false);
 });
