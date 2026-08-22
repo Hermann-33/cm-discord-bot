@@ -48,6 +48,20 @@ function compactClarification(record) {
   };
 }
 
+function lookupResolved(state, id) {
+  const value = state.dynamicLookupResults?.[id];
+  if (value === undefined || value === null) return false;
+  if (typeof value !== 'object') return true;
+  return !['requested','pending','unknown'].includes(String(value.status ?? '').toLowerCase());
+}
+
+function clarificationAlreadyKnown(state, item) {
+  const fields = Array.isArray(item.setsContext) ? item.setsContext : item.setsContext ? [item.setsContext] : [];
+  if (fields.length > 0 && fields.every((field) => state.knownContext?.[field] !== undefined)) return true;
+  if ((item.liveLookupCanReplace ?? []).some((id) => lookupResolved(state, id))) return true;
+  return false;
+}
+
 export function buildLlmTriageInput({
   customerText,
   state = {},
@@ -71,6 +85,7 @@ export function buildLlmTriageInput({
       return caseHit || familyHit || item.id === 'clarify.support_surface';
     })
     .filter((item) => !(state.questionsAsked ?? []).includes(item.id))
+    .filter((item) => !clarificationAlreadyKnown(state, item))
     .slice(0, maxClarifications)
     .map(compactClarification);
 
@@ -90,7 +105,8 @@ export function buildLlmTriageInput({
       questionsAsked: unique(state.questionsAsked ?? []),
       diagnosticsAsked: unique(state.diagnosticsAsked ?? []),
       proceduresAttempted: unique(state.proceduresAttempted ?? []),
-      procedureOutcomes: state.procedureOutcomes ?? {}
+      procedureOutcomes: state.procedureOutcomes ?? {},
+      dynamicLookupResults: state.dynamicLookupResults ?? {}
     },
     allowed: {
       caseIds: cases.map((item) => item.id),
@@ -118,16 +134,29 @@ function scopeConflicts(caseRecord, resolvedEntities) {
   return false;
 }
 
+function validateObservations(observations, errors) {
+  if (!observations || typeof observations !== 'object' || Array.isArray(observations)) {
+    errors.push('observations_invalid');
+    return;
+  }
+  if (!stringArray(observations.explicitEntities ?? [])) errors.push('observation_entities_invalid');
+  if (observations.supportSurface !== null && observations.supportSurface !== undefined && typeof observations.supportSurface !== 'string') errors.push('support_surface_invalid');
+  if (!stringArray(observations.knownFacts ?? [])) errors.push('known_facts_invalid');
+  if (!stringArray(observations.missingFacts ?? [])) errors.push('missing_facts_invalid');
+}
+
 export function validateLlmTriageOutput(output, input, options = {}) {
   const errors = [];
   const directCaseConfidence = options.directCaseConfidence ?? 0.8;
   if (!output || typeof output !== 'object' || Array.isArray(output)) return { valid: false, errors: ['output_not_object'] };
+  validateObservations(output.observations, errors);
   if (!NEXT_ACTIONS.has(output.nextAction)) errors.push('unknown_next_action');
   if (!stringArray(output.caseIds ?? [])) errors.push('case_ids_not_string_array');
   if (!stringArray(output.dynamicLookupIds ?? [])) errors.push('dynamic_lookup_ids_not_string_array');
   if (!stringArray(output.policyIds ?? [])) errors.push('policy_ids_not_string_array');
   if (output.clarificationId !== null && output.clarificationId !== undefined && typeof output.clarificationId !== 'string') errors.push('clarification_id_invalid');
   if (typeof output.confidence !== 'number' || output.confidence < 0 || output.confidence > 1) errors.push('confidence_invalid');
+  if (typeof output.reasonCode !== 'string' || !output.reasonCode.trim()) errors.push('reason_code_invalid');
 
   const allowedCases = new Set(input?.allowed?.caseIds ?? []);
   const allowedClarifications = new Set(input?.allowed?.clarificationIds ?? []);
@@ -156,16 +185,20 @@ export function validateLlmTriageOutput(output, input, options = {}) {
   return { valid: errors.length === 0, errors: unique(errors) };
 }
 
+function fallbackObservations() {
+  return { explicitEntities: [], supportSurface: null, knownFacts: [], missingFacts: [] };
+}
+
 export function chooseSafeTriageFallback(input) {
   const activeCaseId = input?.state?.activeCaseId;
   if (activeCaseId && (input?.allowed?.caseIds ?? []).includes(activeCaseId)) {
-    return { nextAction: 'answer_case', caseIds: [activeCaseId], clarificationId: null, dynamicLookupIds: [], policyIds: [], confidence: 1, reasonCode: 'existing_active_case' };
+    return { observations: fallbackObservations(), nextAction: 'answer_case', caseIds: [activeCaseId], clarificationId: null, dynamicLookupIds: [], policyIds: [], confidence: 1, reasonCode: 'existing_active_case' };
   }
   const clarification = (input?.allowed?.clarifications ?? []).find((item) => !(input?.state?.questionsAsked ?? []).includes(item.id));
   if (clarification) {
-    return { nextAction: 'ask_clarification', caseIds: [], clarificationId: clarification.id, dynamicLookupIds: [], policyIds: [], confidence: 1, reasonCode: 'safe_canonical_clarification' };
+    return { observations: fallbackObservations(), nextAction: 'ask_clarification', caseIds: [], clarificationId: clarification.id, dynamicLookupIds: [], policyIds: [], confidence: 1, reasonCode: 'safe_canonical_clarification' };
   }
-  return { nextAction: 'human_escalation', caseIds: [], clarificationId: null, dynamicLookupIds: [], policyIds: [], confidence: 1, reasonCode: 'no_safe_machine_action' };
+  return { observations: fallbackObservations(), nextAction: 'human_escalation', caseIds: [], clarificationId: null, dynamicLookupIds: [], policyIds: [], confidence: 1, reasonCode: 'no_safe_machine_action' };
 }
 
 export async function runLlmTriage({ provider, input, validatorOptions }) {
