@@ -69,9 +69,34 @@ CM_INTERNAL_INTEGRATIONS_API_CLIENT_ID
 CM_INTERNAL_INTEGRATIONS_API_KEY_ID
 CM_INTERNAL_INTEGRATIONS_API_HMAC_SECRET_BASE64
 CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS
+
+OPENROUTER_API_KEY
+OPENROUTER_MODEL
+OPENROUTER_DATA_COLLECTION
 ```
 
 `BOT_ADMIN_USER_IDS` is a comma-separated explicit Discord user-ID allowlist. `/cm` fails closed when it is empty. `BOT_AUDIT_LOG_CHANNEL_ID` is required before refund/Aura/wallet execution. `BOT_ADMIN_COMMAND_CHANNEL_ID` is not supported.
+
+`OPENROUTER_API_KEY` is optional until AI support is enabled. When present, the default hosted triage model is `google/gemma-4-26b-a4b-it:free`. `OPENROUTER_DATA_COLLECTION` defaults to `allow` for free-endpoint compatibility and can be changed to `deny`; if no compatible endpoint exists, the request fails closed. The planner payload is minimized and sanitized before it leaves the bot. See `docs/OPENROUTER_SUPPORT_TRIAGE.md`.
+
+## OpenRouter support triage
+
+Production source now includes a constrained OpenRouter triage client under `src/ai/`. It is designed to interpret messy customer wording and choose the next support action; it is **not** authoritative for policy, live account/order/payment state, product scope, or restricted technical support.
+
+Every hosted triage call uses:
+
+- `POST https://openrouter.ai/api/v1/chat/completions`;
+- strict JSON-schema structured output;
+- `provider.require_parameters: true`;
+- `temperature: 0`;
+- a bounded 400-token completion budget;
+- deterministic validation of every returned case/clarification/lookup/policy/entity ID;
+- scope checks;
+- canonical clarification/human fallback on failure.
+
+Common customer identifiers and sensitive live-context fields are removed from planner payloads before the API call. Raw transcript history, credentials, account tokens and private evidence are not part of the production planner input.
+
+Adding `OPENROUTER_API_KEY` does not by itself turn on a customer-facing support command. Activation remains gated on benchmark quality and later Discord support-flow integration.
 
 ## `/cm` authorization
 
@@ -198,7 +223,7 @@ The deployed website integration client used by the bot must include:
 purchase-intents.lookup.read
 ```
 
-in its exact `allowedOperations` list. Endpoint existence does not grant that permission. No new bot environment variable is required.
+in its exact `allowedOperations` list. Endpoint existence does not grant that permission.
 
 ## Non-production transcript tooling
 
@@ -212,7 +237,17 @@ npm run evaluate:first-turn-routing -- --data-dir "C:\code\CM-Ticket-Transcripts
 npm run evaluate:historical-state-replay -- --data-dir "C:\code\CM-Ticket-Transcripts" --output "C:\code\CM-Ticket-Transcripts\knowledge-canonical\Evaluation\historical-state-replay-results.json"
 ```
 
-These commands run locally, require strictly verified customer authorship for metric-eligible records, keep all gold transcripts out of `runtime-kb/routing-exemplars.jsonl`, and never send exemplars to the LLM context. They do not integrate with or execute the production bot.
+After `OPENROUTER_API_KEY` is set, the selected free model can be smoke-tested against the existing sanitized planner benchmark without running the Discord bot:
+
+```powershell
+npm.cmd run evaluate:openrouter-triage -- `
+  --data-dir ..\CM-Ticket-Transcripts `
+  --limit 20
+```
+
+Respect the current OpenRouter free-model request limits before increasing the sample size.
+
+These commands run locally, require strictly verified customer authorship for metric-eligible records, keep all gold transcripts out of `runtime-kb/routing-exemplars.jsonl`, and never send routing exemplars or raw historical evidence to the LLM context. They do not execute the production bot.
 
 ## Production notes
 
