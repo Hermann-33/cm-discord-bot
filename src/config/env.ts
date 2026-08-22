@@ -3,6 +3,8 @@ import { z } from "zod";
 const idPattern = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 const snowflakePattern = /^\d{5,32}$/;
 const standardBase64Pattern = /^[A-Za-z0-9+/]+={0,2}$/;
+const openRouterModelPattern = /^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/i;
+const OPENROUTER_DEFAULT_MODEL = "google/gemma-4-26b-a4b-it:free";
 
 const trimmedRequiredString = z.string().transform((value) => value.trim()).pipe(z.string().min(1));
 const snowflake = trimmedRequiredString.pipe(z.string().regex(snowflakePattern));
@@ -21,6 +23,24 @@ const optionalSnowflakeList = z.preprocess((value) => {
 }, z.array(z.string().regex(snowflakePattern)).min(1).max(100)
   .refine((ids) => new Set(ids).size === ids.length, "Duplicate IDs are not allowed")
   .optional());
+
+const optionalOpenRouterApiKey = z.preprocess((value) => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length === 0 ? undefined : trimmed;
+}, z.string().min(20).max(512).regex(/^sk-or-/).optional());
+
+const openRouterModel = z.preprocess((value) => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length === 0 ? undefined : trimmed;
+}, z.string().regex(openRouterModelPattern).default(OPENROUTER_DEFAULT_MODEL));
+
+const openRouterDataCollection = z.preprocess((value) => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim().toLowerCase();
+  return trimmed.length === 0 ? undefined : trimmed;
+}, z.enum(["allow", "deny"]).default("allow"));
 
 function isOriginOnlyHttps(value: string): boolean {
   try {
@@ -63,7 +83,10 @@ const envSchema = z.object({
   CM_INTERNAL_INTEGRATIONS_API_CLIENT_ID: integrationId,
   CM_INTERNAL_INTEGRATIONS_API_KEY_ID: integrationId,
   CM_INTERNAL_INTEGRATIONS_API_HMAC_SECRET_BASE64: z.string().refine(isCanonicalSecret),
-  CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS: timeoutSchema
+  CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS: timeoutSchema,
+  OPENROUTER_API_KEY: optionalOpenRouterApiKey,
+  OPENROUTER_MODEL: openRouterModel,
+  OPENROUTER_DATA_COLLECTION: openRouterDataCollection
 });
 
 export type InternalApiConfig = {
@@ -72,6 +95,15 @@ export type InternalApiConfig = {
   keyId: string;
   hmacSecret: Buffer;
   timeoutMs: number;
+};
+
+export type OpenRouterConfig = {
+  origin: "https://openrouter.ai";
+  apiKey: string;
+  model: string;
+  dataCollection: "allow" | "deny";
+  timeoutMs: number;
+  maxTokens: number;
 };
 
 export type AppConfig = {
@@ -85,6 +117,7 @@ export type AppConfig = {
   botAdminUserIds: readonly string[];
   botAuditLogChannelId?: string;
   internalApi: InternalApiConfig;
+  openRouter?: OpenRouterConfig;
 };
 
 export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -116,6 +149,16 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
         "base64"
       ),
       timeoutMs: parsed.data.CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS
-    }
+    },
+    openRouter: parsed.data.OPENROUTER_API_KEY
+      ? {
+          origin: "https://openrouter.ai",
+          apiKey: parsed.data.OPENROUTER_API_KEY,
+          model: parsed.data.OPENROUTER_MODEL,
+          dataCollection: parsed.data.OPENROUTER_DATA_COLLECTION,
+          timeoutMs: 20_000,
+          maxTokens: 400
+        }
+      : undefined
   };
 }
