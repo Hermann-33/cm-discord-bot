@@ -1,0 +1,242 @@
+import { rankCases } from './evaluate-canonical-support-retrieval.mjs';
+
+const STATE_ARRAYS = [
+  'resolvedEntities',
+  'candidateEntities',
+  'caseHistory',
+  'diagnosticsAsked',
+  'causesRuledOut',
+  'proceduresAttempted',
+  'escalationFlags'
+];
+
+const STATE_OBJECTS = [
+  'knownContext',
+  'diagnosticAnswers',
+  'procedureOutcomes',
+  'dynamicLookupResults'
+];
+
+function unique(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function normalize(value) {
+  return String(value ?? '')
+    .normalize('NFKD')
+    .toLowerCase()
+    .replace(/[’']/g, '')
+    .replace(/[^a-z0-9._+-]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function clone(value) {
+  return structuredClone(value ?? {});
+}
+
+export function createSupportState(initial = {}) {
+  const state = clone(initial);
+  for (const key of STATE_ARRAYS) state[key] = unique(Array.isArray(state[key]) ? state[key] : []);
+  for (const key of STATE_OBJECTS) state[key] = state[key] && typeof state[key] === 'object' && !Array.isArray(state[key]) ? state[key] : {};
+  state.activeCaseId = typeof state.activeCaseId === 'string' ? state.activeCaseId : null;
+  state.pendingDiagnosticId = typeof state.pendingDiagnosticId === 'string' ? state.pendingDiagnosticId : null;
+  return state;
+}
+
+function entityKind(id) {
+  return String(id).split('.').slice(0, id.startsWith('account_') ? 2 : 1).join('.');
+}
+
+function aliasIsNegated(text, alias) {
+  const at = text.indexOf(alias);
+  if (at < 0) return false;
+  const prefix = text.slice(Math.max(0, at - 36), at);
+  return /\b(?:not|isnt|arent|dont|do not|rather than|instead of)\b[^.?!]*$/.test(prefix);
+}
+
+function carryEntities(state, text, aliasEntries) {
+  const explicit = [];
+  const candidates = [];
+  for (const entry of aliasEntries ?? []) {
+    const alias = normalize(entry.alias);
+    if (!alias || !(` ${text} `.includes(` ${alias} `)) || aliasIsNegated(text, alias)) continue;
+    const targets = entry.targetIds ?? entry.targets ?? entry.target_ids ?? [];
+    const ids = Array.isArray(targets) ? targets : [targets];
+    if (ids.length === 1) explicit.push(ids[0]);
+    else candidates.push(...ids);
+  }
+  if (explicit.length) {
+    const kinds = new Set(explicit.map(entityKind));
+    state.resolvedEntities = unique([...state.resolvedEntities.filter((id) => !kinds.has(entityKind(id))), ...explicit]);
+  }
+  if (candidates.length) state.candidateEntities = unique([...state.candidateEntities, ...candidates]);
+}
+
+function setDiagnosticAnswer(state, id, value) {
+  if (!id) return;
+  state.diagnosticAnswers[id] = value;
+  state.diagnosticsAsked = unique([...state.diagnosticsAsked, id]);
+  if (state.pendingDiagnosticId === id) state.pendingDiagnosticId = null;
+}
+
+function interpretKnownContext(state, text) {
+  if (/\bgraphics\b[^.?!]*(?:already\s+)?(?:low|lowest|minimum|min)\b/.test(text) || /\b(?:low|lowest|minimum|min|lowered)\b[^.?!]*\b(?:graphics|settings)\b/.test(text) || /\bgraphics\b[^.?!]*(?:arent|are not|not)\s+high\b/.test(text)) {
+    state.knownContext.graphicsLevel = 'low';
+    setDiagnosticAnswer(state, 'diagnostic.rust.graphics_level', 'low');
+  } else if (/\bgraphics\b[^.?!]*\bhigh\b/.test(text) && !/\b(?:not|arent|are not)\s+high\b/.test(text)) {
+    state.knownContext.graphicsLevel = 'high';
+    setDiagnosticAnswer(state, 'diagnostic.rust.graphics_level', 'high');
+  }
+
+  if (/\b(?:dont|do not|not|never)\s+(?:use|have|run|enable)[^.?!]*\bvpn\b|\bno\s+vpn\b/.test(text)) state.knownContext.vpnActive = false;
+  else if (/\b(?:use|using|have|running|enabled)[^.?!]*\bvpn\b/.test(text)) state.knownContext.vpnActive = true;
+
+  if (/\b(?:didnt|did not|havent|have not|not)\s+(?:receive|received|get|got)[^.?!]*(?:order|delivery|key|account)\b|\b(?:order|delivery)\b[^.?!]*\b(?:missing|not received)\b/.test(text)) state.knownContext.fulfillmentReceived = false;
+  else if (/\b(?:received|got)[^.?!]*(?:order|delivery|key|account)\b/.test(text) && !/\b(?:didnt|did not|havent|have not|not)\b/.test(text)) state.knownContext.fulfillmentReceived = true;
+
+  if (/\bwebview\b[^.?!]*\b(?:already\s+)?(?:installed|present|on (?:the )?pc)\b|\b(?:installed|have|present)\b[^.?!]*\bwebview\b/.test(text)) {
+    state.knownContext.webviewInstalled = true;
+    setDiagnosticAnswer(state, 'diagnostic.loader.webview_present', true);
+  } else if (/\bwebview\b[^.?!]*\b(?:not installed|missing|dont have|do not have)\b/.test(text)) {
+    state.knownContext.webviewInstalled = false;
+    setDiagnosticAnswer(state, 'diagnostic.loader.webview_present', false);
+  }
+
+  if (/\b(?:background apps?|other apps?|programs?)\b[^.?!]*\b(?:closed|already closed|off)\b/.test(text)) state.knownContext.backgroundAppsClosed = true;
+}
+
+function interpretPendingAnswer(state, text) {
+  const id = state.pendingDiagnosticId;
+  if (!id) return;
+  const yes = /^(?:yes|yeah|yep|yup|correct|it is)\b/.test(text);
+  const no = /^(?:no|nope|nah|it isnt|it is not)\b/.test(text);
+  if (!yes && !no) return;
+  setDiagnosticAnswer(state, id, yes);
+  if (id === 'diagnostic.loader.webview_present') state.knownContext.webviewInstalled = yes;
+  if (id === 'diagnostic.order.reference_available') state.knownContext.orderSelectorAvailable = yes;
+}
+
+function caseById(runtimeCases, id) {
+  return (runtimeCases ?? []).find((item) => item.id === id);
+}
+
+function firstProcedure(activeCase) {
+  return activeCase?.flow?.find((step) => step.procedureId)?.procedureId ?? null;
+}
+
+function markProcedure(state, procedureId, outcome = undefined) {
+  if (!procedureId) return;
+  state.proceduresAttempted = unique([...state.proceduresAttempted, procedureId]);
+  if (outcome) state.procedureOutcomes[procedureId] = outcome;
+}
+
+function transitionTarget(activeCase, outcome) {
+  const direct = outcome === 'success' ? activeCase?.onSuccessCaseId : activeCase?.onFailureCaseId;
+  if (direct) return direct;
+  for (const step of activeCase?.flow ?? []) {
+    const target = outcome === 'success' ? step.onSuccess : step.onFailure;
+    if (typeof target === 'string' && target.startsWith('case.')) return target;
+  }
+  return null;
+}
+
+function activateCase(state, targetId) {
+  if (state.activeCaseId && state.activeCaseId !== targetId) state.caseHistory = unique([...state.caseHistory, state.activeCaseId]);
+  state.activeCaseId = targetId;
+}
+
+function applicableNextAction(state, activeCase) {
+  const diagnosticId = (activeCase?.ask ?? []).find((id) => !state.diagnosticsAsked.includes(id) && state.diagnosticAnswers[id] === undefined);
+  if (diagnosticId) return { askDiagnosticId: diagnosticId };
+  const procedureId = (activeCase?.flow ?? []).map((step) => step.procedureId).find((id) => id && !state.proceduresAttempted.includes(id) && state.procedureOutcomes[id] !== 'failure');
+  if (procedureId) return { recommendProcedureId: procedureId };
+  const dynamicLookupId = activeCase?.dynamic?.[0];
+  if (dynamicLookupId) return { requestDynamicLookupId: dynamicLookupId };
+  return null;
+}
+
+export function applyAssistantAction(inputState, action = {}) {
+  const state = createSupportState(inputState);
+  if (action.askDiagnosticId) {
+    state.pendingDiagnosticId = action.askDiagnosticId;
+    state.diagnosticsAsked = unique([...state.diagnosticsAsked, action.askDiagnosticId]);
+  }
+  if (action.recommendProcedureId) state.knownContext.pendingProcedureId = action.recommendProcedureId;
+  if (action.requestDynamicLookupId) state.dynamicLookupResults[action.requestDynamicLookupId] = { status: 'requested' };
+  return state;
+}
+
+export function statefulQuery(state, customerText) {
+  const tags = [];
+  for (const id of state.resolvedEntities) tags.push(`[entity=${id}]`);
+  if (state.activeCaseId) tags.push(`[active_case=${state.activeCaseId}]`);
+  for (const [key, value] of Object.entries(state.knownContext)) if (['string', 'number', 'boolean'].includes(typeof value)) tags.push(`[${key}=${value}]`);
+  for (const [id, outcome] of Object.entries(state.procedureOutcomes)) tags.push(`[procedure=${id}:${outcome}]`);
+  return `${tags.join(' ')} ${customerText}`.trim();
+}
+
+export function resolveSupportTurn({ state: inputState = {}, customerText, runtimeCases = [], aliasEntries = [], retrievalMethod = 'hybrid' }) {
+  const state = createSupportState(inputState);
+  const text = normalize(customerText);
+  carryEntities(state, text, aliasEntries);
+  interpretPendingAnswer(state, text);
+  interpretKnownContext(state, text);
+
+  let activeCase = caseById(runtimeCases, state.activeCaseId);
+  const persists = /\b(?:still|same error|same issue|same crash|same problem|didnt work|did not work|keeps? (?:crashing|closing|happening))\b/.test(text);
+  const succeeded = /\b(?:worked|fixed|resolved|all good|that did it)\b/.test(text) && !persists;
+  const alreadyTried = /\b(?:already (?:did|done|tried|installed|closed|lowered|sent)|tried (?:it|that|this)|did that already)\b/.test(text);
+  let procedureId = state.knownContext.pendingProcedureId ?? firstProcedure(activeCase);
+
+  if (state.activeCaseId === 'case.rust.nfa.server_load_crash' && state.knownContext.graphicsLevel === 'low' && (state.knownContext.backgroundAppsClosed || alreadyTried) && persists) {
+    procedureId = 'procedure.system.reduce_resource_pressure';
+    markProcedure(state, procedureId, 'failure');
+    const targetId = 'case.rust.nfa.server_load_crash.continue';
+    activateCase(state, targetId);
+    return { state, action: { transitionToCaseId: targetId, escalateIfUnresolved: true }, usedRetrieval: false, transitionPriority: 'deterministic_active_case_transition' };
+  }
+
+  if (activeCase?.id === 'case.loader.closes_runtime' && state.knownContext.webviewInstalled === true) {
+    procedureId = 'procedure.loader.install_webview_runtime';
+    markProcedure(state, procedureId, 'not_applicable_already_present');
+    state.escalationFlags = unique([...state.escalationFlags, 'escalation.known_flow_exhausted']);
+    return { state, action: { escalationId: 'escalation.known_flow_exhausted' }, usedRetrieval: false, transitionPriority: 'deterministic_active_case_transition' };
+  }
+
+  const mentionsSentSelector = /\b(?:already (?:sent|provided|gave)|sent (?:it|the order|the reference)|gave (?:it|the order|the reference)|provided (?:it|the order|the reference))\b[^.?!]*(?:above|before|previous|earlier|reference|order|id)?/.test(text) || /\border (?:id|reference)\b[^.?!]*\b(?:above|already|earlier|previous)\b/.test(text);
+  if (activeCase && activeCase.family?.startsWith('commerce.order') && mentionsSentSelector && (state.knownContext.orderSelector || state.knownContext.orderReference)) {
+    const lookupId = activeCase.dynamic?.[0] ?? 'dynamic.order.status';
+    state.knownContext.orderSelectorAvailable = true;
+    state.dynamicLookupResults[lookupId] = { status: 'requested', selectorKnown: true };
+    if (state.pendingDiagnosticId === 'diagnostic.order.reference_available') state.pendingDiagnosticId = null;
+    return { state, action: { requestDynamicLookupId: lookupId, useKnownSelector: true }, usedRetrieval: false, transitionPriority: 'deterministic_active_case_transition' };
+  }
+
+  if (procedureId && (alreadyTried || persists || succeeded)) {
+    const outcome = succeeded ? 'success' : persists ? 'failure' : undefined;
+    markProcedure(state, procedureId, outcome);
+    const targetId = outcome ? transitionTarget(activeCase, outcome) : null;
+    if (targetId && caseById(runtimeCases, targetId)) {
+      activateCase(state, targetId);
+      return { state, action: { transitionToCaseId: targetId }, usedRetrieval: false, transitionPriority: 'explicit_case_edge' };
+    }
+    if (outcome === 'failure') {
+      state.escalationFlags = unique([...state.escalationFlags, 'escalation.known_flow_exhausted']);
+      return { state, action: { escalationId: 'escalation.known_flow_exhausted' }, usedRetrieval: false, transitionPriority: 'active_flow_exhausted' };
+    }
+  }
+
+  if (activeCase) {
+    const action = applicableNextAction(state, activeCase);
+    if (action) return { state, action, usedRetrieval: false, transitionPriority: 'active_case_continuity' };
+  }
+
+  const ranked = rankCases(statefulQuery(state, customerText), runtimeCases, aliasEntries, 5, retrievalMethod, { state });
+  const targetId = ranked.results[0]?.id;
+  if (targetId) {
+    activateCase(state, targetId);
+    activeCase = caseById(runtimeCases, targetId);
+  }
+  return { state, action: applicableNextAction(state, activeCase), usedRetrieval: true, transitionPriority: targetId ? 'scoped_retrieval' : 'global_fallback', candidates: ranked.results.map((item) => item.id) };
+}

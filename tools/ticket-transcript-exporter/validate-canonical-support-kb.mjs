@@ -261,6 +261,11 @@ async function validateCanonicalGraph(canonicalDir) {
     if (fact.object?.entityId) references.push(['canonical fact object', fact.object.entityId]);
     for (const value of Object.values(fact.scope ?? {})) if (Array.isArray(value)) for (const id of value) references.push(['canonical fact scope', id]);
   }
+  for (const item of graph.cases ?? []) {
+    for (const id of [...(item.parentCaseIds ?? []), ...(item.specializesCaseIds ?? []), ...(item.relatedCaseIds ?? []), ...(item.requiresClarificationCaseIds ?? []), item.onSuccessCaseId, item.onFailureCaseId]) references.push(['canonical case transition', id]);
+    for (const id of item.escalationIds ?? []) references.push(['canonical case escalation', id]);
+  }
+  for (const item of graph.cases ?? []) for (const id of item.escalationIds ?? []) ids.add(id);
   let broken = 0;
   for (const [source, id] of references) if (typeof id === 'string' && !ids.has(id)) { issues.push(`${source} has broken target: ${id}`); broken += 1; }
   return { ok: issues.length === 0, issues, nodeCount: allNodes.length + facts.length, relationshipTargetsBroken: broken };
@@ -335,6 +340,7 @@ async function validateRuntimePack(runtimeDir) {
     const policyIds = new Set(arrays('policies.json').map((item) => item.id));
     const dynamicIds = new Set(arrays('dynamic-lookups.json').map((item) => item.id));
     const escalationIds = new Set(arrays('escalations.json').map((item) => item.id));
+    const outcomeIds = new Set(['outcome.resolved', 'outcome.context_resolved', 'outcome.explicit_failure', 'outcome.escalated', 'outcome.unconfirmed']);
     const check = (source, id, allowed) => { if (typeof id === 'string' && !allowed.has(id)) { issues.push(`${source} has broken runtime reference: ${id}`); referencesBroken += 1; } };
     for (const alias of arrays('aliases.json')) for (const id of alias.targets ?? []) check('alias', id, new Set([...entityIds, ...caseIds]));
     for (const profile of profiles) {
@@ -350,6 +356,16 @@ async function validateRuntimePack(runtimeDir) {
       for (const flow of record.flow ?? []) if (flow.procedureId) check('case procedure', flow.procedureId, procedureIds);
       for (const id of record.policies ?? []) check('case policy', id, policyIds);
       for (const id of record.dynamic ?? []) check('case dynamic lookup', id, dynamicIds);
+      for (const id of [...(record.parentCaseIds ?? []), ...(record.specializesCaseIds ?? []), ...(record.relatedCaseIds ?? []), ...(record.requiresClarificationCaseIds ?? []), record.onSuccessCaseId, record.onFailureCaseId]) check('case transition', id, caseIds);
+      for (const id of record.escalationIds ?? []) check('case escalation', id, escalationIds);
+      for (const flow of record.flow ?? []) {
+        for (const target of [flow.onSuccess, flow.onFailure]) {
+          if (!target) continue;
+          if (target.startsWith('case.')) check('case flow transition', target, caseIds);
+          else if (target.startsWith('escalation.')) check('case flow escalation', target, escalationIds);
+          else if (target.startsWith('outcome.')) check('case flow outcome', target, outcomeIds);
+        }
+      }
     }
     for (const route of parsed['routing.json'].caseRoutes ?? []) { check('route case', route.caseId, caseIds); for (const id of route.dynamicLookupIds ?? []) check('route dynamic lookup', id, dynamicIds); }
     for (const topic of arrays('restricted-topics.json')) if (topic.escalationId) check('restricted topic escalation', topic.escalationId, escalationIds);

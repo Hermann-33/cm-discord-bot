@@ -147,10 +147,17 @@ export function validateEvaluationRecords(records, runtimeCaseIds, minQueries = 
     if (typeof family === 'string' && family.trim()) {
       behaviorFamilies.set(family, (behaviorFamilies.get(family) ?? 0) + 1);
     }
-    if (mode === 'historical') {
-      if (record?.sourceType !== 'historical_holdout') issues.push(`query ${id ?? index} must have sourceType historical_holdout.`);
+    if (mode === 'historical-rule') {
+      if (record?.sourceType !== 'historical_rule_holdout') issues.push(`query ${id ?? index} must have sourceType historical_rule_holdout.`);
       if (asStrings(record?.sourceTranscriptIds).length === 0) issues.push(`query ${id ?? index} must have transcript provenance.`);
       if (/\(support wording \d+\)/i.test(record?.query ?? '')) issues.push(`query ${id ?? index} contains artificial padding.`);
+    } else if (mode === 'historical-gold') {
+      if (record?.sourceType !== 'historical_utterance_gold') issues.push(`query ${id ?? index} must have sourceType historical_utterance_gold.`);
+      if (record?.querySource !== 'literal_customer_turn') issues.push(`query ${id ?? index} must have querySource literal_customer_turn.`);
+      if (!['reviewed', 'needs_review'].includes(record?.goldStatus)) issues.push(`query ${id ?? index} has invalid goldStatus.`);
+      if (typeof record?.goldReason !== 'string' || !record.goldReason.trim()) issues.push(`query ${id ?? index} must have goldReason.`);
+      if (asStrings(record?.sourceTranscriptIds).length === 0) issues.push(`query ${id ?? index} must have transcript provenance.`);
+      if (!Array.isArray(record?.sourceTicketNumbers) || record.sourceTicketNumbers.length === 0) issues.push(`query ${id ?? index} must have ticket-number provenance.`);
     } else if (record?.sourceType && record.sourceType !== 'synthetic_adversarial') issues.push(`query ${id ?? index} has invalid adversarial sourceType.`);
 
     const sanitizedView = JSON.stringify({
@@ -163,13 +170,15 @@ export function validateEvaluationRecords(records, runtimeCaseIds, minQueries = 
     for (const finding of findings) issues.push(`query ${id ?? index} privacy candidate ${finding.type}: ${finding.sample}`);
   }
 
-  if (records.length < minQueries) issues.push(`evaluation query count ${records.length} is below required minimum ${minQueries}.`);
+  const acceptanceCount = mode === 'historical-gold' ? records.filter((record) => record.goldStatus === 'reviewed').length : records.length;
+  if (acceptanceCount < minQueries) issues.push(`evaluation query count ${acceptanceCount} is below required minimum ${minQueries}.`);
   if (mode === 'adversarial') for (const family of REQUIRED_BEHAVIOR_FAMILIES) if ((behaviorFamilies.get(family) ?? 0) === 0) issues.push(`missing required behavior family: ${family}`);
 
   return {
     ok: issues.length === 0,
     issues,
     queryCount: records.length,
+    reviewedQueryCount: records.filter((record) => record.goldStatus === 'reviewed').length,
     uniqueQueryIds: ids.size,
     privacyFindingCount: privacyCount,
     dynamicExpectedCount,
@@ -181,19 +190,22 @@ export function validateEvaluationRecords(records, runtimeCaseIds, minQueries = 
 export async function validateCanonicalSupportEvaluation(options) {
   const evaluationDir = join(options.dataDir, 'knowledge-canonical', 'Evaluation');
   const casesPath = join(options.dataDir, 'runtime-kb', 'cases.jsonl');
-  const historical = await readJsonl(join(evaluationDir, 'historical-holdout.jsonl'));
+  const historicalRule = await readJsonl(join(evaluationDir, 'historical-rule-holdout.jsonl'));
+  const historicalGold = await readJsonl(join(evaluationDir, 'historical-utterance-gold.jsonl'));
   const adversarial = await readJsonl(join(evaluationDir, 'adversarial-behavior.jsonl'));
   const cases = await readJsonl(casesPath);
   const runtimeCaseIds = new Set(cases.map((record) => record?.id).filter((id) => typeof id === 'string' && id.trim()));
-  const historicalResult = validateEvaluationRecords(historical, runtimeCaseIds, options.minQueries, 'historical');
+  const historicalRuleResult = validateEvaluationRecords(historicalRule, runtimeCaseIds, options.minQueries, 'historical-rule');
+  const historicalGoldResult = validateEvaluationRecords(historicalGold, runtimeCaseIds, options.minQueries, 'historical-gold');
   const adversarialResult = validateEvaluationRecords(adversarial, runtimeCaseIds, 10, 'adversarial');
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     validatedAt: new Date().toISOString(),
     runtimeCaseCount: runtimeCaseIds.size,
-    ok: historicalResult.ok && adversarialResult.ok,
-    issues: [...historicalResult.issues, ...adversarialResult.issues],
-    historical: historicalResult,
+    ok: historicalRuleResult.ok && historicalGoldResult.ok && adversarialResult.ok,
+    issues: [...historicalRuleResult.issues, ...historicalGoldResult.issues, ...adversarialResult.issues],
+    historicalRule: historicalRuleResult,
+    historicalGold: historicalGoldResult,
     adversarial: adversarialResult
   };
 }

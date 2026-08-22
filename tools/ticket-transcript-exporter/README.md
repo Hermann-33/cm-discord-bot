@@ -173,17 +173,26 @@ npm.cmd run validate:canonical-support-kb -- --data-dir ..\CM-Ticket-Transcripts
 
 It does not decide semantic equivalence; entity/fact canonicalization still requires evidence-based reasoning.
 
-### Baseline retrieval evaluation
+### Independent retrieval evaluation
 
 ```powershell
-npm.cmd run evaluate:canonical-support-retrieval -- --data-dir ..\CM-Ticket-Transcripts
+npm.cmd run evaluate:canonical-support-retrieval -- --data-dir ..\CM-Ticket-Transcripts --dataset historical-utterance-gold --method hybrid
 ```
 
-`evaluate-canonical-support-retrieval.mjs` provides a deterministic baseline over compact support cases using:
+`evaluate-canonical-support-retrieval.mjs` keeps three private evaluation partitions separate: the auto-derived `historical-rule-holdout`, independently reviewed literal `historical-utterance-gold`, and synthetic `adversarial-behavior`. It provides offline lexical, hybrid, and local subword-semantic benchmarks over compact support cases using:
 
 - exact aliases;
 - scope-aware filtering when aliases resolve entities;
-- BM25-style lexical scoring;
-- Recall@1/3/5 and MRR against the sanitized evaluation dataset.
+- scope-specificity and transition-compatible reranking;
+- BM25-style lexical and local character/subword scoring;
+- Recall@1/3/5, MRR, NDCG@5, failure classes, route accuracy, and estimated compiled-context size.
 
-This baseline intentionally calls no external model or embedding API. Dense/hybrid retrieval should only be added after the CM gold set shows measurable benefit.
+No external model, embedding API, or private-data upload is used.
+
+### Stateful support evaluation
+
+```powershell
+npm.cmd run evaluate:canonical-support-state -- --data-dir ..\CM-Ticket-Transcripts
+```
+
+`resolve-canonical-support-state.mjs` is an offline reference resolver. It carries resolved entities and known context across turns, interprets ordinary negation and short follow-up answers against a pending diagnostic/procedure, follows valid case success/failure edges before retrieval, and suppresses repeated known diagnostics or failed procedures. `evaluate-canonical-support-state.mjs` runs the private synthetic conversation set and reports transition, carry-forward, repeat, and reference-validity metrics. Neither module is imported by production `src/`.
