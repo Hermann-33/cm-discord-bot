@@ -10,8 +10,8 @@ const cases = [
   { id: 'case.ancient.rust.issue', displayName: 'Ancient Rust issue', family: 'technical.product', scope: { games: ['game.rust'], vendors: ['vendor.ancient'], products: ['product.ancient.rust'], variants: [], accountModels: [], accountListings: [] }, ask: [], policies: [], dynamic: [], escalationIds: [] }
 ];
 const clarifications = [
-  { id: 'clarify.support_surface', question: 'What is not working?', distinguishesCases: [], distinguishesFamilies: [] },
-  { id: 'clarify.nfa.failure_stage', question: 'Did it ever work?', distinguishesCases: ['case.nfa.invalid_first_use'], distinguishesFamilies: ['accounts.nfa'] }
+  { id: 'clarify.support_surface', question: 'What is not working?', setsContext: ['supportSurface'], distinguishesCases: [], distinguishesFamilies: [] },
+  { id: 'clarify.nfa.failure_stage', question: 'Did it ever work?', setsContext: ['workedBefore'], distinguishesCases: ['case.nfa.invalid_first_use'], distinguishesFamilies: ['accounts.nfa'] }
 ];
 const lookups = [{ id: 'orders.details.read', purpose: 'Read current order details' }];
 const policies = [{ id: 'policy.refund.current', displayName: 'Current refund policy' }];
@@ -99,7 +99,7 @@ test('prompt builder stays compact and instructs the model to choose a next acti
   assert.ok(estimatePlannerTokens(triageInput) < 2000);
 });
 
-test('known context and completed live lookups suppress redundant clarifications', () => {
+test('known context suppresses redundant clarification', () => {
   const contextKnown = input({ state: { resolvedEntities: ['account_model.nfa'], candidateFamilyIds: ['accounts.nfa'], questionsAsked: [], knownContext: { supportSurface: 'nfa_or_account' } } });
   assert.ok(!contextKnown.allowed.clarificationIds.includes('clarify.support_surface'));
 });
