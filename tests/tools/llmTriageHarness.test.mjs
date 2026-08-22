@@ -15,6 +15,8 @@ const clarifications = [
 ];
 const lookups = [{ id: 'orders.details.read', purpose: 'Read current order details' }];
 const policies = [{ id: 'policy.refund.current', displayName: 'Current refund policy' }];
+const observations = { explicitEntities: [], supportSurface: null, knownFacts: [], missingFacts: [] };
+const out = (value) => ({ observations, caseIds: [], clarificationId: null, dynamicLookupIds: [], policyIds: [], confidence: 0.9, reasonCode: 'test', ...value });
 
 function input(overrides = {}) {
   return buildLlmTriageInput({
@@ -30,12 +32,12 @@ function input(overrides = {}) {
 }
 
 test('accepts a valid canonical clarification action', () => {
-  const value = { nextAction: 'ask_clarification', caseIds: [], clarificationId: 'clarify.nfa.failure_stage', dynamicLookupIds: [], policyIds: [], confidence: 0.91, reasonCode: 'insufficient_context' };
+  const value = out({ nextAction: 'ask_clarification', clarificationId: 'clarify.nfa.failure_stage', confidence: 0.91, reasonCode: 'insufficient_context' });
   assert.deepEqual(validateLlmTriageOutput(value, input()).errors, []);
 });
 
 test('rejects invented case and lookup IDs', () => {
-  const value = { nextAction: 'request_dynamic_lookup', caseIds: ['case.fake'], clarificationId: null, dynamicLookupIds: ['lookup.fake'], policyIds: [], confidence: 0.9, reasonCode: 'x' };
+  const value = out({ nextAction: 'request_dynamic_lookup', caseIds: ['case.fake'], dynamicLookupIds: ['lookup.fake'] });
   const result = validateLlmTriageOutput(value, input());
   assert.equal(result.valid, false);
   assert.ok(result.errors.includes('unknown_case:case.fake'));
@@ -44,16 +46,16 @@ test('rejects invented case and lookup IDs', () => {
 
 test('rejects restricted autonomous answer', () => {
   const triageInput = input({ restricted: true });
-  const value = { nextAction: 'answer_case', caseIds: ['case.nfa.invalid_first_use'], clarificationId: null, dynamicLookupIds: [], policyIds: [], confidence: 0.95, reasonCode: 'x' };
+  const value = out({ nextAction: 'answer_case', caseIds: ['case.nfa.invalid_first_use'], confidence: 0.95 });
   assert.ok(validateLlmTriageOutput(value, triageInput).errors.includes('restricted_autonomous_answer'));
 });
 
 test('rejects repeated clarification and low-confidence direct case', () => {
   const triageInput = input({ state: { resolvedEntities: ['account_model.nfa'], candidateFamilyIds: ['accounts.nfa'], questionsAsked: ['clarify.nfa.failure_stage'] } });
-  const repeated = { nextAction: 'ask_clarification', caseIds: [], clarificationId: 'clarify.nfa.failure_stage', dynamicLookupIds: [], policyIds: [], confidence: 0.9, reasonCode: 'x' };
+  const repeated = out({ nextAction: 'ask_clarification', clarificationId: 'clarify.nfa.failure_stage' });
   assert.ok(validateLlmTriageOutput(repeated, triageInput).errors.some((item) => item.startsWith('unknown_clarification:') || item === 'repeated_clarification'));
 
-  const low = { nextAction: 'answer_case', caseIds: ['case.nfa.invalid_first_use'], clarificationId: null, dynamicLookupIds: [], policyIds: [], confidence: 0.4, reasonCode: 'x' };
+  const low = out({ nextAction: 'answer_case', caseIds: ['case.nfa.invalid_first_use'], confidence: 0.4 });
   assert.ok(validateLlmTriageOutput(low, input()).errors.includes('low_confidence_direct_case'));
 });
 
@@ -66,7 +68,7 @@ test('rejects case scope conflict with resolved product', () => {
     dynamicLookups: [],
     policies: []
   });
-  const value = { nextAction: 'answer_case', caseIds: ['case.ancient.rust.issue'], clarificationId: null, dynamicLookupIds: [], policyIds: [], confidence: 0.99, reasonCode: 'x' };
+  const value = out({ nextAction: 'answer_case', caseIds: ['case.ancient.rust.issue'], confidence: 0.99 });
   assert.ok(validateLlmTriageOutput(value, triageInput).errors.includes('scope_conflict:case.ancient.rust.issue'));
 });
 
@@ -95,6 +97,11 @@ test('prompt builder stays compact and instructs the model to choose a next acti
   assert.match(messages[0].content, /safest next action/i);
   assert.ok(estimatePlannerTokens(triageInput) > 0);
   assert.ok(estimatePlannerTokens(triageInput) < 2000);
+});
+
+test('known context and completed live lookups suppress redundant clarifications', () => {
+  const contextKnown = input({ state: { resolvedEntities: ['account_model.nfa'], candidateFamilyIds: ['accounts.nfa'], questionsAsked: [], knownContext: { supportSurface: 'nfa_or_account' } } });
+  assert.ok(!contextKnown.allowed.clarificationIds.includes('clarify.support_surface'));
 });
 
 test('local provider guard refuses non-local endpoints', () => {
