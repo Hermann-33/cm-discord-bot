@@ -89,8 +89,13 @@ function interpretKnownContext(state, text) {
     setDiagnosticAnswer(state, 'diagnostic.rust.graphics_level', 'high');
   }
 
-  if (/\b(?:dont|do not|not|never)\s+(?:use|have|run|enable)[^.?!]*\bvpn\b|\bno\s+vpn\b/.test(text)) state.knownContext.vpnActive = false;
-  else if (/\b(?:use|using|have|running|enabled)[^.?!]*\bvpn\b/.test(text)) state.knownContext.vpnActive = true;
+  if (/\b(?:dont|do not|not|never)\s+(?:use|have|run|enable)[^.?!]*\bvpn\b|\bno\s+vpn\b|\bwithout (?:(?:a|the) )?vpn\b|\bvpn\s+(?:is\s+)?off\b/.test(text)) state.knownContext.vpnActive = false;
+  else if (/\b(?:use|used|using|have|running|enabled|turned on)[^.?!]*\bvpn\b|\bworked with (?:a )?vpn\b|\bvpn\s+(?:is\s+)?on\b/.test(text)) state.knownContext.vpnActive = true;
+
+  if (/\b(?:disabled|turned off)[^.?!]*\bsecure boot\b|\bsecure boot\b[^.?!]*\b(?:disabled|off)\b/.test(text)) state.knownContext.secureBoot = false;
+  else if (/\b(?:enabled|turned on)[^.?!]*\bsecure boot\b|\bsecure boot\b[^.?!]*\b(?:enabled|on)\b/.test(text)) state.knownContext.secureBoot = true;
+  if (/\b(?:disabled|turned off)[^.?!]*\btpm\b|\btpm\b[^.?!]*\b(?:disabled|off)\b/.test(text)) state.knownContext.tpmEnabled = false;
+  else if (/\b(?:enabled|turned on)[^.?!]*\btpm\b|\btpm\b[^.?!]*\b(?:enabled|on)\b/.test(text)) state.knownContext.tpmEnabled = true;
 
   if (/\b(?:didnt|did not|havent|have not|not)\s+(?:receive|received|get|got)[^.?!]*(?:order|delivery|key|account)\b|\b(?:order|delivery)\b[^.?!]*\b(?:missing|not received)\b/.test(text)) state.knownContext.fulfillmentReceived = false;
   else if (/\b(?:received|got)[^.?!]*(?:order|delivery|key|account)\b/.test(text) && !/\b(?:didnt|did not|havent|have not|not)\b/.test(text)) state.knownContext.fulfillmentReceived = true;
@@ -153,6 +158,8 @@ function applicableNextAction(state, activeCase) {
   if (procedureId) return { recommendProcedureId: procedureId };
   const dynamicLookupId = activeCase?.dynamic?.[0];
   if (dynamicLookupId) return { requestDynamicLookupId: dynamicLookupId };
+  const escalationId = activeCase?.escalationIds?.[0];
+  if (escalationId) return { escalationId };
   return null;
 }
 
@@ -184,7 +191,7 @@ export function resolveSupportTurn({ state: inputState = {}, customerText, runti
   interpretKnownContext(state, text);
 
   let activeCase = caseById(runtimeCases, state.activeCaseId);
-  const persists = /\b(?:still|same error|same issue|same crash|same problem|didnt work|did not work|keeps? (?:crashing|closing|happening))\b/.test(text);
+  const persists = /\b(?:still|everything is the same|everything(?:'s| is)? same|same error|same issue|same crash|same problem|didnt work|did not work|wont open|will not open|keeps? (?:crashing|closing|happening))\b/.test(text);
   const succeeded = /\b(?:worked|fixed|resolved|all good|that did it)\b/.test(text) && !persists;
   const alreadyTried = /\b(?:already (?:did|done|tried|installed|closed|lowered|sent)|tried (?:it|that|this)|did that already)\b/.test(text);
   let procedureId = state.knownContext.pendingProcedureId ?? firstProcedure(activeCase);

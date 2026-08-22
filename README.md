@@ -204,6 +204,16 @@ in its exact `allowedOperations` list. Endpoint existence does not grant that pe
 
 The parallel `CM-Ticket-Transcripts` side project remains governed by ADR-0010. Export tooling lives under `tools/ticket-transcript-exporter/`, is not imported by `src/`, and is not a production bot dependency.
 
+The canonical-support evaluation helpers keep first-turn retrieval separate from follow-up state replay:
+
+```powershell
+npm run build:support-evaluation-partitions -- --data-dir "C:\code\CM-Ticket-Transcripts"
+npm run evaluate:first-turn-routing -- --data-dir "C:\code\CM-Ticket-Transcripts" --output "C:\code\CM-Ticket-Transcripts\knowledge-canonical\Evaluation\historical-first-turn-routing-results.json"
+npm run evaluate:historical-state-replay -- --data-dir "C:\code\CM-Ticket-Transcripts" --output "C:\code\CM-Ticket-Transcripts\knowledge-canonical\Evaluation\historical-state-replay-results.json"
+```
+
+These commands run locally, require strictly verified customer authorship for metric-eligible records, keep all gold transcripts out of `runtime-kb/routing-exemplars.jsonl`, and never send exemplars to the LLM context. They do not integrate with or execute the production bot.
+
 ## Production notes
 
 Use a single bot replica unless the in-memory session/scheduler architecture is redesigned. Keep Discord/API credentials only in the host secret store, collect structured logs without request bodies/credentials, and keep the bot limited to the exact website operations required by deployed source.
