@@ -4,7 +4,7 @@ import { sanitizeSupportText, sanitizeTriagePlannerPayload } from "../../src/ai/
 
 test("sanitizes common customer identifiers and secrets", () => {
   const text = sanitizeSupportText(
-    "email Me@Example.com order 550e8400-e29b-41d4-a716-446655440000 CM-ORDER-12345 <@123456789012345678> https://example.com/x sk-or-v1-secretsecretsecret password=hunter2 account_token=short-token abcdefghijklmnopqrstuvwxyz123456"
+    "email Me@Example.com order 550e8400-e29b-41d4-a716-446655440000 CM-ORDER-12345 <@123456789012345678> https://example.com/x sk-or-v1-secretsecretsecret gsk_secretsecretsecretsecret password=hunter2 account_token=short-token abcdefghijklmnopqrstuvwxyz123456"
   );
 
   assert.equal(text.includes("Me@Example.com"), false);
@@ -13,6 +13,7 @@ test("sanitizes common customer identifiers and secrets", () => {
   assert.equal(text.includes("123456789012345678"), false);
   assert.equal(text.includes("https://example.com/x"), false);
   assert.equal(text.includes("sk-or-v1-secretsecretsecret"), false);
+  assert.equal(text.includes("gsk_secretsecretsecretsecret"), false);
   assert.equal(text.includes("abcdefghijklmnopqrstuvwxyz123456"), false);
   assert.equal(text.includes("hunter2"), false);
   assert.equal(text.includes("short-token"), false);
