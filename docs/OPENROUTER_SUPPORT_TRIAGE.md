@@ -35,11 +35,13 @@ Every request uses:
 - `POST https://openrouter.ai/api/v1/chat/completions`;
 - `temperature: 0`;
 - `max_tokens: 400`;
-- strict JSON-schema structured output;
+- OpenRouter JSON output mode with `response_format.type = json_object`;
 - `provider.require_parameters: true`;
 - the configured `provider.data_collection` policy;
 - a 20-second production timeout;
 - no streaming.
+
+The selected free Gemma endpoint advertises `response_format` support but does not enforce arbitrary JSON Schema at the provider layer. Therefore the hosted request uses JSON mode and the bot performs the strict schema and safety validation locally. This preserves the fail-closed boundary without routing the free model through an unsupported `json_schema` requirement.
 
 The API key is sent only in the Authorization header and is never included in planner payloads, returned result objects, audit files, or logs.
 
@@ -71,7 +73,7 @@ The importer reads only private `runtime-kb/`, selects an explicit artifact/fiel
 
 ## Deterministic validation and fallback
 
-The client rejects model output that contains:
+The client parses the model's JSON and then applies the local triage schema and safety validator. It rejects model output that contains:
 
 - unknown case/clarification/lookup/policy IDs;
 - ungrounded entity IDs;
@@ -100,11 +102,11 @@ npm.cmd run evaluate:openrouter-triage -- `
   --limit 20
 ```
 
-The command reads `OPENROUTER_API_KEY` from the environment. It writes only benchmark results under the private audit directory and never prints the API key.
+The command reads `OPENROUTER_API_KEY` from `.env`/the environment. It writes only benchmark results under the private audit directory and never prints the API key.
 
-Hosted evaluation is restricted to the already-consumed `llm-triage-development-inputs.jsonl`; it will refuse a different/new holdout filename. Reports include structured-output acceptance, exact optimal action, `optimal`, `safe_progress`, `safe_no_progress`, `unsafe_wrong_route`, scope leakage, fallback rate, and latency.
+Hosted evaluation is restricted to the already-consumed `llm-triage-development-inputs.jsonl`; it will refuse a different/new holdout filename. Reports include output acceptance after local schema validation, exact optimal action, `optimal`, `safe_progress`, `safe_no_progress`, `unsafe_wrong_route`, scope leakage, fallback rate, and latency.
 
-The selected free model has OpenRouter free-tier request limits, so do not run hundreds of cases blindly. Start with 20, inspect structured-output acceptance/safety, and scale only within the account's current free-model allowance.
+The selected free model has OpenRouter free-tier request limits, so do not run hundreds of cases blindly. Start with 20, inspect acceptance/safety, and scale only within the account's current free-model allowance.
 
 ## Activation gate
 
