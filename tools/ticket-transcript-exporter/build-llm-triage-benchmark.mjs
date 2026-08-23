@@ -7,6 +7,9 @@ import { estimatePlannerTokens } from './llm-triage-prompt.mjs';
 
 const DEFAULT_DEVELOPMENT_DATASET = 'historical-first-turn-action-v3.jsonl';
 const INDEPENDENT_LABEL_METHOD = 'independent_semantic_review_first_turn_decision';
+const FAMILY_EQUIVALENTS = new Map([
+  ['business.media', 'business.application']
+]);
 const readJson = async (file) => JSON.parse(await readFile(file, 'utf8'));
 const readJsonl = async (file) => (await readFile(file, 'utf8')).split(/\r?\n/u).filter(Boolean).map((line) => JSON.parse(line));
 const unique = (values) => [...new Set((values ?? []).filter(Boolean))];
@@ -52,8 +55,37 @@ function goldView(record) {
   };
 }
 
+function normalizedFamilyId(id) {
+  return FAMILY_EQUIVALENTS.get(id) ?? id;
+}
+
 function intersects(values, allowed) {
   return (values ?? []).some((value) => allowed.has(value));
+}
+
+function familiesIntersect(values, allowed) {
+  const normalizedAllowed = new Set([...allowed].map(normalizedFamilyId));
+  return (values ?? []).some((value) => normalizedAllowed.has(normalizedFamilyId(value)));
+}
+
+function compactRuntimeDynamicLookups(rows) {
+  return (rows ?? []).map((item) => ({
+    id: item.id,
+    purpose: [
+      ...(item.questionTypes ?? []),
+      item.operation ? `operation:${item.operation}` : null,
+      item.neverInferFromHistory ? 'current-state only' : null
+    ].filter(Boolean).join('; ')
+  }));
+}
+
+function mergeLookups(...groups) {
+  const byId = new Map();
+  for (const item of groups.flat()) {
+    if (!item?.id || byId.has(item.id)) continue;
+    byId.set(item.id, item);
+  }
+  return [...byId.values()];
 }
 
 export function assessGoldRepresentability(gold, input) {
@@ -67,7 +99,7 @@ export function assessGoldRepresentability(gold, input) {
   if ((gold?.observableCaseIds ?? []).length > 0 && !intersects(gold.observableCaseIds, allowedCases)) {
     reasons.push('gold_case_not_represented');
   }
-  if ((gold?.observableFamilyIds ?? []).length > 0 && allowedFamilies.size > 0 && !intersects(gold.observableFamilyIds, allowedFamilies)) {
+  if ((gold?.observableFamilyIds ?? []).length > 0 && allowedFamilies.size > 0 && !familiesIntersect(gold.observableFamilyIds, allowedFamilies)) {
     reasons.push('gold_family_not_represented');
   }
   if (gold?.action === 'answer_case' && !intersects(gold.observableCaseIds ?? [], allowedCases)) {
@@ -98,7 +130,9 @@ export async function buildLlmTriageBenchmark(dataDir, { dataset = DEFAULT_DEVEL
   const aliasesFile = await readJson(path.join(runtimeDir, 'aliases.json'));
   const aliases = aliasesFile.aliases ?? aliasesFile;
   const actionRouting = await readJson(path.join(runtimeDir, 'action-routing.json'));
-  const dynamicLookups = (actionRouting.approvedLookups ?? []).map((item) => ({ id: item.id, purpose: (item.useWhen ?? []).join('; ') }));
+  const runtimeDynamicLookups = await readJson(path.join(runtimeDir, 'dynamic-lookups.json'));
+  const actionLookups = (actionRouting.approvedLookups ?? []).map((item) => ({ id: item.id, purpose: (item.useWhen ?? []).join('; ') }));
+  const dynamicLookups = mergeLookups(actionLookups, compactRuntimeDynamicLookups(runtimeDynamicLookups));
   const policiesFile = await readJson(path.join(runtimeDir, 'policies.json'));
   const policies = policiesFile.policies ?? policiesFile;
 
