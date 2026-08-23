@@ -5,6 +5,7 @@ const SNOWFLAKE_PATTERN = /(?<!\d)\d{17,20}(?!\d)/gu;
 const URL_PATTERN = /https?:\/\/[^\s<>()]+/giu;
 const SECRET_LABEL_PATTERN = /\b(?:api[_ -]?key|account[_ -]?token|password|secret|credential)\s*[:=]\s*[^\s,;]+/giu;
 const OPENROUTER_KEY_PATTERN = /\bsk-or-[A-Za-z0-9_-]{12,}\b/gu;
+const GROQ_KEY_PATTERN = /\bgsk_[A-Za-z0-9_-]{12,}\b/gu;
 const CM_REFERENCE_PATTERN = /\b(?:CM|ORDER)-[A-Za-z0-9-]{4,}\b/giu;
 const LONG_SECRET_LIKE_TOKEN_PATTERN = /(?<![A-Za-z0-9_.-])[A-Za-z0-9_-]{24,}(?![A-Za-z0-9_.-])/gu;
 
@@ -13,6 +14,7 @@ const SENSITIVE_CONTEXT_KEY = /(?:^|_)(?:email|customeremail|discord(?:user)?id|
 export function sanitizeSupportPlannerText(value) {
   return String(value)
     .replace(OPENROUTER_KEY_PATTERN, '[secret omitted]')
+    .replace(GROQ_KEY_PATTERN, '[secret omitted]')
     .replace(SECRET_LABEL_PATTERN, '[secret omitted]')
     .replace(EMAIL_PATTERN, '[email omitted]')
     .replace(DISCORD_MENTION_PATTERN, '[discord mention omitted]')
