@@ -109,6 +109,40 @@ test('known context suppresses redundant clarification', () => {
   assert.ok(!contextKnown.allowed.clarificationIds.includes('clarify.support_surface'));
 });
 
+test('generic support-surface clarification is omitted when it cannot distinguish scoped candidates', () => {
+  const mediaCase = {
+    id: 'case.media.application',
+    displayName: 'Media or creator application',
+    family: 'business.application',
+    scope: { games: [], vendors: [], products: [], variants: [], accountModels: [], accountListings: [] },
+    ask: [], policies: [], dynamic: [], escalationIds: []
+  };
+  const triageInput = buildLlmTriageInput({
+    customerText: 'Could I make media for spoofers?',
+    state: { candidateCaseIds: [mediaCase.id], candidateFamilyIds: [mediaCase.family], questionsAsked: [] },
+    candidateCases: [mediaCase],
+    candidateFamilies: [mediaCase.family],
+    clarifications: [clarifications[0]],
+    dynamicLookups: [],
+    policies: []
+  });
+  assert.deepEqual(triageInput.allowed.caseIds, ['case.media.application']);
+  assert.deepEqual(triageInput.allowed.clarificationIds, []);
+});
+
+test('generic support-surface clarification remains available when no scoped candidate exists', () => {
+  const triageInput = buildLlmTriageInput({
+    customerText: 'would u be interested in a video like this?',
+    state: { questionsAsked: [] },
+    candidateCases: [],
+    candidateFamilies: [],
+    clarifications: [clarifications[0]],
+    dynamicLookups: [],
+    policies: []
+  });
+  assert.deepEqual(triageInput.allowed.clarificationIds, ['clarify.support_surface']);
+});
+
 test('local provider guard refuses non-local endpoints', () => {
   assert.equal(isLocalTriageEndpoint('http://127.0.0.1:11434/v1'), true);
   assert.equal(isLocalTriageEndpoint('http://localhost:1234/v1'), true);
