@@ -1,4 +1,4 @@
-import { buildTriageMessages, TRIAGE_OUTPUT_SCHEMA } from './llm-triage-prompt.mjs';
+import { buildTriageMessages } from './llm-triage-prompt.mjs';
 import { sanitizeSupportPlannerPayload } from './support-runtime-privacy.mjs';
 
 export const DEFAULT_OPENROUTER_TRIAGE_MODEL = 'google/gemma-4-26b-a4b-it:free';
@@ -42,12 +42,7 @@ export function createOpenRouterTriageProvider({
           max_tokens: maxTokens,
           stream: false,
           response_format: {
-            type: 'json_schema',
-            json_schema: {
-              name: 'cm_support_triage',
-              strict: true,
-              schema: TRIAGE_OUTPUT_SCHEMA
-            }
+            type: 'json_object'
           },
           provider: {
             require_parameters: true,
