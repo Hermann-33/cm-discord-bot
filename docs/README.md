@@ -40,10 +40,13 @@ This documentation system is the durable memory and governance layer for the Che
 - `decisions/ADR-0009-customer-email-in-shared-panels.md` — supersedes ADR-0008 only for the previous full-email prohibition; shared customer identity includes canonical account email
 - `decisions/ADR-0010-ticket-transcript-data-repository-boundary.md` — keeps the parallel `CM-Ticket-Transcripts` repository private, data-only and independent from production runtime
 - `decisions/ADR-0011-pending-purchase-and-fulfillment-support-view.md` — order-first pending-purchase fallback, optional private masked fulfillment support, and public-share exclusions
-- `decisions/ADR-0012-bundled-support-runtime-and-openrouter-planner.md` — sanitized bundled support runtime, constrained optional OpenRouter planner, stateful deterministic service boundary, and benchmark-before-activation gate
+- `decisions/ADR-0012-bundled-support-runtime-and-openrouter-planner.md` — sanitized bundled support runtime, constrained optional hosted planner, stateful deterministic service boundary, and benchmark-before-activation gate; provider preference superseded by ADR-0013
+- `decisions/ADR-0013-groq-primary-support-triage-provider.md` — Groq `openai/gpt-oss-120b` is the primary hosted triage candidate; deterministic validation and the ADR-0012 runtime boundary remain authoritative
 
 ## Specialist references
 
+- `GROQ_SUPPORT_TRIAGE.md` — primary Groq GPT-OSS provider setup, privacy boundary, benchmark pacing, and activation gate
+- `OPENROUTER_SUPPORT_TRIAGE.md` — secondary OpenRouter provider setup and compatibility notes
 - `security/ADMIN_MUTATION_MODEL.md` — Aura/wallet/refund mutation security model
 - `security/CM_ADMIN_CONSOLE_SECURITY.md` — current `/cm` authorization/session/share/user/order/pending/refund/balance-control security model
 - `legacy-parity.md` — frozen behavioral/history audit for the pre-rebuild bot
@@ -54,4 +57,4 @@ Current source code and verified external state override stale chat memory. Late
 
 Adjacent side projects remain outside the production bot runtime unless an explicit later architecture decision says otherwise. In particular, `CM-Ticket-Transcripts` is a private data corpus, not an executable bot/tool repository.
 
-ADR-0012 permits only an operator-generated, provenance-free `support-runtime/` derivative in this public repository. It does not permit production reads from the private corpus.
+ADR-0012 permits only an operator-generated, provenance-free `support-runtime/` derivative in this public repository. ADR-0013 changes the preferred hosted planner provider only; it does not weaken that data boundary.
