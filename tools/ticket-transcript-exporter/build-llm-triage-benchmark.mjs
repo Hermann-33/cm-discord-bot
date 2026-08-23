@@ -52,6 +52,40 @@ function goldView(record) {
   };
 }
 
+function intersects(values, allowed) {
+  return (values ?? []).some((value) => allowed.has(value));
+}
+
+export function assessGoldRepresentability(gold, input) {
+  const reasons = [];
+  const allowedCases = new Set(input?.allowed?.caseIds ?? []);
+  const allowedFamilies = new Set(input?.allowed?.familyIds ?? []);
+  const allowedClarifications = new Set(input?.allowed?.clarificationIds ?? []);
+  const allowedLookups = new Set(input?.allowed?.dynamicLookupIds ?? []);
+  const allowedPolicies = new Set(input?.allowed?.policyIds ?? []);
+
+  if ((gold?.observableCaseIds ?? []).length > 0 && !intersects(gold.observableCaseIds, allowedCases)) {
+    reasons.push('gold_case_not_represented');
+  }
+  if ((gold?.observableFamilyIds ?? []).length > 0 && allowedFamilies.size > 0 && !intersects(gold.observableFamilyIds, allowedFamilies)) {
+    reasons.push('gold_family_not_represented');
+  }
+  if (gold?.action === 'answer_case' && !intersects(gold.observableCaseIds ?? [], allowedCases)) {
+    reasons.push('gold_answer_case_unavailable');
+  }
+  if (gold?.action === 'ask_clarification' && gold.clarificationId && !allowedClarifications.has(gold.clarificationId)) {
+    reasons.push('gold_clarification_unavailable');
+  }
+  if (gold?.action === 'request_dynamic_lookup' && (gold.lookupIds ?? []).length > 0 && !intersects(gold.lookupIds, allowedLookups)) {
+    reasons.push('gold_lookup_unavailable');
+  }
+  if (gold?.action === 'request_policy_route' && (gold.policyIds ?? []).length > 0 && !intersects(gold.policyIds, allowedPolicies)) {
+    reasons.push('gold_policy_unavailable');
+  }
+
+  return { eligible: reasons.length === 0, reasons: unique(reasons) };
+}
+
 export async function buildLlmTriageBenchmark(dataDir, { dataset = DEFAULT_DEVELOPMENT_DATASET, output = 'llm-triage-development-inputs.jsonl', maxCases = 8 } = {}) {
   const evaluationDir = path.join(dataDir, 'knowledge-canonical', 'Evaluation');
   const auditDir = path.join(dataDir, 'knowledge-canonical', 'Audit');
@@ -68,7 +102,7 @@ export async function buildLlmTriageBenchmark(dataDir, { dataset = DEFAULT_DEVEL
   const policiesFile = await readJson(path.join(runtimeDir, 'policies.json'));
   const policies = policiesFile.policies ?? policiesFile;
 
-  const rows = records.map((record) => {
+  const reviewedRows = records.map((record) => {
     const baseline = reviewFirstTurnObservability(record.query, aliases);
     const candidateCases = candidateCasesFor(record, baseline, cases, maxCases);
     const input = buildLlmTriageInput({
@@ -88,33 +122,45 @@ export async function buildLlmTriageBenchmark(dataDir, { dataset = DEFAULT_DEVEL
       restricted: baseline.primaryDecision === 'direct_restricted_escalation',
       maxCases
     });
+    const gold = goldView(record);
     return {
       id: record.id,
       sourceTranscriptIds: record.sourceTranscriptIds,
       goldLabelMethod: record.labelMethod ?? null,
       goldReviewReason: record.reviewReason ?? record.decisionReason ?? null,
       input,
-      gold: goldView(record),
+      gold,
       baseline: {
         primaryDecision: baseline.primaryDecision,
         clarificationId: baseline.clarificationId ?? null,
         observableCaseIds: baseline.observableCaseIds ?? [],
         observableFamilyIds: baseline.observableFamilyIds ?? []
       },
+      benchmarkEligibility: assessGoldRepresentability(gold, input),
       plannerTokenEstimate: estimatePlannerTokens(input)
     };
   });
 
+  const rows = reviewedRows.filter((row) => row.benchmarkEligibility.eligible);
+  const reviewQueue = reviewedRows.filter((row) => !row.benchmarkEligibility.eligible);
   const tokenValues = rows.map((row) => row.plannerTokenEstimate).sort((a, b) => a - b);
   const percentile = (p) => tokenValues.length ? tokenValues[Math.min(tokenValues.length - 1, Math.ceil(tokenValues.length * p) - 1)] : 0;
-  const independentReviewed = rows.filter((row) => row.goldLabelMethod === INDEPENDENT_LABEL_METHOD).length;
+  const independentReviewed = reviewedRows.filter((row) => row.goldLabelMethod === INDEPENDENT_LABEL_METHOD).length;
+  const reasonCounts = Object.fromEntries(unique(reviewQueue.flatMap((row) => row.benchmarkEligibility.reasons)).map((reason) => [
+    reason,
+    reviewQueue.filter((row) => row.benchmarkEligibility.reasons.includes(reason)).length
+  ]));
   const summary = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     dataset,
     sourceRecords: allRecords.length,
+    reviewedRecords: reviewedRows.length,
     records: rows.length,
+    reviewQueueRecords: reviewQueue.length,
+    representabilityRate: reviewedRows.length ? rows.length / reviewedRows.length : 0,
+    representabilityReasons: reasonCounts,
     independentReviewed,
-    independentReviewRate: rows.length ? independentReviewed / rows.length : 0,
+    independentReviewRate: reviewedRows.length ? independentReviewed / reviewedRows.length : 0,
     maxCases,
     plannerTokens: {
       average: tokenValues.length ? tokenValues.reduce((sum, value) => sum + value, 0) / tokenValues.length : 0,
@@ -126,7 +172,9 @@ export async function buildLlmTriageBenchmark(dataDir, { dataset = DEFAULT_DEVEL
       max: Math.max(0, ...rows.map((row) => row.input.allowed.caseIds.length))
     }
   };
+  const reviewQueuePath = output.replace(/\.jsonl$/u, '-review-queue.jsonl');
   await writeFile(path.join(auditDir, output), `${rows.map((row) => JSON.stringify(row)).join('\n')}\n`, 'utf8');
+  await writeFile(path.join(auditDir, reviewQueuePath), reviewQueue.length ? `${reviewQueue.map((row) => JSON.stringify(row)).join('\n')}\n` : '', 'utf8');
   await writeFile(path.join(auditDir, output.replace(/\.jsonl$/u, '-summary.json')), `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
   return summary;
 }
