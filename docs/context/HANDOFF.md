@@ -1,167 +1,130 @@
 # Latest Handoff
 
-Updated: 2026-08-23
+Updated: 2026-08-24
 
 ## Authority
 
-- ADR-0005 — `cm aura` customer message command; admin/staff slash/components/modals.
-- ADR-0006 — `/cm` exact configured guild + non-empty explicit `BOT_ADMIN_USER_IDS`; no `/cm` channel restriction.
-- ADR-0007 — Aura/wallet five-minute fresh-state-bound confirmation + stable idempotency/audit.
-- ADR-0008 — separate customer-facing Share to Chat renderer, no public admin controls, Discord identity/time/audit policy.
-- ADR-0009 — canonical CM account email is intentionally shared; all other ADR-0008 exclusions remain.
-- ADR-0010 — `CM-Ticket-Transcripts` is a separate private data-only side project with no production-bot dependency.
-- ADR-0011 — `/cm order` is canonical-order-first with `NOT_FOUND`-only pending purchase fallback; masked fulfillment support remains private staff data.
-- ADR-0012 — production support may use only a bundled sanitized runtime derivative and a constrained optional OpenRouter next-action planner; no private-corpus runtime path or customer activation yet.
-- `BOT_AUDIT_LOG_CHANNEL_ID` is required before refund/Aura/wallet execute.
-- no direct Supabase/Postgres.
-- manual fulfillment blocked until website owns a dedicated mutation.
+- ADR-0005 — customer `cm aura` remains message-based; admin/staff controls remain slash/components/modals.
+- ADR-0006 — `/cm` requires exact configured guild + explicit `BOT_ADMIN_USER_IDS`; no admin-command channel restriction.
+- ADR-0007 — Aura/wallet mutations require fresh-state-bound confirmation, idempotency, and audit.
+- ADR-0008 + ADR-0009 — Share to Chat uses a separate customer-safe renderer; canonical CM account email may be shared while internal/admin/credential data remains excluded.
+- ADR-0010 — `CM-Ticket-Transcripts` is a private data-only side project with no production runtime dependency.
+- ADR-0011 — `/cm order` is canonical-order-first with `NOT_FOUND`-only pending-purchase fallback; masked fulfillment support is private staff data.
+- ADR-0012 — production AI support may use only the bundled sanitized `support-runtime/` derivative, deterministic state/validation, and benchmark-before-activation gate.
+- ADR-0013 — Groq `openai/gpt-oss-120b` is now the primary hosted support-triage candidate. OpenRouter remains a secondary development adapter.
+- No direct Supabase/Postgres path, no manual fulfillment, and no `purchase-intents.process` permission.
 
-## Current mainline
+## Current feature branch
 
 ```text
-master
-405a71fa2fe2eca467e7f4b7f8b5437e067895ef
+task/ai-support-integration
 ```
 
-TASK-CM-ADMIN-007 is merged on mainline. Current production-source behavior includes canonical-order-first `/cm order`, `NOT_FOUND`-only pending purchase fallback, optional fulfillment support enrichment, pending purchase refresh/transition, and customer-safe pending sharing.
+Customer-facing AI support is still **disabled**. Discord entrypoints are not wired to the support planner yet.
 
-The bot operation set now includes:
+The branch now contains:
+
+- bundled sanitized `support-runtime/` importer/loader boundary;
+- stateful support conversation service and pending-question answer handling;
+- deterministic support action validation/fallback;
+- privacy sanitization for hosted planner payloads;
+- Groq production triage client;
+- Groq hosted benchmark adapter;
+- OpenRouter secondary adapter;
+- consumed-development benchmark guard;
+- rate-safe Groq benchmark pacing and stop-on-429 behavior.
+
+## Primary hosted provider
 
 ```text
-purchase-intents.lookup.read
+Provider: Groq
+Model: openai/gpt-oss-120b
+Endpoint: https://api.groq.com/openai/v1/chat/completions
 ```
 
-The website integration client used by the bot must include that operation in `allowedOperations` for pending lookup to work in production. No new bot environment variable or slash-command registration change was introduced by TASK-CM-ADMIN-007.
-
-## Parallel workstream — Ticket Transcript Corpus
-
-Repository:
+Default planner request controls:
 
 ```text
-Hermann-33/CM-Ticket-Transcripts
+temperature = 0
+reasoning_effort = low
+max_completion_tokens = 400
+stream = false
+response_format = strict JSON schema
 ```
 
-Boundary remains:
+No model tools, browser search, code execution, MCP, direct website access, or executable support operations are exposed to the model.
+
+The deterministic validator remains authoritative for canonical IDs, scope, restricted topics, confidence-sensitive direct cases, repeated/already-known clarifications, and fallbacks.
+
+## Environment
+
+The operator must add the Groq key manually to local `.env` or the deployment secret store:
 
 ```text
-private
-data-only
-no executable extraction code
-no production-bot runtime dependency
+GROQ_API_KEY=
+GROQ_MODEL=openai/gpt-oss-120b
+GROQ_REASONING_EFFORT=low
 ```
 
-The production bot feature branch may bundle only the sanitized `support-runtime/` derivative generated through the ADR-0012 allowlist importer. That is not a runtime dependency on this private repository.
+Do not commit `.env` or print/log the key.
 
-## AI support integration handoff
+The existing OpenRouter variables remain optional and secondary.
 
-`task/ai-support-integration` prepares but does not enable customer support:
+## Exact next action
 
-- `OPENROUTER_API_KEY` optional; default Gemma free model/data policy are in `.env.example`;
-- strict structured request and deterministic validation/fallback;
-- sanitizer applied by both production and hosted benchmark clients;
-- benchmark restricted to `llm-triage-development-inputs.jsonl` and reports acceptance, optimal action, safety/scope, fallback and latency;
-- public support-runtime importer/loader boundary;
-- explicit stateful support service with pending-answer interpretation;
-- no `src/index.ts` or Discord registration wiring.
-
-Exact next action after repository verification: the operator manually supplies `OPENROUTER_API_KEY` and runs only:
+After pulling the latest branch and adding `GROQ_API_KEY`, first run repository validation:
 
 ```powershell
-npm.cmd run evaluate:openrouter-triage -- `
-  --data-dir ..\CM-Ticket-Transcripts `
-  --limit 20
+npm.cmd ci
+npm.cmd test
+npm.cmd run typecheck
+npm.cmd run build
+git diff --check
 ```
 
-Review the private benchmark outputs before any activation work.
-
-Repository verification on Node `v24.11.1` passed: clean `npm.cmd ci` with 0 vulnerabilities, 261/261 tests, typecheck, build, diff check, focused secret/private-data/runtime-wiring scans, and no hosted API call.
-
-The strict Discord discovery stage has already identified 1,578 unique `View Transcript` records and stored the durable discovery set in:
-
-```text
-CM-Ticket-Transcripts/source-logs.jsonl
-```
-
-A real Chrome HAR from a working Tickety transcript proved that the actual conversation is loaded from:
-
-```text
-GET https://tickety.top/api/ticketTranscript?id=<transcriptId>
-Content-Type: application/vnd.msgpack
-```
-
-The captured Msgpack payload was successfully decoded and contained real `users[]` and `messages[]` data, including timestamps, content, attachments, embeds, reactions, components and message references. The earlier repeated 14,956-byte HTTP files are only HTML application shells and are not complete transcript records.
-
-## Structured transcript extractor
-
-The structured extractor lives only under non-production tooling:
-
-```text
-tools/ticket-transcript-exporter/export-ticket-payloads.mjs
-```
-
-Supported npm command:
-
-```text
-npm run export:ticket-transcript-payloads
-```
-
-Behavior:
-
-```text
-CM-Ticket-Transcripts/source-logs.jsonl
-  -> transcript IDs
-  -> https://tickety.top/api/ticketTranscript?id=<id>
-  -> application/vnd.msgpack
-  -> Msgpackr decode
-  -> users/messages validation
-  -> author resolution
-  -> schema-v2 transcript JSON
-  -> plain-text projection
-  -> raw Msgpack evidence
-```
-
-The structured stage does not rescan Discord and does not use the Discord bot token. It uses a local no-save `msgpackr` installation so production dependencies remain unchanged:
+Then run only a 3-record hosted smoke benchmark:
 
 ```powershell
-npm.cmd install --no-save --package-lock=false --omit=optional msgpackr@2.0.4
+npm.cmd run evaluate:groq-triage -- --data-dir ..\CM-Ticket-Transcripts --limit 3
 ```
 
-The exporter defaults to five transcripts, requires explicit `--all` for full-corpus processing, uses conservative sequential pacing, honors `Retry-After`, retries transient failures, records failures explicitly, and does not bypass private/restricted 401/403 transcripts.
+The Groq evaluator automatically paces requests using a conservative estimated token-per-minute budget and stops after the first provider HTTP 429.
 
-`--resume` skips only already-valid schema-v2 `tickety-msgpack-api` records. Old HTML-shell records are therefore replaced rather than incorrectly treated as complete.
-
-## Structured extraction workflow
-
-First validate five real structured transcripts:
+If the 3-record run has real accepted model outputs (`structuredOutputAcceptanceRate > 0` and `fallbackRate < 1`), continue with:
 
 ```powershell
-npm.cmd run export:ticket-transcript-payloads -- --output-dir ..\CM-Ticket-Transcripts --limit 5 --no-resume
+npm.cmd run evaluate:groq-triage -- --data-dir ..\CM-Ticket-Transcripts --limit 20
 ```
 
-Acceptance gate:
+Do not run a new untouched final holdout while provider/model configuration is still being selected.
 
-1. output reports real message counts rather than HTML byte-only success;
-2. generated `transcripts/<id>.json` contains populated `users` and `messages`;
-3. `text/<id>.txt` contains the actual support conversation;
-4. attachments/replies/embeds are preserved when present;
-5. failures are explicit and no credentials are written to the data repository.
+## Activation gate
 
-After that sample is accepted, bulk extraction is:
+Do not wire customer Discord support until the chosen hosted configuration demonstrates:
 
-```powershell
-npm.cmd run export:ticket-transcript-payloads -- --output-dir ..\CM-Ticket-Transcripts --all --resume
+```text
+safe-progress-or-better >= 95%
+unsafe route <= 2%
+scope leakage = 0
 ```
 
-If interrupted, rerun the same command; valid schema-v2 records are skipped.
+Also review structured-output acceptance, fallback rate, latency, clarification relevance, privacy, rate-limit behavior, and multi-turn eventual routing.
 
-## Production separation
+## Runtime data boundary
 
-No transcript tooling is imported by `src/`, emitted by the production TypeScript build, started with the bot, or connected to the Internal Integrations API/database. Generated transcript artifacts belong only in the private `CM-Ticket-Transcripts` repository.
+Production must never read `CM-Ticket-Transcripts` directly. Only the explicit allowlisted, provenance-free `support-runtime/` bundle may be used by `src/`.
 
-Normal Discord bot work can continue independently from the transcript corpus acquisition workstream.
+Raw transcripts, source transcript IDs, evidence prose, fact provenance, private evaluation artifacts, customer PII, and credentials remain outside production runtime.
 
-## Canonical support KB handoff
+## Current production behavior remains unchanged
 
-Use `npm.cmd run build:canonical-support-kb -- --data-dir <private-data-repo>`, followed by the two canonical validators and the retrieval evaluator. These commands operate only on the supplied private data repository. They are not imported by `src/`, do not call live APIs, and do not authorize production integration.
+The feature branch does not change deployed command behavior. Existing production surfaces remain:
 
-For remediation evaluation, run the evaluator separately with `--dataset historical-holdout --method lexical`, `--dataset historical-holdout --method hybrid`, and `--dataset adversarial-behavior --method hybrid`. Do not combine historical and synthetic metrics. Current status is partial because historical directional retrieval targets are not yet met.
+- `cm aura`;
+- `/refresh-leaderboard`;
+- private `/cm user`;
+- private `/cm order`;
+- refund/Aura/wallet mutation controls;
+- customer-safe Share to Chat.
+
+No bot startup, command registration, deployment, or customer-facing AI activation is part of the provider setup/benchmark stage.
