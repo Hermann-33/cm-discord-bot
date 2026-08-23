@@ -1,7 +1,6 @@
 import type { OpenRouterConfig } from "../config/env";
 import { sanitizeTriagePlannerPayload } from "./privacy";
 import {
-  TRIAGE_DECISION_JSON_SCHEMA,
   chooseSupportTriageFallback,
   triageDecisionSchema,
   validateSupportTriageDecision,
@@ -17,7 +16,7 @@ const SYSTEM_PROMPT = [
   "Use only case, clarification, lookup, policy, family, and entity IDs present in the payload.",
   "Prefer current-data lookup when the answer depends on live order, payment, fulfillment, wallet, Aura, stock, or status state.",
   "Do not autonomously answer restricted support topics.",
-  "Return only the JSON object required by the response schema."
+  "Return exactly one JSON object matching the required triage fields. Do not add markdown or prose outside the JSON object."
 ].join(" ");
 
 export type OpenRouterTriageResult = {
@@ -78,12 +77,7 @@ export class OpenRouterTriageClient {
           max_tokens: this.config.maxTokens,
           stream: false,
           response_format: {
-            type: "json_schema",
-            json_schema: {
-              name: "cm_support_triage",
-              strict: true,
-              schema: TRIAGE_DECISION_JSON_SCHEMA
-            }
+            type: "json_object"
           },
           provider: {
             require_parameters: true,
