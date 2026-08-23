@@ -65,13 +65,14 @@ test('Groq provider sanitizes every hosted planner payload', async () => {
   });
   await provider({
     ...input,
-    customerText: 'email user@example.com password=hunter2 CM-PRIVATE-1234',
+    customerText: 'email user@example.com password=hunter2 CM-PRIVATE-1234 gsk_secretsecretsecretsecret',
     state: { ...input.state, dynamicLookupResults: { orderId: '550e8400-e29b-41d4-a716-446655440000' } }
   });
   const outbound = JSON.stringify(body.messages);
   assert.equal(outbound.includes('user@example.com'), false);
   assert.equal(outbound.includes('hunter2'), false);
   assert.equal(outbound.includes('CM-PRIVATE-1234'), false);
+  assert.equal(outbound.includes('gsk_secretsecretsecretsecret'), false);
   assert.equal(outbound.includes('550e8400-e29b-41d4-a716-446655440000'), false);
   assert.equal(outbound.includes('account_model.nfa'), true);
 });
