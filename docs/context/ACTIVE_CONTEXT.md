@@ -1,155 +1,135 @@
 # Active Context
 
-Updated: 2026-08-23
+Updated: 2026-08-24
 
-## Mainline baseline
+## Production baseline
 
-Current remote `master` observed while starting the AI support integration:
+The deployed/mainline bot remains a standalone Node.js/TypeScript Discord service with no direct Supabase/Postgres client, credential, RPC fallback, or database mutation path.
 
-```text
-c8847611edbd4b8a43a6f8011bae9f069377b0d8
-```
-
-TASK-CM-ADMIN-007 is merged. Canonical support KB and planner benchmark tooling continue on feature branches; customer-facing AI support is not enabled.
-
-## AI support integration feature state
-
-Branch `task/ai-support-integration` prepares the ADR-0012 boundary:
-
-- optional OpenRouter planner, disabled without `OPENROUTER_API_KEY`;
-- pinned default `google/gemma-4-26b-a4b-it:free`;
-- compact planner payload privacy sanitization and deterministic output validation;
-- safe no-retry fallback for timeout, quota/rate limit, 5xx, provider and malformed-output failure;
-- stateful support-service interfaces with pending-question answer consumption;
-- an operator-controlled allowlist importer from private `runtime-kb/` to public bundled `support-runtime/`;
-- no raw transcripts, evidence/provenance fields, transcript/fact IDs, customer PII, routing exemplars, or private manifests in the public pack;
-- no runtime path/dependency on the private transcript repository;
-- no Discord `MessageCreate` support wiring.
-
-The next gate is a controlled 20-record OpenRouter smoke benchmark using the already-consumed development input set after the operator manually supplies the API key. No hosted request is part of repository setup/verification.
-
-Local Node `v24.11.1` repository verification passed on 2026-08-23: `npm.cmd ci` reported 0 vulnerabilities, all 261 tests passed, typecheck/build passed, and `git diff --check` passed.
-
-## Current mainline production behavior
+Current production command behavior remains unchanged by the AI-support work:
 
 - customer `cm aura` message command;
 - `/refresh-leaderboard`;
 - private `/cm user` by exact email or linked Discord user;
-- direct `/cm order` by public reference or order UUID;
-- compact user/order/delivery navigation;
+- private `/cm order` by public reference/order/purchase identifier;
 - canonical refund preview/confirm/re-preview/execute;
-- confirmed Aura adjustment;
-- confirmed wallet adjustment;
-- Share to Chat customer-safe copies;
-- Discord timestamps;
-- concise Components V2 mutation audit.
+- confirmed Aura and wallet adjustments;
+- customer-safe Share to Chat copies.
 
-The bot remains a standalone Node.js/TypeScript process with no direct Supabase/Postgres client, credential, RPC fallback or database mutation path.
+The bot website operation set remains explicitly allowlisted and does not include `purchase-intents.process` or manual fulfillment.
 
-## TASK-CM-ADMIN-007 feature state
+## AI support integration branch
 
-ADR-0011 defines the pending-purchase and fulfillment-support boundary.
-
-### Pending `/cm order` lookup
-
-The feature branch fixes valid pending checkout references by using:
+Current feature branch:
 
 ```text
-/cm order
-  -> orders.details.read
-  -> only on stable NOT_FOUND: purchase-intents.lookup.read
-  -> exact users.overview.read(user_id) owner equality
-  -> private Pending Purchase panel
-  -> Refresh Purchase
-  -> canonical Order panel once orderId/order becomes available
+task/ai-support-integration
 ```
 
-The fallback is intentionally **NOT_FOUND-only**. Authentication, operation-permission, validation, rate-limit and service errors are not hidden behind a second lookup.
+Customer-facing AI support is not enabled. Discord message entrypoints are intentionally unwired until the hosted planner passes the benchmark gate.
 
-Pending purchase state is read-only. Before a canonical order exists it exposes no Refund, Delivery Details, purchase-processing or manual-fulfillment control.
-
-### Canonical order support details
-
-The feature branch consumes the website's optional `orders.fulfillment.read.support` extension:
-
-- human-readable product/account type;
-- finite duration when known;
-- at most 10 stored masked license/account materials;
-- canonical manual-required state.
-
-Private Order Operations may also show useful fulfillment provider context. Raw/decrypted fulfillment secrets are not accepted by the strict DTO.
-
-Support enrichment is best-effort for the order panel. If support cannot be fetched, the canonical order remains usable. Missing support/masked material is not interpreted as manual fulfillment.
-
-### Share to Chat
-
-ADR-0008 + ADR-0009 remain authoritative, extended by ADR-0011.
-
-The new Pending Purchase public copy is separately rendered and buttonless. It can include canonical customer email, linked Discord identity, public purchase reference, safe item/variant/game, amount, payment method, status and dates.
-
-It omits:
-
-- purchase-intent UUID;
-- CM user UUID;
-- internal option IDs;
-- payment provider/provider status;
-- admin/operator internals;
-- credentials;
-- interactive controls.
-
-Masked fulfillment support material and provider internals remain **private staff data** and are never copied by Share to Chat.
-
-## Authorization / mutation invariants
-
-ADR-0006 remains authoritative for `/cm`: exact configured guild, non-empty explicit `BOT_ADMIN_USER_IDS`, invoking user allowlisted, per-interaction reauthorization and operator-owned sessions. `/refresh-leaderboard` retains its separate channel/permission policy.
-
-Aura/wallet retain ADR-0007 fresh-overview -> private confirmation -> fresh relevant-balance equality -> website execute -> audit. Refund retains canonical preview -> confirmation -> fresh exact re-preview -> execute.
-
-No manual fulfillment exists. `purchase-intents.process` is forbidden to the bot. No website, Supabase, environment or command-registration boundary is changed by TASK-CM-ADMIN-007.
-
-## Bot API surface on TASK-CM-ADMIN-007
+ADR-0012 remains authoritative for the production data/state boundary:
 
 ```text
-aura.leaderboards.read
-aura.lookup.read
-users.overview.read
-orders.details.read
-orders.fulfillment.read
-purchase-intents.lookup.read
-orders.refund.preview
-orders.refund.execute
-users.aura.adjust
-users.wallet.adjust
+private transcript corpus
+  -> operator-controlled sanitized allowlist importer
+  -> public support-runtime/ bundle
+  -> deterministic resolver/state/action layer
+  -> hosted semantic next-action planner
+  -> deterministic validator
+  -> clarification / lookup / policy / case / escalation
 ```
 
-Deployment must explicitly add `purchase-intents.lookup.read` to the bot website integration client's `allowedOperations`; endpoint existence is not permission.
+Production startup never reads the private `CM-Ticket-Transcripts` repository.
 
-## Parallel side project — CM Ticket Transcript Corpus
+## Primary hosted planner candidate
 
-ADR-0010 and `SIDE_PROJECTS.md` remain unchanged by TASK-CM-ADMIN-007.
+ADR-0013 changes the preferred hosted provider from OpenRouter to Groq while preserving all ADR-0012 safety boundaries.
 
 ```text
-Hermann-33/CM-Ticket-Transcripts
+Provider: Groq
+Model: openai/gpt-oss-120b
+Endpoint: https://api.groq.com/openai/v1/chat/completions
 ```
 
-The repository is private/data-only; exporter code stays under this bot repo's `tools/ticket-transcript-exporter/`; no production bot dependency exists. Main bot engineering and transcript acquisition remain independent.
-
-## Verification evidence
-
-TASK-CM-ADMIN-007 source implementation head:
+Default request configuration:
 
 ```text
-8e1c1ff839fdf171403219f0b881c82395d17007
+temperature: 0
+reasoning_effort: low
+max_completion_tokens: 400
+stream: false
+response_format: strict JSON schema
 ```
 
-GitHub Actions run `32254272306` verified the PR merge-ref against concurrent master `087e2d431ff3ddb74e034b9d736c64f1b914abc9` on Node `22.23.2`:
+The model has no model-side tools, browser search, code execution, MCP, database access, direct website access, or executable support operation authority.
+
+OpenRouter remains implemented only as an explicit secondary development adapter.
+
+## Hosted-planner safety boundary
+
+Before any hosted request, customer text and live/session context are sanitized to remove common identifiers, credentials, secrets, order references, URLs, and other unnecessary sensitive values while preserving canonical support IDs.
+
+Every model output is checked deterministically. The bot rejects:
+
+- invented case/clarification/lookup/policy/entity IDs;
+- scope-conflicting cases;
+- restricted autonomous answers;
+- direct cases below the configured confidence threshold;
+- repeated clarifications;
+- clarifications already answered by known/live context;
+- malformed or schema-invalid outputs.
+
+Provider failures fail closed to the canonical state continuation / clarification / human escalation path. Provider clients do not automatically retry.
+
+## Stateful conversation support
+
+The support-service scaffold preserves:
+
+- resolved entities;
+- candidate cases/families;
+- known and unknown context;
+- pending clarification;
+- questions and answers;
+- diagnostics/procedures/outcomes;
+- dynamic lookup results;
+- policy state;
+- multiple intents.
+
+Short replies are interpreted relative to a pending question before a new route is considered.
+
+## Groq benchmark harness
+
+The hosted benchmark remains restricted to the already-consumed development input file. New/final holdouts cannot be substituted during provider/model selection.
+
+The Groq benchmark:
+
+- uses the same compact sanitized planner payload and deterministic validator as production;
+- defaults to a conservative estimated 6,500-token-per-minute pacing budget;
+- reserves the full completion allowance when pacing;
+- stops after the first HTTP 429 instead of repeatedly consuming failed requests;
+- reports accepted structured output, optimal/safe-progress/safe-no-progress/unsafe classifications, fallback rate, scope leakage, and latency.
+
+Exact next smoke test after the operator adds `GROQ_API_KEY`:
+
+```powershell
+npm.cmd run evaluate:groq-triage -- --data-dir ..\CM-Ticket-Transcripts --limit 3
+```
+
+If genuine model outputs are accepted, continue with a paced 20-record run.
+
+## Activation gate
+
+Customer-facing support remains blocked until the selected provider/model configuration demonstrates:
 
 ```text
-npm ci: PASS — 0 vulnerabilities
-npm test: PASS — 153/153
-npm run typecheck: PASS
-npm run build: PASS
-git diff --check: PASS
+safe-progress-or-better >= 95%
+unsafe route <= 2%
+scope leakage = 0
 ```
 
-No slash-command JSON changed, so TASK-CM-ADMIN-007 does not require Discord command re-registration after merge. Normal deployment/restart and the website client permission update remain operational rollout requirements.
+Structured-output acceptance, fallback rate, latency, clarification relevance, privacy, provider reliability, and multi-turn eventual routing must also be reviewed before Discord activation.
+
+## Private transcript repository
+
+`Hermann-33/CM-Ticket-Transcripts` remains private and data/specification-only. Canonical knowledge, historical evidence, evaluation artifacts, and provenance stay there. Only the explicitly sanitized runtime derivative may be promoted to the public bot repository.
