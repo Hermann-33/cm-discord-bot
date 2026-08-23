@@ -69,7 +69,7 @@ function decision(overrides: Record<string, unknown> = {}) {
   };
 }
 
-test("sends pinned Gemma request with strict structured output and sanitized customer text", async () => {
+test("sends pinned Gemma request with JSON output mode and sanitized customer text", async () => {
   let capturedUrl = "";
   let capturedInit: RequestInit | undefined;
   const fetchImpl: typeof fetch = async (input, init) => {
@@ -98,8 +98,8 @@ test("sends pinned Gemma request with strict structured output and sanitized cus
   assert.equal(body.model, "google/gemma-4-26b-a4b-it:free");
   assert.equal(body.temperature, 0);
   assert.equal(body.max_tokens, 400);
-  assert.equal(body.response_format.type, "json_schema");
-  assert.equal(body.response_format.json_schema.strict, true);
+  assert.equal(body.response_format.type, "json_object");
+  assert.equal(Object.hasOwn(body.response_format, "json_schema"), false);
   assert.equal(body.provider.require_parameters, true);
   assert.equal(body.provider.data_collection, "allow");
   assert.equal(JSON.stringify(body).includes("user@example.com"), false);
