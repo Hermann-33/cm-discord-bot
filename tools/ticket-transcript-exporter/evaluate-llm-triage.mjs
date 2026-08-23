@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -5,7 +6,7 @@ import { performance } from 'node:perf_hooks';
 import { classifyConversationalSafety } from './audit-conversational-safety.mjs';
 import { runLlmTriage } from './llm-triage-contract.mjs';
 import { createLocalOpenAiCompatibleTriageProvider } from './llm-triage-provider.mjs';
-import { createOpenRouterTriageProvider, DEFAULT_OPENROUTER_TRIAGE_MODEL } from './openrouter-triage-provider.mjs';
+import { createOpenRouterTriageProvider } from './openrouter-triage-provider.mjs';
 
 const readJsonl = async (file) => (await readFile(file, 'utf8')).split(/\r?\n/u).filter(Boolean).map((line) => JSON.parse(line));
 const safeName = (value) => String(value).replace(/[^a-z0-9._-]+/giu, '-').replace(/^-+|-+$/gu, '').toLowerCase() || 'model';
@@ -98,12 +99,12 @@ export async function evaluateLlmTriageRows(rows, {
     records: results.length,
     structuredOutputAcceptanceRate: results.filter((row) => row.accepted).length / total,
     exactOptimalActionRate: results.filter((row) => row.exactOptimalAction).length / total,
-    fallbackRate: results.filter((row) => !row.accepted).length / total,
     counts,
     safeProgressOrBetterRate: (counts.optimal + counts.safe_progress) / total,
     unsafeRate: (counts.unsafe_wrong_route + counts.unsafe_scope_leakage + counts.invalid) / total,
     safeNoProgressRate: counts.safe_no_progress / total,
     semanticReviewQueue: results.filter((row) => row.requiresSemanticReview).length,
+    fallbackRate: results.filter((row) => !row.accepted).length / total,
     latencyMs: {
       average: latencies.length ? latencies.reduce((sum, value) => sum + value, 0) / latencies.length : 0,
       median: percentile(latencies, 0.5),
@@ -118,25 +119,29 @@ export async function evaluateLlmTriageRows(rows, {
   return { summary, results };
 }
 
-async function writeEvaluation({ dataDir, inputFile, model, providerName, evaluated, metadata = {} }) {
+async function evaluateProvider({ dataDir, inputFile, model, limit, timeoutMs, directCaseConfidence, provider, providerMeta }) {
   const auditDir = path.join(dataDir, 'knowledge-canonical', 'Audit');
-  const stem = `llm-triage-${providerName}-${safeName(model)}`;
+  let rows = await readJsonl(path.join(auditDir, inputFile));
+  if (Number.isInteger(limit) && limit > 0) rows = rows.slice(0, limit);
+  const evaluated = await evaluateLlmTriageRows(rows, {
+    provider,
+    model,
+    directCaseConfidence,
+    onProgress: ({ index, total }) => {
+      if (index === 1 || index === total || index % 25 === 0) process.stderr.write(`triage ${index}/${total}\n`);
+    }
+  });
+  const stem = `llm-triage-${safeName(model)}`;
   const output = {
     ...evaluated.summary,
-    provider: providerName,
     inputFile,
-    ...metadata
+    timeoutMs,
+    directCaseConfidence,
+    ...providerMeta
   };
   await writeFile(path.join(auditDir, `${stem}-summary.json`), `${JSON.stringify(output, null, 2)}\n`, 'utf8');
   await writeFile(path.join(auditDir, `${stem}-results.jsonl`), `${evaluated.results.map((row) => JSON.stringify(row)).join('\n')}\n`, 'utf8');
   return output;
-}
-
-async function loadRows(dataDir, inputFile, limit) {
-  const auditDir = path.join(dataDir, 'knowledge-canonical', 'Audit');
-  let rows = await readJsonl(path.join(auditDir, inputFile));
-  if (Number.isInteger(limit) && limit > 0) rows = rows.slice(0, limit);
-  return rows;
 }
 
 export async function evaluateLocalLlmTriage({
@@ -149,57 +154,40 @@ export async function evaluateLocalLlmTriage({
   useJsonSchema = true,
   directCaseConfidence = 0.8
 }) {
-  const rows = await loadRows(dataDir, inputFile, limit);
   const provider = createLocalOpenAiCompatibleTriageProvider({ baseUrl, model, timeoutMs, useJsonSchema });
-  const evaluated = await evaluateLlmTriageRows(rows, {
-    provider,
-    model,
-    directCaseConfidence,
-    onProgress: ({ index, total }) => {
-      if (index === 1 || index === total || index % 25 === 0) process.stderr.write(`triage ${index}/${total}\n`);
-    }
-  });
-  return writeEvaluation({
+  return evaluateProvider({
     dataDir,
     inputFile,
     model,
-    providerName: 'local',
-    evaluated,
-    metadata: { baseUrl, useJsonSchema, directCaseConfidence }
+    limit,
+    timeoutMs,
+    directCaseConfidence,
+    provider,
+    providerMeta: { provider: 'local', baseUrl, useJsonSchema }
   });
 }
 
 export async function evaluateOpenRouterLlmTriage({
   dataDir,
   inputFile = 'llm-triage-development-inputs.jsonl',
-  model = DEFAULT_OPENROUTER_TRIAGE_MODEL,
+  model,
   apiKey,
   limit = null,
   timeoutMs = 30_000,
+  directCaseConfidence = 0.8,
   dataCollection = 'allow',
-  maxTokens = 400,
-  directCaseConfidence = 0.8
+  maxTokens = 400
 }) {
-  if (inputFile !== 'llm-triage-development-inputs.jsonl') {
-    throw new Error('OpenRouter evaluation is restricted to the consumed development input set');
-  }
-  const rows = await loadRows(dataDir, inputFile, limit);
   const provider = createOpenRouterTriageProvider({ apiKey, model, timeoutMs, dataCollection, maxTokens });
-  const evaluated = await evaluateLlmTriageRows(rows, {
-    provider,
-    model,
-    directCaseConfidence,
-    onProgress: ({ index, total }) => {
-      if (index === 1 || index === total || index % 10 === 0) process.stderr.write(`openrouter triage ${index}/${total}\n`);
-    }
-  });
-  return writeEvaluation({
+  return evaluateProvider({
     dataDir,
     inputFile,
     model,
-    providerName: 'openrouter',
-    evaluated,
-    metadata: { dataCollection, maxTokens, directCaseConfidence }
+    limit,
+    timeoutMs,
+    directCaseConfidence,
+    provider,
+    providerMeta: { provider: 'openrouter', dataCollection, maxTokens }
   });
 }
 
@@ -210,8 +198,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     return index >= 0 ? args[index + 1] : fallback;
   };
   const dataDir = get('--data-dir');
+  const model = get('--model');
   const providerName = get('--provider', 'local');
-  const model = get('--model', providerName === 'openrouter' ? DEFAULT_OPENROUTER_TRIAGE_MODEL : null);
   if (!dataDir || !model) throw new Error('Usage: node evaluate-llm-triage.mjs --data-dir <private-data-dir> --provider <local|openrouter> --model <model> [--limit N]');
   const limitRaw = get('--limit');
   const timeoutRaw = get('--timeout-ms');
