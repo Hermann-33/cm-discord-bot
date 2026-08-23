@@ -98,29 +98,52 @@ The support-service scaffold preserves:
 
 Short replies are interpreted relative to a pending question before a new route is considered.
 
-## Groq benchmark harness
+## Groq benchmark state
 
-The hosted benchmark remains restricted to the already-consumed development input file. New/final holdouts cannot be substituted during provider/model selection.
+Groq authentication and strict structured output are working. A 20-record run produced 20/20 accepted outputs with zero fallback and zero scope leakage, but its headline semantic rates were not valid planner-quality estimates because several reviewed gold actions were impossible to express from the deterministic candidate input supplied to the model.
 
-The Groq benchmark:
+Concrete examples included:
 
-- uses the same compact sanitized planner payload and deterministic validator as production;
-- defaults to a conservative estimated 6,500-token-per-minute pacing budget;
-- reserves the full completion allowance when pacing;
-- stops after the first HTTP 429 instead of repeatedly consuming failed requests;
-- reports accepted structured output, optimal/safe-progress/safe-no-progress/unsafe classifications, fallback rate, scope leakage, and latency.
+- `hwid reset plssss`: reviewed gold expected `case.spoofer.hwid_state`, but no candidate case was supplied;
+- `where is the config file?`: reviewed gold expected `case.product.requirements`, but no candidate case was supplied;
+- `my rust nfa account doesnt work` and `i got a nfa account and it dont work`: reviewed gold claimed current catalog-status lookup while the planner input was scoped to NFA/account support;
+- a reseller-offer message was reviewed as a technical-failure clarification while the deterministic input correctly exposed a reseller/partnership case.
 
-Exact next smoke test after the operator adds `GROQ_API_KEY`:
+Therefore the previous 70% safe-progress / 5% unsafe 20-record summary must not be treated as a clean GPT-OSS quality score.
 
-```powershell
-npm.cmd run evaluate:groq-triage -- --data-dir ..\CM-Ticket-Transcripts --limit 3
+The benchmark builder now separates planner-quality evaluation from deterministic candidate/gold disagreement:
+
+```text
+historical-first-turn-action-v3.jsonl reviewed rows
+  -> build planner input
+  -> assess whether reviewed gold is expressible from allowed IDs/families
+  -> eligible rows: llm-triage-development-inputs.jsonl
+  -> unrepresentable rows: llm-triage-development-inputs-review-queue.jsonl
 ```
 
-If genuine model outputs are accepted, continue with a paced 20-record run.
+The summary reports representability rate and reason counts. Hosted Groq/OpenRouter evaluation fails closed unless every row in the hosted development file has independent V3 review metadata and explicit positive representability.
+
+This prevents the LLM from being penalized for an action/case/clarification it was never allowed to choose while preserving candidate-generation failures for separate remediation.
+
+Current next step:
+
+```powershell
+git pull --ff-only origin task/ai-support-integration
+npm.cmd test
+npm.cmd run typecheck
+npm.cmd run build
+git diff --check
+npm.cmd run build:llm-triage-benchmark -- --data-dir ..\CM-Ticket-Transcripts
+```
+
+Review the generated representability summary/review queue before spending more Groq requests. Do not rerun the 20-record hosted benchmark until that preflight is understood.
 
 ## Activation gate
 
-Customer-facing support remains blocked until the selected provider/model configuration demonstrates:
+Customer-facing support remains blocked until both layers pass:
+
+1. deterministic candidate/gold representability is high enough that the planner is normally offered the correct action space;
+2. on representable independently reviewed rows, the selected provider/model demonstrates:
 
 ```text
 safe-progress-or-better >= 95%
