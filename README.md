@@ -86,7 +86,8 @@ Production source now includes a constrained OpenRouter triage client under `src
 Every hosted triage call uses:
 
 - `POST https://openrouter.ai/api/v1/chat/completions`;
-- strict JSON-schema structured output;
+- OpenRouter JSON output mode (`response_format.type = json_object`) compatible with the selected free Gemma endpoint;
+- strict local schema and deterministic safety validation after JSON parsing;
 - `provider.require_parameters: true`;
 - `temperature: 0`;
 - a bounded 400-token completion budget;
