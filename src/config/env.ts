@@ -3,8 +3,9 @@ import { z } from "zod";
 const idPattern = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 const snowflakePattern = /^\d{5,32}$/;
 const standardBase64Pattern = /^[A-Za-z0-9+/]+={0,2}$/;
-const openRouterModelPattern = /^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/i;
+const hostedModelPattern = /^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/i;
 const OPENROUTER_DEFAULT_MODEL = "google/gemma-4-26b-a4b-it:free";
+const GROQ_DEFAULT_MODEL = "openai/gpt-oss-120b";
 
 const trimmedRequiredString = z.string().transform((value) => value.trim()).pipe(z.string().min(1));
 const snowflake = trimmedRequiredString.pipe(z.string().regex(snowflakePattern));
@@ -30,11 +31,29 @@ const optionalOpenRouterApiKey = z.preprocess((value) => {
   return trimmed.length === 0 ? undefined : trimmed;
 }, z.string().min(20).max(512).regex(/^sk-or-/).optional());
 
+const optionalGroqApiKey = z.preprocess((value) => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length === 0 ? undefined : trimmed;
+}, z.string().min(20).max(512).regex(/^gsk_/).optional());
+
 const openRouterModel = z.preprocess((value) => {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   return trimmed.length === 0 ? undefined : trimmed;
-}, z.string().regex(openRouterModelPattern).default(OPENROUTER_DEFAULT_MODEL));
+}, z.string().regex(hostedModelPattern).default(OPENROUTER_DEFAULT_MODEL));
+
+const groqModel = z.preprocess((value) => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length === 0 ? undefined : trimmed;
+}, z.string().regex(hostedModelPattern).default(GROQ_DEFAULT_MODEL));
+
+const groqReasoningEffort = z.preprocess((value) => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim().toLowerCase();
+  return trimmed.length === 0 ? undefined : trimmed;
+}, z.enum(["low", "medium", "high"]).default("low"));
 
 const openRouterDataCollection = z.preprocess((value) => {
   if (typeof value !== "string") return undefined;
@@ -84,6 +103,9 @@ const envSchema = z.object({
   CM_INTERNAL_INTEGRATIONS_API_KEY_ID: integrationId,
   CM_INTERNAL_INTEGRATIONS_API_HMAC_SECRET_BASE64: z.string().refine(isCanonicalSecret),
   CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS: timeoutSchema,
+  GROQ_API_KEY: optionalGroqApiKey,
+  GROQ_MODEL: groqModel,
+  GROQ_REASONING_EFFORT: groqReasoningEffort,
   OPENROUTER_API_KEY: optionalOpenRouterApiKey,
   OPENROUTER_MODEL: openRouterModel,
   OPENROUTER_DATA_COLLECTION: openRouterDataCollection
@@ -95,6 +117,15 @@ export type InternalApiConfig = {
   keyId: string;
   hmacSecret: Buffer;
   timeoutMs: number;
+};
+
+export type GroqConfig = {
+  origin: "https://api.groq.com";
+  apiKey: string;
+  model: string;
+  reasoningEffort: "low" | "medium" | "high";
+  timeoutMs: number;
+  maxCompletionTokens: number;
 };
 
 export type OpenRouterConfig = {
@@ -117,6 +148,7 @@ export type AppConfig = {
   botAdminUserIds: readonly string[];
   botAuditLogChannelId?: string;
   internalApi: InternalApiConfig;
+  groq?: GroqConfig;
   openRouter?: OpenRouterConfig;
 };
 
@@ -150,6 +182,16 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
       ),
       timeoutMs: parsed.data.CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS
     },
+    groq: parsed.data.GROQ_API_KEY
+      ? {
+          origin: "https://api.groq.com",
+          apiKey: parsed.data.GROQ_API_KEY,
+          model: parsed.data.GROQ_MODEL,
+          reasoningEffort: parsed.data.GROQ_REASONING_EFFORT,
+          timeoutMs: 20_000,
+          maxCompletionTokens: 400
+        }
+      : undefined,
     openRouter: parsed.data.OPENROUTER_API_KEY
       ? {
           origin: "https://openrouter.ai",
