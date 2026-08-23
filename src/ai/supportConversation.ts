@@ -1,4 +1,3 @@
-import type { OpenRouterTriageResult } from "./openRouterClient";
 import type { SupportRuntimePack } from "./runtimePack";
 import type { SupportTriageDecision, SupportTriageInput } from "./supportTriage";
 
@@ -86,8 +85,17 @@ export interface DeterministicSupportResolver {
   }): Promise<SupportTurnContext> | SupportTurnContext;
 }
 
+export type SupportTriagePlannerResult = {
+  accepted: boolean;
+  decision: SupportTriageDecision;
+  validationErrors: readonly string[];
+  fallbackUsed: boolean;
+  model: string;
+  requestId?: string;
+};
+
 export interface SupportTriagePlanner {
-  triage(input: SupportTriageInput): Promise<OpenRouterTriageResult>;
+  triage(input: SupportTriageInput): Promise<SupportTriagePlannerResult>;
 }
 
 export type GroundedSupportAction = {
@@ -116,7 +124,7 @@ export class SupportConversationService {
   async prepareTurn(customerText: string, inputState: SupportConversationState): Promise<{
     state: SupportConversationState;
     action: GroundedSupportAction;
-    planner: OpenRouterTriageResult;
+    planner: SupportTriagePlannerResult;
   }> {
     const pending = applyPendingClarificationAnswer(inputState, customerText);
     const context = await this.resolver.resolve({
