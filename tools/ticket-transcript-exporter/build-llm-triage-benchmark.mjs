@@ -5,6 +5,8 @@ import { buildLlmTriageInput } from './llm-triage-contract.mjs';
 import { reviewFirstTurnObservability } from './first-turn-action-router.mjs';
 import { estimatePlannerTokens } from './llm-triage-prompt.mjs';
 
+const DEFAULT_DEVELOPMENT_DATASET = 'historical-first-turn-action-v3.jsonl';
+const INDEPENDENT_LABEL_METHOD = 'independent_semantic_review_first_turn_decision';
 const readJson = async (file) => JSON.parse(await readFile(file, 'utf8'));
 const readJsonl = async (file) => (await readFile(file, 'utf8')).split(/\r?\n/u).filter(Boolean).map((line) => JSON.parse(line));
 const unique = (values) => [...new Set((values ?? []).filter(Boolean))];
@@ -50,11 +52,12 @@ function goldView(record) {
   };
 }
 
-export async function buildLlmTriageBenchmark(dataDir, { dataset = 'first-turn-action-reviewed-v1-v2.jsonl', output = 'llm-triage-development-inputs.jsonl', maxCases = 8 } = {}) {
+export async function buildLlmTriageBenchmark(dataDir, { dataset = DEFAULT_DEVELOPMENT_DATASET, output = 'llm-triage-development-inputs.jsonl', maxCases = 8 } = {}) {
   const evaluationDir = path.join(dataDir, 'knowledge-canonical', 'Evaluation');
   const auditDir = path.join(dataDir, 'knowledge-canonical', 'Audit');
   const runtimeDir = path.join(dataDir, 'runtime-kb');
-  const records = (await readJsonl(path.join(evaluationDir, dataset))).filter((row) => row.goldStatus === 'reviewed');
+  const allRecords = await readJsonl(path.join(evaluationDir, dataset));
+  const records = allRecords.filter((row) => row.goldStatus === 'reviewed');
   const cases = await readJsonl(path.join(runtimeDir, 'cases.jsonl'));
   const clarificationsFile = await readJson(path.join(runtimeDir, 'clarifications.json'));
   const clarifications = clarificationsFile.clarifications ?? clarificationsFile;
@@ -88,6 +91,8 @@ export async function buildLlmTriageBenchmark(dataDir, { dataset = 'first-turn-a
     return {
       id: record.id,
       sourceTranscriptIds: record.sourceTranscriptIds,
+      goldLabelMethod: record.labelMethod ?? null,
+      goldReviewReason: record.reviewReason ?? record.decisionReason ?? null,
       input,
       gold: goldView(record),
       baseline: {
@@ -102,10 +107,14 @@ export async function buildLlmTriageBenchmark(dataDir, { dataset = 'first-turn-a
 
   const tokenValues = rows.map((row) => row.plannerTokenEstimate).sort((a, b) => a - b);
   const percentile = (p) => tokenValues.length ? tokenValues[Math.min(tokenValues.length - 1, Math.ceil(tokenValues.length * p) - 1)] : 0;
+  const independentReviewed = rows.filter((row) => row.goldLabelMethod === INDEPENDENT_LABEL_METHOD).length;
   const summary = {
     schemaVersion: 1,
     dataset,
+    sourceRecords: allRecords.length,
     records: rows.length,
+    independentReviewed,
+    independentReviewRate: rows.length ? independentReviewed / rows.length : 0,
     maxCases,
     plannerTokens: {
       average: tokenValues.length ? tokenValues.reduce((sum, value) => sum + value, 0) / tokenValues.length : 0,
