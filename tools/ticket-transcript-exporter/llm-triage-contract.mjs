@@ -79,14 +79,17 @@ export function buildLlmTriageInput({
   const cases = candidateCases.slice(0, maxCases).map(compactCase);
   const familyIds = unique([...candidateFamilies, ...cases.map((item) => item.family)]);
   const candidateCaseIds = new Set(cases.map((item) => item.id));
+  const hasScopedCandidates = candidateCaseIds.size > 0 || familyIds.length > 0;
   const clarificationRows = clarifications
     .filter((item) => {
       const caseHit = (item.distinguishesCases ?? []).some((id) => candidateCaseIds.has(id));
       const familyHit = (item.distinguishesFamilies ?? []).some((id) => familyIds.includes(id));
-      return caseHit || familyHit || item.id === 'clarify.support_surface';
+      const genericFallback = item.id === 'clarify.support_surface' && !hasScopedCandidates;
+      return caseHit || familyHit || genericFallback;
     })
     .filter((item) => !(state.questionsAsked ?? []).includes(item.id))
     .filter((item) => !clarificationAlreadyKnown(state, item))
+    .sort((a, b) => Number(a.id === 'clarify.support_surface') - Number(b.id === 'clarify.support_surface'))
     .slice(0, maxClarifications)
     .map(compactClarification);
 
