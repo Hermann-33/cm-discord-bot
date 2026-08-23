@@ -33,6 +33,12 @@ function assertIndependentDevelopmentRows(rows) {
       `Hosted evaluation requires independently reviewed V3 development inputs; ${invalid.length}/${rows.length} rows are stale or non-independent. Rebuild with npm.cmd run build:llm-triage-benchmark -- --data-dir <private-data-dir>`
     );
   }
+  const unrepresentable = rows.filter((row) => row.benchmarkEligibility?.eligible !== true);
+  if (unrepresentable.length > 0) {
+    throw new Error(
+      `Hosted evaluation requires planner-representable gold; ${unrepresentable.length}/${rows.length} rows are missing benchmark eligibility or cannot express their gold action. Rebuild with npm.cmd run build:llm-triage-benchmark -- --data-dir <private-data-dir>`
+    );
+  }
 }
 
 export function triageOutputToPrediction(output) {
