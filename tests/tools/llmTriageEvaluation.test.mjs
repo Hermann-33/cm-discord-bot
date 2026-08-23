@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { evaluateLlmTriageRows, evaluateOpenRouterLlmTriage, triageOutputToPrediction } from '../../tools/ticket-transcript-exporter/evaluate-llm-triage.mjs';
+import { evaluateGroqLlmTriage, evaluateLlmTriageRows, evaluateOpenRouterLlmTriage, triageOutputToPrediction } from '../../tools/ticket-transcript-exporter/evaluate-llm-triage.mjs';
 
 const input = {
   state: { resolvedEntities: [], questionsAsked: [], activeCaseId: null },
@@ -20,6 +20,24 @@ const input = {
 };
 
 const observations = { explicitEntities: [], supportSurface: 'loader', knownFacts: [], missingFacts: ['failure_stage'] };
+const gold = {
+  action: 'ask_clarification',
+  inferability: 'family_only',
+  primaryDecision: 'family_scoped_clarification',
+  observableCaseIds: ['case.loader.connection'],
+  observableFamilyIds: ['technical.loader'],
+  clarificationId: 'clarify.loader.failure_stage',
+  lookupIds: [],
+  policyIds: []
+};
+
+const row = (id, plannerTokenEstimate = 100) => ({
+  id,
+  sourceTranscriptIds: [],
+  plannerTokenEstimate,
+  input,
+  gold
+});
 
 test('maps structured triage actions to conversational-safety decisions', () => {
   assert.equal(triageOutputToPrediction({ nextAction: 'answer_case', caseIds: ['case.loader.connection'] }).primaryDecision, 'direct_static_case');
@@ -28,25 +46,10 @@ test('maps structured triage actions to conversational-safety decisions', () => 
 });
 
 test('evaluates a valid LLM clarification as optimal', async () => {
-  const rows = [{
-    id: 'row.1',
-    sourceTranscriptIds: ['private-audit-only'],
-    plannerTokenEstimate: 100,
-    input,
-    gold: {
-      action: 'ask_clarification',
-      inferability: 'family_only',
-      primaryDecision: 'family_scoped_clarification',
-      observableCaseIds: ['case.loader.connection'],
-      observableFamilyIds: ['technical.loader'],
-      clarificationId: 'clarify.loader.failure_stage',
-      lookupIds: [],
-      policyIds: []
-    }
-  }];
   const provider = async () => JSON.stringify({ observations, nextAction: 'ask_clarification', caseIds: [], clarificationId: 'clarify.loader.failure_stage', dynamicLookupIds: [], policyIds: [], confidence: 0.9, reasonCode: 'insufficient_context' });
-  const result = await evaluateLlmTriageRows(rows, { provider, model: 'mock' });
+  const result = await evaluateLlmTriageRows([row('row.1')], { provider, model: 'mock' });
   assert.equal(result.summary.records, 1);
+  assert.equal(result.summary.requestedRecords, 1);
   assert.equal(result.summary.structuredOutputAcceptanceRate, 1);
   assert.equal(result.summary.exactOptimalActionRate, 1);
   assert.equal(result.summary.counts.optimal, 1);
@@ -56,23 +59,7 @@ test('evaluates a valid LLM clarification as optimal', async () => {
 });
 
 test('invalid model JSON uses canonical safe fallback and is tracked separately', async () => {
-  const rows = [{
-    id: 'row.2',
-    sourceTranscriptIds: [],
-    plannerTokenEstimate: 50,
-    input,
-    gold: {
-      action: 'ask_clarification',
-      inferability: 'family_only',
-      primaryDecision: 'family_scoped_clarification',
-      observableCaseIds: ['case.loader.connection'],
-      observableFamilyIds: ['technical.loader'],
-      clarificationId: 'clarify.loader.failure_stage',
-      lookupIds: [],
-      policyIds: []
-    }
-  }];
-  const result = await evaluateLlmTriageRows(rows, { provider: async () => '{bad json', model: 'mock' });
+  const result = await evaluateLlmTriageRows([row('row.2', 50)], { provider: async () => '{bad json', model: 'mock' });
   assert.equal(result.summary.structuredOutputAcceptanceRate, 0);
   assert.equal(result.results[0].accepted, false);
   assert.equal(result.results[0].effectiveOutput.nextAction, 'ask_clarification');
@@ -80,13 +67,38 @@ test('invalid model JSON uses canonical safe fallback and is tracked separately'
   assert.equal(result.summary.fallbackRate, 1);
 });
 
-test('hosted benchmark refuses a new holdout input file before provider creation', async () => {
+test('rate-limited hosted evaluation stops after the first 429 instead of consuming more requests', async () => {
+  let calls = 0;
+  const provider = async () => {
+    calls += 1;
+    throw new Error('Groq triage provider returned HTTP 429');
+  };
+  const result = await evaluateLlmTriageRows(
+    [row('row.1'), row('row.2'), row('row.3')],
+    { provider, model: 'mock', stopOnRateLimit: true }
+  );
+  assert.equal(calls, 1);
+  assert.equal(result.summary.records, 1);
+  assert.equal(result.summary.requestedRecords, 3);
+  assert.deepEqual(result.summary.stoppedEarly, { reason: 'provider_rate_limit', afterRecords: 1 });
+});
+
+test('hosted benchmarks refuse a new holdout input file before provider creation', async () => {
   await assert.rejects(
     evaluateOpenRouterLlmTriage({
       dataDir: '.',
       inputFile: 'new-final-holdout.jsonl',
       apiKey: 'test-api-key'
     }),
-    /consumed development input set/
+    /consumed development inputs/
+  );
+  await assert.rejects(
+    evaluateGroqLlmTriage({
+      dataDir: '.',
+      inputFile: 'new-final-holdout.jsonl',
+      model: 'openai/gpt-oss-120b',
+      apiKey: 'gsk_test_key_12345678901234567890'
+    }),
+    /consumed development inputs/
   );
 });
