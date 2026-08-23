@@ -10,6 +10,7 @@ import { createOpenRouterTriageProvider } from './openrouter-triage-provider.mjs
 import { createGroqTriageProvider } from './groq-triage-provider.mjs';
 
 const DEVELOPMENT_INPUT_FILE = 'llm-triage-development-inputs.jsonl';
+const INDEPENDENT_LABEL_METHOD = 'independent_semantic_review_first_turn_decision';
 const readJsonl = async (file) => (await readFile(file, 'utf8')).split(/\r?\n/u).filter(Boolean).map((line) => JSON.parse(line));
 const safeName = (value) => String(value).replace(/[^a-z0-9._-]+/giu, '-').replace(/^-+|-+$/gu, '').toLowerCase() || 'model';
 const unique = (values) => [...new Set((values ?? []).filter(Boolean))];
@@ -23,6 +24,15 @@ function percentile(values, p) {
 
 function providerRateLimited(errors) {
   return (errors ?? []).some((value) => /provider_error:.*HTTP 429/iu.test(String(value)));
+}
+
+function assertIndependentDevelopmentRows(rows) {
+  const invalid = rows.filter((row) => row.goldLabelMethod !== INDEPENDENT_LABEL_METHOD);
+  if (invalid.length > 0) {
+    throw new Error(
+      `Hosted evaluation requires independently reviewed V3 development inputs; ${invalid.length}/${rows.length} rows are stale or non-independent. Rebuild with npm.cmd run build:llm-triage-benchmark -- --data-dir <private-data-dir>`
+    );
+  }
 }
 
 export function triageOutputToPrediction(output) {
@@ -147,10 +157,12 @@ async function evaluateProvider({
   providerMeta,
   tokenBudgetPerMinute = null,
   estimatedCompletionTokens = 0,
-  stopOnRateLimit = false
+  stopOnRateLimit = false,
+  requireIndependentGold = false
 }) {
   const auditDir = path.join(dataDir, 'knowledge-canonical', 'Audit');
   let rows = await readJsonl(path.join(auditDir, inputFile));
+  if (requireIndependentGold) assertIndependentDevelopmentRows(rows);
   if (Number.isInteger(limit) && limit > 0) rows = rows.slice(0, limit);
 
   let nextAllowedAt = 0;
@@ -234,7 +246,8 @@ export async function evaluateOpenRouterLlmTriage({
     directCaseConfidence,
     provider,
     providerMeta: { provider: 'openrouter', dataCollection, maxTokens },
-    stopOnRateLimit: true
+    stopOnRateLimit: true,
+    requireIndependentGold: true
   });
 }
 
@@ -268,7 +281,8 @@ export async function evaluateGroqLlmTriage({
     },
     tokenBudgetPerMinute: benchmarkTokenBudgetPerMinute,
     estimatedCompletionTokens: maxCompletionTokens,
-    stopOnRateLimit: true
+    stopOnRateLimit: true,
+    requireIndependentGold: true
   });
 }
 
