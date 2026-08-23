@@ -7,15 +7,22 @@ import { classifyConversationalSafety } from './audit-conversational-safety.mjs'
 import { runLlmTriage } from './llm-triage-contract.mjs';
 import { createLocalOpenAiCompatibleTriageProvider } from './llm-triage-provider.mjs';
 import { createOpenRouterTriageProvider } from './openrouter-triage-provider.mjs';
+import { createGroqTriageProvider } from './groq-triage-provider.mjs';
 
+const DEVELOPMENT_INPUT_FILE = 'llm-triage-development-inputs.jsonl';
 const readJsonl = async (file) => (await readFile(file, 'utf8')).split(/\r?\n/u).filter(Boolean).map((line) => JSON.parse(line));
 const safeName = (value) => String(value).replace(/[^a-z0-9._-]+/giu, '-').replace(/^-+|-+$/gu, '').toLowerCase() || 'model';
 const unique = (values) => [...new Set((values ?? []).filter(Boolean))];
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function percentile(values, p) {
   if (!values.length) return 0;
   const sorted = [...values].sort((a, b) => a - b);
   return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * p) - 1)];
+}
+
+function providerRateLimited(errors) {
+  return (errors ?? []).some((value) => /provider_error:.*HTTP 429/iu.test(String(value)));
 }
 
 export function triageOutputToPrediction(output) {
@@ -62,12 +69,16 @@ export async function evaluateLlmTriageRows(rows, {
   provider,
   model = 'unknown',
   directCaseConfidence = 0.8,
-  onProgress = null
+  onProgress = null,
+  beforeRow = null,
+  stopOnRateLimit = false
 } = {}) {
   if (typeof provider !== 'function') throw new TypeError('provider is required');
   const results = [];
+  let stoppedEarly = null;
   for (let index = 0; index < rows.length; index += 1) {
     const row = rows[index];
+    if (beforeRow) await beforeRow({ index, row, total: rows.length });
     const started = performance.now();
     const result = await runLlmTriage({ provider, input: row.input, validatorOptions: { directCaseConfidence } });
     const latencyMs = performance.now() - started;
@@ -88,6 +99,10 @@ export async function evaluateLlmTriageRows(rows, {
       ...safety
     });
     if (onProgress) onProgress({ index: index + 1, total: rows.length, latest: results.at(-1) });
+    if (stopOnRateLimit && providerRateLimited(result.errors)) {
+      stoppedEarly = { reason: 'provider_rate_limit', afterRecords: results.length };
+      break;
+    }
   }
 
   const counts = Object.fromEntries(['optimal','safe_progress','safe_no_progress','unsafe_wrong_route','unsafe_scope_leakage','invalid'].map((key) => [key, results.filter((row) => row.classification === key).length]));
@@ -96,7 +111,9 @@ export async function evaluateLlmTriageRows(rows, {
   const summary = {
     schemaVersion: 1,
     model,
+    requestedRecords: rows.length,
     records: results.length,
+    stoppedEarly,
     structuredOutputAcceptanceRate: results.filter((row) => row.accepted).length / total,
     exactOptimalActionRate: results.filter((row) => row.exactOptimalAction).length / total,
     counts,
@@ -119,14 +136,42 @@ export async function evaluateLlmTriageRows(rows, {
   return { summary, results };
 }
 
-async function evaluateProvider({ dataDir, inputFile, model, limit, timeoutMs, directCaseConfidence, provider, providerMeta }) {
+async function evaluateProvider({
+  dataDir,
+  inputFile,
+  model,
+  limit,
+  timeoutMs,
+  directCaseConfidence,
+  provider,
+  providerMeta,
+  tokenBudgetPerMinute = null,
+  estimatedCompletionTokens = 0,
+  stopOnRateLimit = false
+}) {
   const auditDir = path.join(dataDir, 'knowledge-canonical', 'Audit');
   let rows = await readJsonl(path.join(auditDir, inputFile));
   if (Number.isInteger(limit) && limit > 0) rows = rows.slice(0, limit);
+
+  let nextAllowedAt = 0;
+  const beforeRow = tokenBudgetPerMinute && tokenBudgetPerMinute > 0
+    ? async ({ row, index, total }) => {
+        const waitMs = Math.max(0, nextAllowedAt - Date.now());
+        if (waitMs > 0) {
+          process.stderr.write(`rate-safe wait ${Math.ceil(waitMs / 1000)}s before ${index + 1}/${total}\n`);
+          await sleep(waitMs);
+        }
+        const estimatedTokens = Math.max(1, Number(row.plannerTokenEstimate ?? 0) + estimatedCompletionTokens);
+        nextAllowedAt = Date.now() + Math.ceil((estimatedTokens / tokenBudgetPerMinute) * 60_000);
+      }
+    : null;
+
   const evaluated = await evaluateLlmTriageRows(rows, {
     provider,
     model,
     directCaseConfidence,
+    beforeRow,
+    stopOnRateLimit,
     onProgress: ({ index, total }) => {
       if (index === 1 || index === total || index % 25 === 0) process.stderr.write(`triage ${index}/${total}\n`);
     }
@@ -146,7 +191,7 @@ async function evaluateProvider({ dataDir, inputFile, model, limit, timeoutMs, d
 
 export async function evaluateLocalLlmTriage({
   dataDir,
-  inputFile = 'llm-triage-development-inputs.jsonl',
+  inputFile = DEVELOPMENT_INPUT_FILE,
   model,
   baseUrl = 'http://127.0.0.1:11434/v1',
   limit = null,
@@ -169,7 +214,7 @@ export async function evaluateLocalLlmTriage({
 
 export async function evaluateOpenRouterLlmTriage({
   dataDir,
-  inputFile = 'llm-triage-development-inputs.jsonl',
+  inputFile = DEVELOPMENT_INPUT_FILE,
   model,
   apiKey,
   limit = null,
@@ -178,6 +223,7 @@ export async function evaluateOpenRouterLlmTriage({
   dataCollection = 'allow',
   maxTokens = 400
 }) {
+  if (inputFile !== DEVELOPMENT_INPUT_FILE) throw new Error('Hosted evaluation is restricted to consumed development inputs');
   const provider = createOpenRouterTriageProvider({ apiKey, model, timeoutMs, dataCollection, maxTokens });
   return evaluateProvider({
     dataDir,
@@ -187,7 +233,42 @@ export async function evaluateOpenRouterLlmTriage({
     timeoutMs,
     directCaseConfidence,
     provider,
-    providerMeta: { provider: 'openrouter', dataCollection, maxTokens }
+    providerMeta: { provider: 'openrouter', dataCollection, maxTokens },
+    stopOnRateLimit: true
+  });
+}
+
+export async function evaluateGroqLlmTriage({
+  dataDir,
+  inputFile = DEVELOPMENT_INPUT_FILE,
+  model,
+  apiKey,
+  limit = null,
+  timeoutMs = 30_000,
+  directCaseConfidence = 0.8,
+  reasoningEffort = 'low',
+  maxCompletionTokens = 400,
+  benchmarkTokenBudgetPerMinute = 6_500
+}) {
+  if (inputFile !== DEVELOPMENT_INPUT_FILE) throw new Error('Hosted evaluation is restricted to consumed development inputs');
+  const provider = createGroqTriageProvider({ apiKey, model, timeoutMs, reasoningEffort, maxCompletionTokens });
+  return evaluateProvider({
+    dataDir,
+    inputFile,
+    model,
+    limit,
+    timeoutMs,
+    directCaseConfidence,
+    provider,
+    providerMeta: {
+      provider: 'groq',
+      reasoningEffort,
+      maxCompletionTokens,
+      benchmarkTokenBudgetPerMinute
+    },
+    tokenBudgetPerMinute: benchmarkTokenBudgetPerMinute,
+    estimatedCompletionTokens: maxCompletionTokens,
+    stopOnRateLimit: true
   });
 }
 
@@ -200,13 +281,14 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const dataDir = get('--data-dir');
   const model = get('--model');
   const providerName = get('--provider', 'local');
-  if (!dataDir || !model) throw new Error('Usage: node evaluate-llm-triage.mjs --data-dir <private-data-dir> --provider <local|openrouter> --model <model> [--limit N]');
+  if (!dataDir || !model) throw new Error('Usage: node evaluate-llm-triage.mjs --data-dir <private-data-dir> --provider <local|openrouter|groq> --model <model> [--limit N]');
+  const inputFile = get('--input-file', DEVELOPMENT_INPUT_FILE);
   const limitRaw = get('--limit');
   const timeoutRaw = get('--timeout-ms');
   const confidenceRaw = get('--direct-case-confidence');
   const common = {
     dataDir: path.resolve(dataDir),
-    inputFile: get('--input-file', 'llm-triage-development-inputs.jsonl'),
+    inputFile,
     model,
     limit: limitRaw ? Number(limitRaw) : null,
     timeoutMs: timeoutRaw ? Number(timeoutRaw) : 30_000,
@@ -214,7 +296,17 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   };
 
   let result;
-  if (providerName === 'openrouter') {
+  if (providerName === 'groq') {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) throw new Error('GROQ_API_KEY is required for --provider groq');
+    result = await evaluateGroqLlmTriage({
+      ...common,
+      apiKey,
+      reasoningEffort: get('--reasoning-effort', process.env.GROQ_REASONING_EFFORT ?? 'low'),
+      maxCompletionTokens: Number(get('--max-completion-tokens', '400')),
+      benchmarkTokenBudgetPerMinute: Number(get('--benchmark-tpm-budget', '6500'))
+    });
+  } else if (providerName === 'openrouter') {
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) throw new Error('OPENROUTER_API_KEY is required for --provider openrouter');
     result = await evaluateOpenRouterLlmTriage({
@@ -230,7 +322,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       useJsonSchema: !args.includes('--no-json-schema')
     });
   } else {
-    throw new Error('--provider must be local or openrouter');
+    throw new Error('--provider must be local, openrouter, or groq');
   }
   console.log(JSON.stringify(result, null, 2));
 }
