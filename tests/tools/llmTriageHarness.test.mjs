@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { assessGoldRepresentability } from '../../tools/ticket-transcript-exporter/build-llm-triage-benchmark.mjs';
 import { buildLlmTriageInput, chooseSafeTriageFallback, runLlmTriage, validateLlmTriageOutput } from '../../tools/ticket-transcript-exporter/llm-triage-contract.mjs';
 import { buildTriageMessages, estimatePlannerTokens } from '../../tools/ticket-transcript-exporter/llm-triage-prompt.mjs';
 import { isLocalTriageEndpoint } from '../../tools/ticket-transcript-exporter/llm-triage-provider.mjs';
@@ -141,6 +142,57 @@ test('generic support-surface clarification remains available when no scoped can
     policies: []
   });
   assert.deepEqual(triageInput.allowed.clarificationIds, ['clarify.support_surface']);
+});
+
+test('gold representability rejects an answer case the planner was never offered', () => {
+  const triageInput = buildLlmTriageInput({
+    customerText: 'hwid reset plssss',
+    state: { questionsAsked: [] },
+    candidateCases: [],
+    candidateFamilies: [],
+    clarifications: [clarifications[0]],
+    dynamicLookups: [],
+    policies: []
+  });
+  const result = assessGoldRepresentability({
+    action: 'answer_case',
+    observableCaseIds: ['case.spoofer.hwid_state'],
+    observableFamilyIds: ['technical.spoofer'],
+    clarificationId: null,
+    lookupIds: [],
+    policyIds: []
+  }, triageInput);
+  assert.equal(result.eligible, false);
+  assert.ok(result.reasons.includes('gold_case_not_represented'));
+  assert.ok(result.reasons.includes('gold_answer_case_unavailable'));
+});
+
+test('gold representability rejects family and clarification divergence', () => {
+  const triageInput = input();
+  const result = assessGoldRepresentability({
+    action: 'ask_clarification',
+    observableCaseIds: [],
+    observableFamilyIds: ['technical.game'],
+    clarificationId: 'clarify.technical.failure_stage',
+    lookupIds: [],
+    policyIds: []
+  }, triageInput);
+  assert.equal(result.eligible, false);
+  assert.ok(result.reasons.includes('gold_family_not_represented'));
+  assert.ok(result.reasons.includes('gold_clarification_unavailable'));
+});
+
+test('gold representability accepts a clarification available in the planner contract', () => {
+  const triageInput = input();
+  const result = assessGoldRepresentability({
+    action: 'ask_clarification',
+    observableCaseIds: ['case.nfa.invalid_first_use'],
+    observableFamilyIds: ['accounts.nfa'],
+    clarificationId: 'clarify.nfa.failure_stage',
+    lookupIds: [],
+    policyIds: []
+  }, triageInput);
+  assert.deepEqual(result, { eligible: true, reasons: [] });
 });
 
 test('local provider guard refuses non-local endpoints', () => {
