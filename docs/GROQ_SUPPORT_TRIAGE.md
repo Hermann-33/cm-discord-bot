@@ -93,13 +93,23 @@ Regenerate the compact hosted planner inputs after pulling benchmark changes:
 npm.cmd run build:llm-triage-benchmark -- --data-dir ..\CM-Ticket-Transcripts
 ```
 
-The generated file remains:
+The builder now separates **planner-quality evaluation** from **candidate-generation failures**. A row is eligible for hosted planner scoring only when the planner input can actually express the reviewed gold action. For example, an exact-case row is not sent to Groq when its gold case was never included in `allowed.caseIds`, and a gold clarification is not scored when that clarification was never offered.
+
+Eligible rows are written to:
 
 ```text
 knowledge-canonical/Audit/llm-triage-development-inputs.jsonl
 ```
 
-Hosted Groq/OpenRouter evaluation fails closed if that file contains stale/non-independent labels.
+Unrepresentable rows are preserved for deterministic/router or gold-label review in:
+
+```text
+knowledge-canonical/Audit/llm-triage-development-inputs-review-queue.jsonl
+```
+
+The benchmark summary reports reviewed-row count, eligible-row count, representability rate, and reason counts. Nothing is silently discarded.
+
+Hosted Groq/OpenRouter evaluation fails closed if the development file contains stale/non-independent labels or rows without an explicit positive representability result.
 
 ## Benchmark command
 
@@ -127,7 +137,10 @@ The benchmark stops early on a provider HTTP 429 rather than repeatedly consumin
 
 ## Acceptance gate
 
-Do not enable customer-facing support until the selected provider/model configuration demonstrates:
+Do not enable customer-facing support until both layers pass:
+
+1. deterministic candidate/gold representability is high enough that the planner is normally offered the correct action space;
+2. on representable independently reviewed rows, the selected provider/model demonstrates:
 
 ```text
 safe-progress-or-better >= 95%
