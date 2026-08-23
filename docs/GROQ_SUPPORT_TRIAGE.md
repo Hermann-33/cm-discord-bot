@@ -75,9 +75,35 @@ A model decision is rejected if it contains or attempts:
 
 Transport failures, HTTP failures, timeouts, and invalid outputs fail closed to the existing canonical fallback. The client does not retry automatically, including on HTTP 429.
 
+Planner input construction also avoids offering the global `clarify.support_surface` question when it does not distinguish the currently scoped candidate cases/families. Specific applicable clarifications are preferred over the generic fallback.
+
+## Development benchmark source
+
+Hosted model selection uses the already-consumed, independently reviewed V3 first-turn set:
+
+```text
+knowledge-canonical/Evaluation/historical-first-turn-action-v3.jsonl
+```
+
+The older V1/V2 reviewed file is not valid semantic gold for hosted model selection because a substantial portion of its labels were reproducible from the deterministic router rather than independently adjudicated.
+
+Regenerate the compact hosted planner inputs after pulling benchmark changes:
+
+```powershell
+npm.cmd run build:llm-triage-benchmark -- --data-dir ..\CM-Ticket-Transcripts
+```
+
+The generated file remains:
+
+```text
+knowledge-canonical/Audit/llm-triage-development-inputs.jsonl
+```
+
+Hosted Groq/OpenRouter evaluation fails closed if that file contains stale/non-independent labels.
+
 ## Benchmark command
 
-After `GROQ_API_KEY` is added locally, start with a very small smoke run:
+After `GROQ_API_KEY` is added locally and the V3 benchmark input has been rebuilt, start with a very small smoke run:
 
 ```powershell
 npm.cmd run evaluate:groq-triage -- --data-dir ..\CM-Ticket-Transcripts --limit 3
