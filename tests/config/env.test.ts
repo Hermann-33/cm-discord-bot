@@ -27,6 +27,7 @@ test("loads a complete strict configuration", () => {
   assert.equal(config.internalApi.clientId, "cm-discord-bot");
   assert.equal(config.internalApi.timeoutMs, 5_000);
   assert.equal(config.internalApi.hmacSecret.byteLength, 32);
+  assert.equal(config.groq, undefined);
   assert.equal(config.openRouter, undefined);
 });
 
@@ -96,6 +97,56 @@ test("defaults timeout to 5000 and enforces 1000 through 15000 milliseconds", ()
     environment.CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS = value;
     assert.throws(() => loadConfig(environment), /CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS/);
   }
+});
+
+test("Groq remains disabled until an API key is configured", () => {
+  const environment = validEnvironment();
+  environment.GROQ_API_KEY = "   ";
+  environment.GROQ_MODEL = "openai/gpt-oss-120b";
+  assert.equal(loadConfig(environment).groq, undefined);
+});
+
+test("Groq key enables GPT-OSS 120B triage defaults", () => {
+  const environment = validEnvironment();
+  environment.GROQ_API_KEY = "gsk_test_key_12345678901234567890";
+  const config = loadConfig(environment);
+
+  assert.deepEqual(config.groq, {
+    origin: "https://api.groq.com",
+    apiKey: "gsk_test_key_12345678901234567890",
+    model: "openai/gpt-oss-120b",
+    reasoningEffort: "low",
+    timeoutMs: 20_000,
+    maxCompletionTokens: 400
+  });
+});
+
+test("Groq model and reasoning effort can be explicitly overridden", () => {
+  const environment = validEnvironment();
+  environment.GROQ_API_KEY = "gsk_test_key_12345678901234567890";
+  environment.GROQ_MODEL = "openai/gpt-oss-20b";
+  environment.GROQ_REASONING_EFFORT = "medium";
+  const config = loadConfig(environment);
+
+  assert.equal(config.groq?.model, "openai/gpt-oss-20b");
+  assert.equal(config.groq?.reasoningEffort, "medium");
+});
+
+test("rejects malformed Groq configuration without printing the key", () => {
+  const environment = validEnvironment();
+  const key = "not-a-groq-key-value";
+  environment.GROQ_API_KEY = key;
+  environment.GROQ_REASONING_EFFORT = "maximum";
+
+  assert.throws(
+    () => loadConfig(environment),
+    (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      return message.includes("GROQ_API_KEY") &&
+        message.includes("GROQ_REASONING_EFFORT") &&
+        !message.includes(key);
+    }
+  );
 });
 
 test("OpenRouter remains disabled until an API key is configured", () => {
