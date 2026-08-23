@@ -1,3 +1,4 @@
+export { GroqTriageClient, type GroqTriageResult } from "./groqClient";
 export { OpenRouterTriageClient, type OpenRouterTriageResult } from "./openRouterClient";
 export {
   OPENROUTER_DEFAULT_MAX_TOKENS,
@@ -36,5 +37,6 @@ export {
   type PendingSupportClarification,
   type SupportConversationState,
   type SupportTriagePlanner,
+  type SupportTriagePlannerResult,
   type SupportTurnContext
 } from "./supportConversation";
