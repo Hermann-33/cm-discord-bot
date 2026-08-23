@@ -58,7 +58,8 @@ test("API client exposes only explicitly approved bot operations", () => {
   }
 });
 
-test("OpenRouter integration uses the approved host and never imports private transcript tooling", () => {
+test("hosted AI integrations use approved hosts and never import private transcript tooling", () => {
+  assert.equal(sourceText.includes("https://api.groq.com"), true);
   assert.equal(sourceText.includes("https://openrouter.ai"), true);
   assert.equal(sourceText.includes("tools/ticket-transcript-exporter"), false);
   assert.equal(sourceText.includes("CM-Ticket-Transcripts"), false);
@@ -92,6 +93,9 @@ test("environment example contains only the approved root variable surface", () 
     "CM_INTERNAL_INTEGRATIONS_API_KEY_ID",
     "CM_INTERNAL_INTEGRATIONS_API_HMAC_SECRET_BASE64",
     "CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS",
+    "GROQ_API_KEY",
+    "GROQ_MODEL",
+    "GROQ_REASONING_EFFORT",
     "OPENROUTER_API_KEY",
     "OPENROUTER_MODEL",
     "OPENROUTER_DATA_COLLECTION"
