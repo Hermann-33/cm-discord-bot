@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { assessGoldRepresentability } from '../../tools/ticket-transcript-exporter/build-llm-triage-benchmark.mjs';
 import { evaluateGroqLlmTriage, evaluateLlmTriageRows, evaluateOpenRouterLlmTriage, triageOutputToPrediction } from '../../tools/ticket-transcript-exporter/evaluate-llm-triage.mjs';
 
 const input = {
@@ -81,6 +82,46 @@ test('rate-limited hosted evaluation stops after the first 429 instead of consum
   assert.equal(result.summary.records, 1);
   assert.equal(result.summary.requestedRecords, 3);
   assert.deepEqual(result.summary.stoppedEarly, { reason: 'provider_rate_limit', afterRecords: 1 });
+});
+
+test('legacy media family name is representable when the canonical media case is available', () => {
+  const triageInput = {
+    allowed: {
+      caseIds: ['case.media.application'],
+      familyIds: ['business.application'],
+      clarificationIds: [],
+      dynamicLookupIds: [],
+      policyIds: []
+    }
+  };
+  const result = assessGoldRepresentability({
+    action: 'answer_case',
+    observableCaseIds: ['case.media.application'],
+    observableFamilyIds: ['business.media'],
+    lookupIds: [],
+    policyIds: []
+  }, triageInput);
+  assert.deepEqual(result, { eligible: true, reasons: [] });
+});
+
+test('runtime dynamic lookup IDs are valid hosted-planner actions when supplied by the benchmark input', () => {
+  const triageInput = {
+    allowed: {
+      caseIds: ['case.catalog.availability_status'],
+      familyIds: ['catalog.dynamic'],
+      clarificationIds: [],
+      dynamicLookupIds: ['dynamic.catalog.product_status'],
+      policyIds: []
+    }
+  };
+  const result = assessGoldRepresentability({
+    action: 'request_dynamic_lookup',
+    observableCaseIds: ['case.catalog.availability_status'],
+    observableFamilyIds: ['catalog.dynamic'],
+    lookupIds: ['dynamic.catalog.product_status'],
+    policyIds: []
+  }, triageInput);
+  assert.deepEqual(result, { eligible: true, reasons: [] });
 });
 
 test('hosted benchmarks refuse a new holdout input file before provider creation', async () => {
