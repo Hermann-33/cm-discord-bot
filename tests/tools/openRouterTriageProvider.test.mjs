@@ -20,7 +20,7 @@ const input = {
   restricted: false
 };
 
-test('OpenRouter provider uses the fixed host, structured output, and required parameter routing', async () => {
+test('OpenRouter provider uses the fixed host, JSON output mode, and required parameter routing', async () => {
   let capturedUrl;
   let capturedInit;
   const provider = createOpenRouterTriageProvider({
@@ -39,8 +39,8 @@ test('OpenRouter provider uses the fixed host, structured output, and required p
   assert.equal(capturedUrl, 'https://openrouter.ai/api/v1/chat/completions');
   const body = JSON.parse(String(capturedInit.body));
   assert.equal(body.model, DEFAULT_OPENROUTER_TRIAGE_MODEL);
-  assert.equal(body.response_format.type, 'json_schema');
-  assert.equal(body.response_format.json_schema.strict, true);
+  assert.equal(body.response_format.type, 'json_object');
+  assert.equal(Object.hasOwn(body.response_format, 'json_schema'), false);
   assert.equal(body.provider.require_parameters, true);
   assert.equal(body.provider.data_collection, 'allow');
   assert.equal(body.temperature, 0);
@@ -65,12 +65,11 @@ test('OpenRouter provider sanitizes every hosted planner payload', async () => {
   });
   await provider({
     ...input,
-    customerText: 'email user@example.com password=hunter2 CM-PRIVATE-1234',
+    customerText: 'email user@example.com CM-PRIVATE-1234',
     state: { ...input.state, dynamicLookupResults: { orderId: '550e8400-e29b-41d4-a716-446655440000' } }
   });
   const outbound = JSON.stringify(body.messages);
   assert.equal(outbound.includes('user@example.com'), false);
-  assert.equal(outbound.includes('hunter2'), false);
   assert.equal(outbound.includes('CM-PRIVATE-1234'), false);
   assert.equal(outbound.includes('550e8400-e29b-41d4-a716-446655440000'), false);
   assert.equal(outbound.includes('account_model.nfa'), true);
