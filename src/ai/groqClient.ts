@@ -20,6 +20,19 @@ const SYSTEM_PROMPT = [
   "Return only the JSON object required by the response schema."
 ].join(" ");
 
+function toGroqStrictSchema(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map((item) => toGroqStrictSchema(item));
+  if (!value || typeof value !== "object") return value;
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .filter(([key]) => key !== "uniqueItems" && key !== "minLength")
+      .map(([key, child]) => [key, toGroqStrictSchema(child)])
+  );
+}
+
+export const GROQ_TRIAGE_DECISION_JSON_SCHEMA = toGroqStrictSchema(TRIAGE_DECISION_JSON_SCHEMA);
+
 export type GroqTriageResult = {
   accepted: boolean;
   decision: SupportTriageDecision;
@@ -81,7 +94,7 @@ export class GroqTriageClient {
             json_schema: {
               name: "cm_support_triage",
               strict: true,
-              schema: TRIAGE_DECISION_JSON_SCHEMA
+              schema: GROQ_TRIAGE_DECISION_JSON_SCHEMA
             }
           }
         }),
