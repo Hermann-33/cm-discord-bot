@@ -70,6 +70,10 @@ CM_INTERNAL_INTEGRATIONS_API_KEY_ID
 CM_INTERNAL_INTEGRATIONS_API_HMAC_SECRET_BASE64
 CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS
 
+GROQ_API_KEY
+GROQ_MODEL
+GROQ_REASONING_EFFORT
+
 OPENROUTER_API_KEY
 OPENROUTER_MODEL
 OPENROUTER_DATA_COLLECTION
@@ -77,27 +81,30 @@ OPENROUTER_DATA_COLLECTION
 
 `BOT_ADMIN_USER_IDS` is a comma-separated explicit Discord user-ID allowlist. `/cm` fails closed when it is empty. `BOT_AUDIT_LOG_CHANNEL_ID` is required before refund/Aura/wallet execution. `BOT_ADMIN_COMMAND_CHANNEL_ID` is not supported.
 
-`OPENROUTER_API_KEY` is optional until AI support is enabled. When present, the default hosted triage model is `google/gemma-4-26b-a4b-it:free`. `OPENROUTER_DATA_COLLECTION` defaults to `allow` for free-endpoint compatibility and can be changed to `deny`; if no compatible endpoint exists, the request fails closed. The planner payload is minimized and sanitized before it leaves the bot. See `docs/OPENROUTER_SUPPORT_TRIAGE.md`.
+`GROQ_API_KEY` is optional until AI support is enabled. When present, the default primary hosted triage candidate is `openai/gpt-oss-120b` with `GROQ_REASONING_EFFORT=low`. The planner payload is minimized and sanitized before it leaves the bot. See `docs/GROQ_SUPPORT_TRIAGE.md`.
 
-## OpenRouter support triage
+`OPENROUTER_API_KEY` remains optional for the secondary OpenRouter development adapter. Its default model is `google/gemma-4-26b-a4b-it:free`; see `docs/OPENROUTER_SUPPORT_TRIAGE.md`.
 
-Production source now includes a constrained OpenRouter triage client under `src/ai/`. It is designed to interpret messy customer wording and choose the next support action; it is **not** authoritative for policy, live account/order/payment state, product scope, or restricted technical support.
+## Hosted support triage
 
-Every hosted triage call uses:
+Production source includes constrained hosted triage clients under `src/ai/`. Groq GPT-OSS 120B is the primary candidate; OpenRouter remains available as a secondary development provider. Neither provider is authoritative for policy, live account/order/payment state, product scope, restricted technical support, or executable operations.
 
-- `POST https://openrouter.ai/api/v1/chat/completions`;
-- OpenRouter JSON output mode (`response_format.type = json_object`) compatible with the selected free Gemma endpoint;
-- strict local schema and deterministic safety validation after JSON parsing;
-- `provider.require_parameters: true`;
+The Groq client uses:
+
+- `POST https://api.groq.com/openai/v1/chat/completions`;
+- `openai/gpt-oss-120b` by default;
+- strict JSON-schema Structured Outputs;
 - `temperature: 0`;
+- `reasoning_effort: low` by default;
 - a bounded 400-token completion budget;
+- no streaming or model tools;
 - deterministic validation of every returned case/clarification/lookup/policy/entity ID;
 - scope checks;
 - canonical clarification/human fallback on failure.
 
-Common customer identifiers and sensitive live-context fields are removed from planner payloads before the API call. Raw transcript history, credentials, account tokens and private evidence are not part of the production planner input.
+Common customer identifiers and sensitive live-context fields are removed from planner payloads before hosted calls. Raw transcript history, credentials, account tokens and private evidence are not part of the production planner input.
 
-Adding `OPENROUTER_API_KEY` does not by itself turn on a customer-facing support command. Activation remains gated on benchmark quality and later Discord support-flow integration.
+Adding a hosted-model API key does not by itself turn on customer-facing support. Activation remains gated on benchmark quality and later Discord support-flow integration.
 
 ## `/cm` authorization
 
@@ -238,17 +245,15 @@ npm run evaluate:first-turn-routing -- --data-dir "C:\code\CM-Ticket-Transcripts
 npm run evaluate:historical-state-replay -- --data-dir "C:\code\CM-Ticket-Transcripts" --output "C:\code\CM-Ticket-Transcripts\knowledge-canonical\Evaluation\historical-state-replay-results.json"
 ```
 
-After `OPENROUTER_API_KEY` is set, the selected free model can be smoke-tested against the existing sanitized planner benchmark without running the Discord bot:
+After `GROQ_API_KEY` is set, start with a three-record hosted smoke test without running the Discord bot:
 
 ```powershell
-npm.cmd run evaluate:openrouter-triage -- `
-  --data-dir ..\CM-Ticket-Transcripts `
-  --limit 20
+npm.cmd run evaluate:groq-triage -- --data-dir ..\CM-Ticket-Transcripts --limit 3
 ```
 
-Respect the current OpenRouter free-model request limits before increasing the sample size.
+If accepted outputs are returned, continue with a 20-record smoke benchmark. The Groq evaluator token-paces hosted calls and stops after a provider HTTP 429 instead of repeatedly consuming failed requests.
 
-These commands run locally, require strictly verified customer authorship for metric-eligible records, keep all gold transcripts out of `runtime-kb/routing-exemplars.jsonl`, and never send routing exemplars or raw historical evidence to the LLM context. They do not execute the production bot.
+These commands use already-consumed development records, keep new final holdouts out of model selection, never send routing exemplars or raw historical evidence to the model, and do not execute the production bot.
 
 ## Production notes
 
