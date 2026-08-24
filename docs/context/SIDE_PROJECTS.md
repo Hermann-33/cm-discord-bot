@@ -1,8 +1,10 @@
 # Related Side Projects
 
-Updated: 2026-08-23
+Updated: 2026-08-24
 
 This document records adjacent Cheater's Market workstreams that are intentionally outside the standalone Discord bot runtime but are relevant enough that future agents must understand the boundary.
+
+For the current AI-support implementation, benchmark history and exact handoff, read `docs/context/AI_SUPPORT_SIDE_PROJECT.md`.
 
 ## CM Ticket Transcript Corpus
 
@@ -47,7 +49,7 @@ structured records:        1,578
 failed:                    0
 ```
 
-Phase T2 now turns that complete corpus into a source-grounded support knowledge graph that can be browsed as an Obsidian graph and later exported into a compact context pack for a support chatbot.
+Phase T2 turned that complete corpus into a source-grounded support knowledge graph and canonical runtime knowledge source. The graph remains directly browsable in Obsidian while the production bot consumes only a separately reviewed, sanitized runtime derivative.
 
 ### Proven Tickety data path
 
@@ -87,7 +89,8 @@ The structured exporter mirrors that configuration.
 - attachment URLs and metadata;
 - explicitly scoped derived datasets;
 - data-only analysis inputs;
-- Markdown/JSON knowledge-graph artifacts derived from the corpus.
+- Markdown/JSON knowledge-graph artifacts derived from the corpus;
+- canonical runtime-KB source data, benchmark data, adjudication overlays and audit artifacts.
 
 ### Forbidden data-repository content
 
@@ -113,22 +116,7 @@ cm-discord-bot/tools/ticket-transcript-exporter/
 
 It is tooling-only: not imported by `src/`, not emitted by the production TypeScript build, not called by bot startup, and not a production runtime dependency.
 
-Current modules:
-
-```text
-tools/ticket-transcript-exporter/
-├── run-ticket-transcript-export.mjs
-├── export-ticket-transcripts.mjs
-├── export-ticket-payloads.mjs
-└── prepare-knowledge-analysis.mjs
-```
-
-Roles:
-
-- `run-ticket-transcript-export.mjs` — strict Discord `View Transcript` discovery wrapper;
-- `export-ticket-transcripts.mjs` — original discovery/HTML acquisition support;
-- `export-ticket-payloads.mjs` — structured Msgpack transcript extractor;
-- `prepare-knowledge-analysis.mjs` — offline deterministic packer for exhaustive T2 corpus review.
+The tooling expanded beyond the original acquisition scripts and now also contains canonicalization, benchmark-building, routing, privacy validation and hosted-triage evaluation utilities. Executable tooling remains in the public bot repository; the private transcript repository stays data/specification-only.
 
 ### Structured extractor behavior
 
@@ -152,62 +140,47 @@ Roles:
 - size-caps each binary response;
 - records explicit run/failure manifests.
 
-### T2 analysis-input behavior
+### Analysis and canonicalization behavior
 
-`prepare-knowledge-analysis.mjs` is an offline read of the already-complete local data repository. It makes no Discord, Tickety, LLM, website/API or database call.
-
-It produces data-only files under the private transcript repository:
+The complete corpus was reviewed exhaustively rather than sampled. The private repository now contains:
 
 ```text
-CM-Ticket-Transcripts/
-└── analysis-input/
-    ├── corpus.ndjson
-    ├── review.ndjson
-    ├── stats.json
-    ├── manifest.json
-    └── README.md
+analysis-input/
+deep-review/
+knowledge-deep/
+knowledge-canonical/
+runtime-kb/
 ```
 
-`corpus.ndjson` preserves every full plain-text ticket as one line-addressable record so T2 can review all 1,578 tickets without losing source fidelity.
+The deep-review/canonicalization layers preserve source evidence, duplicate relationships, historical-only observations, current-state/dynamic facts, restricted technical material, unresolved questions and contradictions.
 
-`review.ndjson` is only a deterministic triage view containing bounded opening/customer, other-human-response and closing excerpts. It is **not** an LLM summary and cannot be promoted into a canonical support rule without checking source evidence where needed.
-
-### T2 knowledge graph target
-
-The final graph is intended to be directly usable as an Obsidian vault. Nodes use Markdown frontmatter plus `[[wikilinks]]` so Obsidian's Graph view can display relationships without requiring a plugin.
-
-Target data-only layout:
+The corpus-level coverage currently accounts for:
 
 ```text
-knowledge/
-├── 00 - Support Knowledge Graph.md
-├── Categories/
-├── Intents/
-├── Symptoms/
-├── Procedures/
-├── Policies/
-├── Escalations/
-├── Products/
-├── Entities/
-├── Examples/
-└── Evidence/
+structured tickets:      1,578 / 1,578
+historical fact nodes:    3,949
+canonical runtime cases:  55
 ```
 
-Each canonical node should distinguish:
+Historical customer PII must not be copied into the canonical chatbot runtime layer. Raw transcripts remain private source evidence.
 
-- observed recognition signals;
+Historical conversations are evidence, not automatically policy. A repeated staff answer may still be wrong, obsolete or contradictory. Canonicalization preserves contradictions/unknowns instead of silently converting every historical message into a bot instruction.
+
+### Obsidian knowledge graph
+
+The private graph is intended to remain directly usable as an Obsidian vault. Nodes use Markdown frontmatter plus `[[wikilinks]]` so Obsidian Graph view can display relationships without requiring a plugin.
+
+The graph/canonical layer distinguishes:
+
+- recognition signals;
 - diagnostic questions;
-- resolution path or support action;
-- constraints/forbidden assumptions;
+- resolution/support actions;
+- constraints and forbidden assumptions;
 - escalation criteria;
-- linked product/category/intent nodes;
-- supporting ticket evidence/counts;
-- contradictions or uncertainty;
+- product/game/vendor/account-model scope;
+- supporting evidence;
+- contradictions and uncertainty;
 - confidence/status.
-
-Historical customer PII must not be copied into the canonical chatbot knowledge layer. Raw transcripts remain private source evidence.
-
-Historical conversations are evidence, not automatically policy. A repeated staff answer may still be wrong, obsolete or contradictory. T2 must preserve contradictions/unknowns rather than silently converting every historical message into a bot instruction.
 
 ### Local decoder dependency
 
@@ -219,7 +192,7 @@ npm.cmd install --no-save --package-lock=false --omit=optional msgpackr@2.0.4
 
 This is a local tooling dependency only and is intentionally not persisted in `package.json` or `package-lock.json`.
 
-### Structured output
+### Structured source output
 
 The completed v2 record set uses:
 
@@ -243,29 +216,29 @@ Ticket transcripts can contain customer identifiers, emails, Discord identities,
 
 The transcript repository is private. Do not add credentials to the corpus, and do not publish or broaden access to transcript data as a convenience for analysis.
 
-### Independence from the production bot
+### Independence from production
 
-Normal Discord bot engineering continues independently. The transcript corpus and knowledge graph may later inform support tooling, analytics or a separate chatbot, but the current production bot has no runtime dependency on either.
+Normal Discord bot engineering continues independently. ADR-0012 permits one narrow derivative only: an operator-controlled importer may select sanitized canonical runtime fields into this public repository's bundled `support-runtime/` directory.
 
-ADR-0012 completed that architecture review for one narrow derivative only: an operator-controlled public importer may select sanitized canonical runtime fields into the bot repository's bundled `support-runtime/` directory. Production still cannot read this private repository, raw transcripts, evidence/provenance, transcript/fact IDs, routing exemplars, evaluation/holdout data or customer PII.
+Production still cannot read the private repository, raw transcripts, evidence/provenance, transcript/fact IDs, routing exemplars, evaluation/holdout data, adjudication metadata or customer PII.
 
-The private repository remains data-only and is never written by bot startup. Canonical updates require an explicit offline import/review/commit cycle in the public bot repository.
+The private repository remains data/specification-only and is never written by bot startup. Canonical updates require an explicit offline import/review/commit cycle in the public bot repository.
 
 ## Current status
 
 ```text
-Side project:          CM Ticket Transcript Corpus
-Phase T1:              COMPLETE
-Strict links found:    1,578
-Structured corpus:     1,578 / 1,578
-Extraction failures:   0
-Data repo:             private, data-only
-Phase T2:              Support Knowledge Graph
-T2 first gate:         generate analysis-input pack from complete local corpus
-T2 final view:         Obsidian Markdown graph with wikilinks
-Later runtime target:  compact chatbot context derived from canonical graph
+Side project:                 CM Ticket Transcript / AI Support Knowledge Base
+Phase T1 extraction:          COMPLETE
+Strict links found:           1,578
+Structured corpus:            1,578 / 1,578
+Extraction failures:          0
+Exhaustive deep review:       COMPLETE
+Historical facts accounted:  3,949
+Canonical runtime cases:      55
+Data repo:                    private, data/specification-only
+Public runtime derivative:    sanitized support-runtime/ only
+Hosted planner candidate:     Groq openai/gpt-oss-120b
+Customer-facing AI:           disabled / unwired
 ```
 
-Canonicalization is implemented as an offline, data-repository-targeted phase. Public tools build, validate, privacy-scan, and evaluate `knowledge-canonical/` plus private `runtime-kb/`. Production reads only the separately generated and reviewed public `support-runtime/` derivative governed by ADR-0012; it never reads the private outputs directly.
-
-The exhaustive remediation layer adds corpus-derived case synthesis, 1,578-ticket runtime-disposition coverage, 3,949-fact runtime-usage coverage, and separate historical/adversarial benchmarks. Retrieval quality remains a measured follow-up; structural completion does not imply production readiness.
+The current consumed-development V3 benchmark is separately adjudicated instead of rewriting source labels. As of 2026-08-24 it contains 236 retained adjudicated rows, all 236 planner-representable, with a zero-row representability review queue. See `AI_SUPPORT_SIDE_PROJECT.md`, `HANDOFF.md`, and `GROQ_SUPPORT_TRIAGE.md` for the exact current benchmark and next action.
