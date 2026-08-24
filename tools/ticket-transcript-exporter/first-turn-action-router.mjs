@@ -3,7 +3,7 @@ import { buildAliasIndex, resolveAliases } from './evaluate-canonical-support-re
 const unique = (values) => [...new Set(values.filter(Boolean))];
 
 function normalized(value) {
-  return String(value ?? '').toLowerCase().replace(/[’']/gu, '').replace(/\s+/gu, ' ').trim();
+  return String(value ?? '').toLowerCase().replace(/[’']/gu, '').replace(/\bpayed\b/gu, 'paid').replace(/\s+/gu, ' ').trim();
 }
 
 export function resolveObservableEntities(query, aliases) {
