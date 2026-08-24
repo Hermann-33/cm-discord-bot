@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildLlmTriageInput, chooseSafeTriageFallback, runLlmTriage } from '../../tools/ticket-transcript-exporter/llm-triage-contract.mjs';
+import { buildTriageMessages } from '../../tools/ticket-transcript-exporter/llm-triage-prompt.mjs';
 
 const paymentCases = [
   {
@@ -42,9 +43,9 @@ const lookups = [
   { id: 'dynamic.purchase_intent.status', purpose: 'semantic payment status' }
 ];
 
-function deterministicPaymentInput() {
+function deterministicPaymentInput(customerText = 'i just payed again its wtv bro') {
   return buildLlmTriageInput({
-    customerText: 'i just payed again its wtv bro',
+    customerText,
     state: { candidateFamilyIds: ['commerce.payment'], questionsAsked: [] },
     candidateCases: paymentCases,
     candidateFamilies: ['commerce.payment'],
@@ -67,6 +68,16 @@ test('deterministic live-lookup route suppresses unrelated lookup expansion and 
     'purchase-intents.process.status.read'
   ]);
   assert.deepEqual(input.allowed.clarificationIds, []);
+});
+
+test('deterministic lookup prompt treats redacted selectors as present and forbids unavailable clarification', () => {
+  const input = deterministicPaymentInput('[order identifier omitted] order id pls check its paid already');
+  const [systemMessage] = buildTriageMessages(input);
+
+  assert.match(systemMessage.content, /privacy placeholders/i);
+  assert.match(systemMessage.content, /sensitive value was present but redacted/i);
+  assert.match(systemMessage.content, /deterministicDynamicLookupIds/i);
+  assert.match(systemMessage.content, /Never choose ask_clarification when allowed\.clarificationIds is empty/i);
 });
 
 test('provider failure preserves deterministic live-lookup route instead of escalating', async () => {
