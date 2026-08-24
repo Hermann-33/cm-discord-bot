@@ -105,6 +105,9 @@ export function buildLlmTriageInput({
   const dynamicLookupRows = (dynamicLookups ?? [])
     .filter((item) => relevantLookupIds.has(item.id))
     .map((item) => ({ id: item.id, purpose: item.purpose ?? item.description ?? null }));
+  const deterministicDynamicLookupIds = dynamicLookupRows
+    .filter((item) => deterministicLookupIds.has(item.id))
+    .map((item) => item.id);
 
   return {
     schemaVersion: 1,
@@ -134,6 +137,7 @@ export function buildLlmTriageInput({
       clarificationIds: clarificationRows.map((item) => item.id),
       dynamicLookups: dynamicLookupRows,
       dynamicLookupIds: dynamicLookupRows.map((item) => item.id),
+      deterministicDynamicLookupIds,
       policies: (policies ?? []).map((item) => ({ id: item.id, displayName: item.displayName ?? item.name ?? item.id })),
       policyIds: (policies ?? []).map((item) => item.id)
     },
@@ -214,6 +218,12 @@ function fallbackObservations() {
 }
 
 export function chooseSafeTriageFallback(input) {
+  const allowedLookupIds = new Set(input?.allowed?.dynamicLookupIds ?? []);
+  const deterministicLookupIds = unique(input?.allowed?.deterministicDynamicLookupIds ?? [])
+    .filter((id) => allowedLookupIds.has(id));
+  if (deterministicLookupIds.length > 0) {
+    return { observations: fallbackObservations(), nextAction: 'request_dynamic_lookup', caseIds: [], clarificationId: null, dynamicLookupIds: deterministicLookupIds, policyIds: [], confidence: 1, reasonCode: 'deterministic_lookup_route' };
+  }
   const activeCaseId = input?.state?.activeCaseId;
   if (!input?.restricted && activeCaseId && (input?.allowed?.caseIds ?? []).includes(activeCaseId)) {
     return { observations: fallbackObservations(), nextAction: 'answer_case', caseIds: [activeCaseId], clarificationId: null, dynamicLookupIds: [], policyIds: [], confidence: 1, reasonCode: 'existing_active_case' };
