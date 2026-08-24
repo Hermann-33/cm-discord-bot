@@ -105,6 +105,43 @@ test('prompt builder stays compact and instructs the model to choose a next acti
   assert.ok(estimatePlannerTokens(triageInput) < 2000);
 });
 
+test('lookup options are limited to deterministic case or control-plane relevance', () => {
+  const staticCase = {
+    id: 'case.spoofer.hwid_state',
+    displayName: 'HWID or spoofer state question',
+    family: 'technical.spoofer',
+    scope: { games: [], vendors: [], products: [], variants: [], accountModels: [], accountListings: [] },
+    ask: [], policies: [], dynamic: [], escalationIds: []
+  };
+  const allLookups = [
+    { id: 'users.overview.read', purpose: 'user overview' },
+    { id: 'orders.details.read', purpose: 'order details' },
+    { id: 'dynamic.catalog.product_status', purpose: 'product status' }
+  ];
+  const staticInput = buildLlmTriageInput({
+    customerText: 'hwid reset plssss',
+    state: { candidateCaseIds: [staticCase.id], candidateFamilyIds: [staticCase.family], questionsAsked: [] },
+    candidateCases: [staticCase],
+    candidateFamilies: [staticCase.family],
+    clarifications: [],
+    dynamicLookups: allLookups,
+    policies: []
+  });
+  assert.deepEqual(staticInput.allowed.dynamicLookupIds, []);
+
+  const paymentInput = buildLlmTriageInput({
+    customerText: 'my payment is pending',
+    state: { questionsAsked: [] },
+    candidateCases: [],
+    candidateFamilies: ['commerce.payment'],
+    candidateDynamicLookupIds: ['users.overview.read'],
+    clarifications: [],
+    dynamicLookups: allLookups,
+    policies: []
+  });
+  assert.deepEqual(paymentInput.allowed.dynamicLookupIds, ['users.overview.read']);
+});
+
 test('known context suppresses redundant clarification', () => {
   const contextKnown = input({ state: { resolvedEntities: ['account_model.nfa'], candidateFamilyIds: ['accounts.nfa'], questionsAsked: [], knownContext: { supportSurface: 'nfa_or_account' } } });
   assert.ok(!contextKnown.allowed.clarificationIds.includes('clarify.support_surface'));
