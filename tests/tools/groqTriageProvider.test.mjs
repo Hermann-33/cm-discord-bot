@@ -11,14 +11,29 @@ const input = {
     cases: [],
     familyIds: ['accounts.nfa'],
     clarificationIds: ['clarify.nfa.failure_stage'],
+    deterministicClarificationIds: [],
     clarifications: [{ id: 'clarify.nfa.failure_stage', question: 'Did it ever work before?' }],
     dynamicLookupIds: [],
+    deterministicDynamicLookupIds: [],
     dynamicLookups: [],
     policyIds: [],
     policies: []
   },
   restricted: false
 };
+
+async function captureBody(plannerInput) {
+  let body;
+  const provider = createGroqTriageProvider({
+    apiKey: 'gsk_test_key_12345678901234567890',
+    fetchImpl: async (_url, init) => {
+      body = JSON.parse(String(init.body));
+      return new Response(JSON.stringify({ choices: [{ message: { content: '{}' } }] }), { status: 200 });
+    }
+  });
+  await provider(plannerInput);
+  return body;
+}
 
 test('Groq provider uses fixed host, GPT-OSS 120B, strict schema, and low reasoning', async () => {
   let capturedUrl;
@@ -45,6 +60,50 @@ test('Groq provider uses fixed host, GPT-OSS 120B, strict schema, and low reason
   assert.equal(body.temperature, 0);
   assert.equal(body.max_completion_tokens, 400);
   assert.equal(body.stream, false);
+});
+
+test('Groq strict schema constrains deterministic lookup routes', async () => {
+  const body = await captureBody({
+    ...input,
+    customerText: '[order identifier omitted] order id pls check its paid already',
+    allowed: {
+      ...input.allowed,
+      clarificationIds: [],
+      clarifications: [],
+      dynamicLookupIds: ['purchase-intents.lookup.read', 'purchase-intents.process.status.read'],
+      deterministicDynamicLookupIds: ['purchase-intents.lookup.read', 'purchase-intents.process.status.read'],
+      dynamicLookups: [
+        { id: 'purchase-intents.lookup.read', purpose: 'purchase lookup' },
+        { id: 'purchase-intents.process.status.read', purpose: 'purchase status' }
+      ]
+    }
+  });
+  const schema = body.response_format.json_schema.schema;
+  assert.deepEqual(schema.properties.nextAction.enum, ['request_dynamic_lookup']);
+  assert.equal(schema.properties.clarificationId.type, 'null');
+  assert.deepEqual(schema.properties.dynamicLookupIds.items.enum, [
+    'purchase-intents.lookup.read',
+    'purchase-intents.process.status.read'
+  ]);
+});
+
+test('Groq strict schema constrains deterministic clarification routes', async () => {
+  const body = await captureBody({
+    ...input,
+    customerText: 'and [order identifier omitted]',
+    allowed: {
+      ...input.allowed,
+      clarificationIds: ['clarify.order.fulfillment_state'],
+      deterministicClarificationIds: ['clarify.order.fulfillment_state'],
+      clarifications: [{ id: 'clarify.order.fulfillment_state', question: 'What do you need about this order?' }],
+      dynamicLookupIds: [],
+      deterministicDynamicLookupIds: [],
+      dynamicLookups: []
+    }
+  });
+  const schema = body.response_format.json_schema.schema;
+  assert.deepEqual(schema.properties.nextAction.enum, ['ask_clarification']);
+  assert.deepEqual(schema.properties.clarificationId.enum, ['clarify.order.fulfillment_state']);
 });
 
 test('Groq provider rejects non-Groq remote endpoints', () => {

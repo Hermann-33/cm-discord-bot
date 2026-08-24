@@ -1,4 +1,4 @@
-import { buildTriageMessages, TRIAGE_OUTPUT_SCHEMA } from './llm-triage-prompt.mjs';
+import { buildTriageMessages, buildTriageOutputSchema } from './llm-triage-prompt.mjs';
 import { sanitizeSupportPlannerPayload, sanitizeSupportPlannerText } from './support-runtime-privacy.mjs';
 
 export const DEFAULT_GROQ_TRIAGE_MODEL = 'openai/gpt-oss-120b';
@@ -60,7 +60,7 @@ export function createGroqTriageProvider({
             json_schema: {
               name: 'cm_support_triage',
               strict: true,
-              schema: TRIAGE_OUTPUT_SCHEMA
+              schema: buildTriageOutputSchema(sanitizedInput)
             }
           }
         }),
