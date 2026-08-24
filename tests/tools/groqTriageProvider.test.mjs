@@ -89,3 +89,33 @@ test('Groq provider does not retry a 429 response', async () => {
   await assert.rejects(() => provider(input), /HTTP 429/);
   assert.equal(calls, 1);
 });
+
+test('Groq provider exposes sanitized structured error metadata without failed-generation content', async () => {
+  const provider = createGroqTriageProvider({
+    apiKey: 'gsk_test_key_12345678901234567890',
+    fetchImpl: async () => new Response(JSON.stringify({
+      error: {
+        type: 'invalid_request_error',
+        code: 'json_validate_failed',
+        message: 'Generated JSON failed for user@example.com password=hunter2',
+        failed_generation: 'gsk_secretsecretsecretsecret'
+      }
+    }), {
+      status: 400,
+      headers: { 'content-type': 'application/json' }
+    })
+  });
+
+  await assert.rejects(
+    () => provider(input),
+    (error) => {
+      assert.match(error.message, /HTTP 400/);
+      assert.match(error.message, /invalid_request_error/);
+      assert.match(error.message, /json_validate_failed/);
+      assert.equal(error.message.includes('user@example.com'), false);
+      assert.equal(error.message.includes('hunter2'), false);
+      assert.equal(error.message.includes('gsk_secretsecretsecretsecret'), false);
+      return true;
+    }
+  );
+});
