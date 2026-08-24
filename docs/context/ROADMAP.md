@@ -1,6 +1,6 @@
 # Project Roadmap
 
-Updated: 2026-08-23
+Updated: 2026-08-24 10:49 +08:00
 
 ## Completion rule
 
@@ -40,17 +40,11 @@ Active code/dependency audit plus current Internal Integrations API operation/se
 
 ## Phase 5.2 — Admin UI declutter — COMPLETE ON MAINLINE
 
-`TASK-CM-ADMIN-006` simplified private `/cm` and customer-share presentation without changing API, authorization or mutation behavior. Final verification passed 131/131 tests, typecheck, build and diff check and PR #4 merged at:
+`TASK-CM-ADMIN-006` simplified private `/cm` and customer-share presentation without changing API, authorization or mutation behavior. PR #4 merged at `6cef7695a09c8761d395f5d530bc79b7532c9b9f` after tests/typecheck/build/diff checks.
 
-```text
-6cef7695a09c8761d395f5d530bc79b7532c9b9f
-```
+## Phase 5.3 — Pending purchase + fulfillment support integration — IMPLEMENTED / VERIFIED
 
-## Phase 5.3 — Pending purchase + fulfillment support integration — IMPLEMENTED / VERIFIED ON PR #5
-
-`TASK-CM-ADMIN-007` / ADR-0011 completes the currently available website-side order-support contract in the Discord bot.
-
-Implemented on `task/cm-order-support-details`:
+`TASK-CM-ADMIN-007` / ADR-0011 completed the currently available website-side order-support contract in the Discord bot:
 
 - `/cm order` remains canonical-order first;
 - stable `NOT_FOUND` falls back to `purchase-intents.lookup.read`;
@@ -59,31 +53,10 @@ Implemented on `task/cm-order-support-details`:
 - Refresh Purchase with automatic transition to canonical order;
 - no order-only refund/delivery controls while only a purchase intent exists;
 - optional private `orders.fulfillment.read.support` type/duration/masked-material/manual state;
-- optional support failure no longer blocks canonical order controls;
+- optional support failure does not block canonical order controls;
 - strict rejection of unexpected raw fulfillment material;
 - masked fulfillment support/provider internals excluded from Share to Chat;
-- exact API allowlist expanded only with `purchase-intents.lookup.read`;
 - `purchase-intents.process`, manual fulfillment and direct DB remain forbidden.
-
-Source implementation merge-ref verification on current concurrent mainline passed GitHub Actions run `32254272306`:
-
-```text
-Node 22.23.2
-npm ci: PASS — 0 vulnerabilities
-npm test: PASS — 153/153
-npm run typecheck: PASS
-npm run build: PASS
-git diff --check: PASS
-```
-
-Remaining gates before production use:
-
-1. final PR/documentation-head CI;
-2. explicit merge authorization;
-3. ensure website bot integration client allows `purchase-intents.lookup.read`;
-4. normal bot deployment/restart.
-
-No slash-command definition changed, so command re-registration is not required.
 
 ## Phase 6 — Manual fulfillment — BACKEND OPERATION REQUIRED
 
@@ -99,61 +72,150 @@ Priorities:
 - deployment/rollback/credential-rotation runbooks;
 - controlled authenticated read/mutation smoke tests only with explicit authorization.
 
-## Parallel side project — CM Ticket Transcript Corpus
+## Parallel side project — CM Ticket Transcript / AI Support Knowledge Base
 
-This is not a production-bot phase. It is a separate workstream governed by ADR-0010 and `SIDE_PROJECTS.md`.
+This is not a production-bot runtime phase until an explicit activation task passes all gates. It is governed by ADR-0010, ADR-0012, ADR-0013, `SIDE_PROJECTS.md`, `AI_SUPPORT_SIDE_PROJECT.md`, `HANDOFF.md`, and `AI_SUPPORT_HANDOVER_PROMPT.md`.
 
-Repository:
+Private repository:
 
 ```text
 Hermann-33/CM-Ticket-Transcripts
 ```
 
-The repository is private and data-only. Main bot engineering may continue at the same time.
+The repository is private and data/specification-only. Executable tooling remains in `cm-discord-bot/tools/ticket-transcript-exporter/`.
 
-### Transcript Phase T1 — Corpus acquisition — IN PROGRESS
-
-Objective: make historical Discord/Tickety ticket corpus durable and accessible for later analysis.
-
-Required sequence:
+### Transcript Phase T1 — Corpus acquisition — COMPLETE
 
 ```text
-Discord ticket-log channel
-  -> enumerate complete historical log messages
-  -> extract ticket metadata + exact View Transcript URLs
-  -> validate fetch/parser against a small representative sample
-  -> normalize complete transcript conversations
-  -> bulk-export all recoverable tickets
-  -> produce explicit failure/completeness manifests
-  -> persist data in CM-Ticket-Transcripts
+strict View Transcript records: 1,578
+structured tickets:             1,578 / 1,578
+extraction failures:            0
+messages:                       39,090
 ```
 
-Real five-ticket validation remains the next operational gate before bulk export.
+Tickety transcript content is obtained from its Msgpack API path, not the JavaScript shell page. Discovery targets only exact `View Transcript` controls.
 
-### Transcript Phase T2 — Corpus quality / indexing — NOT STARTED
+### Transcript Phase T2 — Exhaustive deep review / knowledge graph — COMPLETE
 
-Potential follow-up only after T1: schema stabilization, deduplication/integrity, indexes/manifests, attachment inventory and missing-data reconciliation.
+All 1,578 tickets were processed into the private deep-review / evidence / graph layers. The private evidence system preserves contradictions, unresolved items, attachment/manual-review candidates, source links and provenance rather than flattening all historical support into present policy.
 
-### Transcript Phase T3 — Analysis / product use — NOT STARTED
+```text
+historical fact nodes:     3,949
+fact dispositions:         3,949 / 3,949
+broken links:              0
+fact nodes without evidence: 0
+```
 
-Any analytics/support intelligence or production integration built from the corpus is separately scoped. Existence of the corpus does not authorize a production bot dependency.
+### Transcript Phase T3 — Canonical/runtime knowledge compilation — COMPLETE FOR CURRENT OFFLINE SOURCE
 
-### Transcript Phase T3a — Canonical support KB — COMPLETE (offline tooling/data artifacts)
+The private canonical/runtime source currently contains 55 support cases plus entity, procedure, policy, dynamic lookup, escalation, clarification and routing artifacts. Historical prose/PII/provenance remain outside the production derivative.
 
-The historical facts now have exact disposition coverage and compile into canonical and compact runtime artifacts in the private repository. Structural/privacy validation and a 300-query local lexical baseline are available. Production runtime integration remains not started and requires separate architecture review/ADR.
+Dynamic/current state such as payment/order/fulfillment/balance/price/stock/status must use live authority rather than historical claims.
 
-### Transcript Phase T3b — Exhaustive case-coverage remediation — PARTIAL
+### Transcript Phase T4 — First-turn inferability / conversational routing — IMPLEMENTED / DEVELOPMENT EVALUATION
 
-The compiler now derives the emitted runtime case inventory from all 1,578 reviewed ticket ledgers, writes exact ticket/fact usage ledgers, and separates a source-grounded historical holdout from synthetic adversarial tests. Coverage and structural gates pass. The local hybrid ranker improves substantially over lexical retrieval but remains below the directional historical Recall@3/Recall@5/MRR targets, so production integration remains blocked.
+The project pivoted away from forcing exact first-turn case classification. Normative behavior now supports:
 
-### Phase 8 — AI support runtime integration — SCAFFOLDED / BENCHMARK GATED
+```text
+exact_case
+family_only
+entity_only
+control_plane_only
+insufficient_context
+multi_intent
+```
 
-ADR-0012 establishes the sanitized bundled runtime and constrained optional OpenRouter planner. Configuration, privacy filtering, strict decision validation, deterministic fallback, explicit conversation state, pending-answer handling, and an allowlist runtime-pack importer are implemented without customer-facing Discord wiring.
+Under-specified messages ask targeted clarification. Stateful replay preserves context and avoids repeated questions/diagnostics.
 
-Remaining activation gates:
+### Transcript Phase T5 — Hosted LLM triage — PRIMARY PROVIDER SELECTED / BENCHMARK CLEANUP PAUSED
 
-1. operator supplies `OPENROUTER_API_KEY` outside Git;
-2. run the controlled 20-record consumed-development smoke benchmark;
-3. inspect structured acceptance, optimal action, safety classes, scope leakage, fallback rate and latency;
-4. remediate benchmark findings without consuming a new final holdout;
-5. separately review and authorize Discord activation/grounded reply rendering.
+ADR-0013 selects:
+
+```text
+Provider: Groq
+Model: openai/gpt-oss-120b
+```
+
+OpenRouter remains secondary only.
+
+The hosted model chooses a structured next action; it does not own support truth, live state, policy, scope, restricted-topic decisions, state transitions or executable operations.
+
+Implemented safeguards include:
+
+- hosted input privacy sanitization;
+- strict JSON-schema output;
+- canonical-ID/scope/restricted/repetition/known-answer validation;
+- no automatic provider retry/failover;
+- V3 gold representability gating;
+- separate V3 adjudication overlay;
+- turn-scoped live-lookup exposure rather than a global tool catalog;
+- rate-safe Groq benchmark pacing and stop-on-429 behavior.
+
+The latest user-confirmed benchmark rebuild is the current pause point:
+
+```text
+sourceRecords:             300
+reviewedRecords:           262
+adjudicatedRecords:        237
+excludedByAdjudication:     25
+records:                   230
+reviewQueueRecords:          7
+representabilityRate:      0.9704641350210971
+```
+
+Current committed adjudication categories:
+
+```text
+bad_gold:                  14
+ambiguous_gold:             7
+safety_boundary_conflict:   3
+safety_boundary_review:     1
+```
+
+Six queue rows are bare order selectors that the deterministic router over-interprets as direct live-lookup intent. One row (`0217`) is likely stale/ambiguous gold because the user already supplied delivery state and described an inaccessible `View Order` link. The proposed `0217` exclusion is not committed.
+
+Do not spend more Groq quota from this 230/237 state.
+
+Immediate cleanup gate:
+
+1. fix selector-only order routing;
+2. add/update selector-only vs selector+intent tests;
+3. re-review `0217` and, if confirmed, exclude it only through the adjudication overlay;
+4. rebuild the benchmark;
+5. require review queue `0` and representability `1`;
+6. pass tests/typecheck/build/diff check;
+7. only then resume hosted development evaluation.
+
+Projected clean denominator after those changes, if `0217` is excluded, is 236/236. This is a target, not current measured truth.
+
+### Transcript Phase T6 — Hosted model selection / frozen final holdout — NOT COMPLETE
+
+After consumed-development cleanup:
+
+- inspect every unsafe/safe-no-progress/scope-leak/invalid/fallback/semantic-review row;
+- fix the smallest responsible layer rather than tuning against bad gold;
+- freeze provider/model/prompt/thresholds;
+- create/review a genuinely untouched transcript-grouped final holdout;
+- run it once for final selection.
+
+Do not consume the final holdout during development tuning.
+
+### Phase 8 — Customer-facing AI support runtime integration — BLOCKED BY BENCHMARK GATE
+
+ADR-0012 scaffolding exists, but Discord entrypoints are intentionally unwired.
+
+Activation requires at minimum:
+
+```text
+safe-progress-or-better >= 95%
+unsafe route <= 2%
+scope leakage = 0
+repeated known questions = 0
+context-answerable questions = 0
+```
+
+Also require high structured-output acceptance, low/zero fallback, acceptable latency/rate-limit behavior, privacy pass, product/variant/account-model isolation, restricted-topic precision and correct multi-turn eventual routing.
+
+Only after these gates pass may a separately authorized task review grounded reply rendering, Discord integration, staging, merge and deployment.
+
+No bot startup, command registration, deployment, website mutation or customer-facing AI activation is authorized by the current paused workstream.
