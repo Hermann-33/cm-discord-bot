@@ -44,6 +44,18 @@ test('NFA purchase through PayPal is payment context, not an NFA failure', () =>
   assert.ok(result.observableFamilyIds.includes('commerce.payment'));
 });
 
+test('payment-not-detected and typoed PayPal purchases preserve payment routing', () => {
+  const notDetected = reviewFirstTurnObservability('I made the payment but your system isnt detecting it. Reference: [order identifier omitted]', aliases);
+  assert.equal(notDetected.primaryDecision, 'direct_dynamic_lookup');
+  assert.ok(notDetected.lookupIds.includes('purchase-intents.lookup.read'));
+  assert.ok(notDetected.observableFamilyIds.includes('commerce.payment'));
+
+  const missingKey = reviewFirstTurnObservability('hey, i buyed pubg with paypal, and did not receive the key', aliases);
+  assert.equal(missingKey.primaryDecision, 'direct_dynamic_lookup');
+  assert.ok(missingKey.lookupIds.includes('purchase-intents.lookup.read'));
+  assert.ok(missingKey.observableFamilyIds.includes('commerce.payment'));
+});
+
 test('explicit NFA activation beats broad account-delivery heuristics', () => {
   const result = reviewFirstTurnObservability('hello, i need help to activate my nfa account', aliases);
   assert.equal(result.primaryDecision, 'direct_static_case');
@@ -69,6 +81,12 @@ test('setup, controller compatibility, and duration requests expose their exact 
   assert.deepEqual(reviewFirstTurnObservability('is the spoofer perm or temp', aliases).observableCaseIds, ['case.catalog.pricing_duration']);
 });
 
+test('mere feature/controller statements do not become compatibility answers', () => {
+  const result = reviewFirstTurnObservability('i only use esp i dont use aimbot since i play on controller', aliases);
+  assert.equal(result.primaryDecision, 'generic_clarification');
+  assert.equal(result.clarificationId, 'clarify.support_surface');
+});
+
 test('media and partnership proposals are not swallowed by generic payment routing', () => {
   assert.deepEqual(reviewFirstTurnObservability('u looking for some media?', aliases).observableCaseIds, ['case.media.application']);
   assert.deepEqual(reviewFirstTurnObservability('hello i was wondering if you offer rebrand/branded?', aliases).observableCaseIds, ['case.reseller.application']);
@@ -87,6 +105,13 @@ test('security reports escalate and current detection-status questions enter the
 
 test('spoofer launch failures expose a targeted technical clarification', () => {
   const result = reviewFirstTurnObservability('i got a problem launching your spoofer', aliases);
+  assert.equal(result.primaryDecision, 'family_scoped_clarification');
+  assert.equal(result.clarificationId, 'clarify.technical.failure_stage');
+  assert.ok(result.observableFamilyIds.includes('technical.product'));
+});
+
+test('product comparison mismatch reaches technical clarification instead of entity fallback', () => {
+  const result = reviewFirstTurnObservability('I just buy the cheat but why is not like exodus', aliases);
   assert.equal(result.primaryDecision, 'family_scoped_clarification');
   assert.equal(result.clarificationId, 'clarify.technical.failure_stage');
   assert.ok(result.observableFamilyIds.includes('technical.product'));
