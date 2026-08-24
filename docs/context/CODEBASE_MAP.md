@@ -1,6 +1,6 @@
 # Codebase Map
 
-Updated: 2026-08-23
+Updated: 2026-08-24 10:49 +08:00
 
 ## Repository boundaries
 
@@ -14,7 +14,7 @@ Updated: 2026-08-23
 | `docs/decisions/` | durable ADRs |
 | `docs/security/` | specialist security models |
 | `.env.example` | non-secret deployment variable names only |
-| `.github/workflows/ci.yml` | Node 22 verification gate |
+| `.github/workflows/ci.yml` | Node verification gate |
 | `support-runtime/` | generated sanitized canonical runtime bundle; never raw/private evidence |
 
 Never commit `.env`, `dist/`, `node_modules`, logs, archives, generated transcript data or real credentials.
@@ -25,35 +25,26 @@ Never commit `.env`, `dist/`, `node_modules`, logs, archives, generated transcri
 
 - `src/index.ts` — composition root; Discord/API/services/controller/schedule/shutdown wiring.
 - `src/api/signing.ts` — fragile canonical HMAC request signing.
-- `src/api/client.ts` — strict Internal Integrations API transport and typed operation methods, including pending purchase lookup.
+- `src/api/client.ts` — strict Internal Integrations API transport and typed operation methods.
 - `src/api/schemas.ts` — strict core DTO mirrors/selectors/errors, including optional fulfillment support schema.
 - `src/api/purchaseIntents.ts` — strict `purchase-intents.lookup.read` request/response DTO mirror for pending `/cm order` support.
 - `src/api/errors.ts` — stable safe API errors.
-- `src/config/env.ts` — Discord/API/admin environment validation.
+- `src/config/env.ts` — Discord/API/admin plus hosted-AI environment validation/defaults.
 
-### AI support scaffolding — not customer-enabled
+### AI support source — scaffolded, not customer-enabled
 
-- `src/ai/openRouterClient.ts` — optional no-retry OpenRouter structured triage planner with deterministic fallback.
+- `src/ai/groqClient.ts` — primary hosted Groq structured-output triage client for `openai/gpt-oss-120b`; no automatic retry.
+- `src/ai/openRouterClient.ts` — optional secondary OpenRouter development adapter.
 - `src/ai/privacy.ts` — outbound planner PII/credential/reference sanitizer.
-- `src/ai/supportTriage.ts` — strict decision schema, canonical-ID/scope/repetition/known-answer validation and fallback.
+- `src/ai/supportTriage.ts` — production-side structured decision schema/validation/fallback boundary.
 - `src/ai/runtimePack.ts` — integrity-checked loader for the bundled public support runtime only.
 - `src/ai/supportConversation.ts` — explicit state model, pending-answer consumption and resolver/planner/action interfaces.
-- `support-runtime/` — generated 12-artifact sanitized pack and public integrity manifest.
+- `src/ai/index.ts` — AI support exports.
+- `support-runtime/` — generated sanitized runtime artifacts and integrity metadata; no raw historical evidence/provenance.
 
-Approved active API operations:
+Customer-facing Discord entrypoints are intentionally **not wired** to this support planner yet.
 
-```text
-aura.leaderboards.read
-aura.lookup.read
-users.overview.read
-orders.details.read
-orders.fulfillment.read
-purchase-intents.lookup.read
-orders.refund.preview
-orders.refund.execute
-users.aura.adjust
-users.wallet.adjust
-```
+Important validator caveat: direct-case validation still needs a future explicit design for case-specific required observable conditions. Do not replace that with a crude `multiple candidate families => reject direct answer` rule.
 
 ### Commands/admin console
 
@@ -75,7 +66,7 @@ users.wallet.adjust
 - `src/discord/adminAuthorization.ts` — ADR-0006 exact-guild + explicit-user `/cm` authorization.
 - `src/discord/adminAudit.ts` — concise mention-safe Components V2 refund/Aura/wallet audit panels.
 - `src/discord/presentation.ts` — Discord-safe text, identity and timestamp helpers.
-- `src/discord/registerCommands.ts` — manual guild bulk overwrite for `/refresh-leaderboard` + `/cm`; TASK-CM-ADMIN-007 does not change command JSON.
+- `src/discord/registerCommands.ts` — manual guild bulk overwrite for `/refresh-leaderboard` + `/cm`.
 - `src/discord/safeMessages.ts` — safe mention/channel/message helpers.
 - `src/discord/client.ts` — intents; Message Content remains intentional while `cm aura` is text-based.
 
@@ -88,74 +79,108 @@ users.wallet.adjust
 - `src/scheduler/shutdown.ts` — idempotent shutdown.
 - `src/logger/index.ts` — structured sanitized logging.
 
-## Non-production tooling
+## Current website operation context
 
-### Ticket transcript exporter and analysis preparation
+Existing admin/leaderboard source uses an explicit least-privilege subset of the HMAC Internal Integrations API. `purchase-intents.process` remains forbidden.
 
-- `tools/ticket-transcript-exporter/run-ticket-transcript-export.mjs` — strict Discord-history wrapper that allows only exact `View Transcript` link buttons through discovery.
-- `tools/ticket-transcript-exporter/export-ticket-transcripts.mjs` — original Discord discovery + HTML/Chrome acquisition module; retained for source-log discovery and historical raw-shell evidence.
-- `tools/ticket-transcript-exporter/export-ticket-payloads.mjs` — schema-v2 structured extractor that reads `source-logs.jsonl`, calls Tickety's fixed `/api/ticketTranscript?id=<id>` endpoint, decodes `application/vnd.msgpack`, resolves message authors, and writes real message-level JSON/text/raw Msgpack artifacts.
-- `tools/ticket-transcript-exporter/prepare-knowledge-analysis.mjs` — offline deterministic packer that consolidates the completed local schema-v2 data repository into line-addressable `analysis-input/corpus.ndjson`, deterministic review excerpts and corpus statistics for exhaustive knowledge-graph analysis.
-- `tools/ticket-transcript-exporter/import-support-runtime-pack.mjs` — operator-controlled explicit-field importer from private canonical `runtime-kb/` to public `support-runtime/`; strips/rejects evidence, provenance, PII and private identifiers.
-- `tools/ticket-transcript-exporter/support-runtime-privacy.mjs` — hosted benchmark payload sanitizer matching the production privacy boundary.
-- `tools/ticket-transcript-exporter/README.md` — discovery + structured extraction workflow.
-- `tests/tools/ticketTranscriptExporter.test.mjs` — strict button discovery, URL restrictions, Discord-log parsing and legacy HTML helper tests.
-- `tests/tools/ticketTranscriptPayloadExporter.test.mjs` — structured-export CLI, payload validation, user resolution and text-projection tests.
-- `tests/tools/ticketTranscriptKnowledgeAnalysis.test.mjs` — analysis-packer path safety, complete-corpus consolidation, deterministic excerpting and provenance/statistics tests.
+Private AI runtime definitions also contain dynamic lookup concepts. In particular, `dynamic.catalog.*` currently refers to `catalog.current.read`, but that operation is not confirmed in the documented website operation catalog. This is an unresolved API-contract gap, not permission to invent an endpoint or use historical catalog state.
 
-Boundary:
+See `DATA_STATUS.md` for the current operation/data boundary.
+
+## Non-production ticket/AI tooling
+
+All executable corpus, canonicalization, routing and hosted-evaluation tooling remains under:
 
 ```text
-Stage 1
-Discord REST read-only history
-  -> exact View Transcript button
-  -> CM-Ticket-Transcripts/source-logs.jsonl
-
-Stage 2
-source-logs.jsonl
-  -> https://tickety.top/api/ticketTranscript?id=<id>
-  -> application/vnd.msgpack
-  -> schema-v2 local corpus files
-
-Stage 3
-complete schema-v2 local corpus
-  -> offline analysis packer
-  -> CM-Ticket-Transcripts/analysis-input/corpus.ndjson
-  -> CM-Ticket-Transcripts/analysis-input/review.ndjson
-  -> corpus statistics/provenance
-  -> source-grounded knowledge-graph review
+tools/ticket-transcript-exporter/
 ```
 
-The structured extraction stage does not rescan Discord and does not use the Discord bot token. It uses a local no-save `msgpackr` installation rather than adding a production dependency.
+It is not imported by `src/`, not called by production bot startup, and not a runtime dependency on the private corpus repository.
 
-The analysis-packing stage makes no network calls and does not summarize with an LLM. Its review file is a deterministic triage aid only; original transcript records remain authoritative for any rule promoted into the final support knowledge graph.
+### Corpus discovery/extraction
 
-No transcript tool is imported by `src/`, included in `tsconfig.build.json`, started by the bot, or connected to the Internal Integrations API/database.
+- `run-ticket-transcript-export.mjs` — strict Discord-history wrapper; exact `View Transcript` link buttons only.
+- `export-ticket-transcripts.mjs` — original discovery / legacy HTML-shell acquisition support.
+- `export-ticket-payloads.mjs` — schema-v2 Tickety Msgpack API extractor reading existing source logs.
+- `prepare-knowledge-analysis.mjs` — offline complete-corpus analysis packer.
 
-## Root test inventory relevant to TASK-CM-ADMIN-007
+### Canonical knowledge / evaluation tooling
 
-- `tests/api/admin-client.test.ts` — pending lookup contract, optional fulfillment support, raw-field rejection, existing mutation retry contracts.
-- `tests/commands/cm.test.ts` — order-first pending fallback, exact owner resolution, canonical transition, non-NOT_FOUND no-fallback.
-- `tests/commands/cmUi.test.ts` — pending controls/private support rendering/manual inference safeguards.
-- `tests/commands/cmShare.test.ts` — pending public field boundary; masked support/provider leakage prevention.
-- `tests/architecture.test.ts` — exact API allowlist/no DB/no purchase-processing/manual-fulfillment shortcuts.
-- `tests/discord/registerCommands.test.ts` — unchanged `/cm user` + `/cm order` command registration.
+- `build-canonical-support-kb.mjs` — canonical graph/runtime compiler for an explicitly supplied private data directory.
+- `synthesize-support-cases.mjs` — corpus-wide case synthesis / coverage ledgers / holdout preparation.
+- `validate-canonical-support-kb.mjs` — disposition/relationship/wikilink/runtime/privacy validation.
+- `validate-canonical-support-evaluation.mjs` — sanitized evaluation-set validation.
+- `evaluate-canonical-support-retrieval.mjs` — local deterministic retrieval baseline.
+- `build-canonical-clarifications.mjs` — canonical clarification artifacts.
+- `select-canonical-clarification.mjs` — information-gain clarification selection.
+- `resolve-canonical-support-state.mjs` — deterministic state transition/replay support.
 
-Side-project tooling coverage:
+### First-turn / LLM planner tooling
+
+- `first-turn-action-router.mjs` — deterministic first-turn observability/inferability router; currently has the documented bare-order-selector overreach pending correction.
+- `build-llm-triage-benchmark.mjs` — creates compact V3 hosted-planner inputs, applies adjudication overlay and checks gold representability.
+- `llm-triage-contract.mjs` — planner input construction, turn-scoped lookup exposure, output validation and safe fallback.
+- `llm-triage-prompt.mjs` — constrained hosted planner messages/schema/token estimate.
+- `groq-triage-provider.mjs` — Groq development provider adapter.
+- `openrouter-triage-provider.mjs` — secondary OpenRouter adapter.
+- `evaluate-llm-triage.mjs` — hosted planner evaluator, safety/progress classification and benchmark pacing.
+- `llm-triage-provider.mjs` — provider/local-endpoint support helpers.
+- `support-runtime-privacy.mjs` — hosted benchmark/runtime payload privacy helpers.
+- `import-support-runtime-pack.mjs` — operator-controlled allowlisted private-runtime -> public `support-runtime/` importer.
+
+### Relevant tool tests
 
 - `tests/tools/ticketTranscriptExporter.test.mjs`
 - `tests/tools/ticketTranscriptPayloadExporter.test.mjs`
 - `tests/tools/ticketTranscriptKnowledgeAnalysis.test.mjs`
-- `tools/ticket-transcript-exporter/build-canonical-support-kb.mjs` — offline canonical graph/runtime-pack compiler for an explicitly supplied private data directory.
-- `tools/ticket-transcript-exporter/synthesize-support-cases.mjs` — corpus-wide ticket-to-case synthesis, exact coverage ledgers, real-language holdout selection, and separate adversarial generation.
-- `tools/ticket-transcript-exporter/validate-canonical-support-kb.mjs` — disposition, relationship, wikilink, runtime-shape, and privacy validation.
-- `tools/ticket-transcript-exporter/validate-canonical-support-evaluation.mjs` — sanitized gold-set validation.
-- `tools/ticket-transcript-exporter/evaluate-canonical-support-retrieval.mjs` — local exact-alias, scope-aware BM25-style baseline evaluator.
+- `tests/tools/actionRoutingClarifications.test.mjs` — first-turn inferability/routing regression coverage, including payment, NFA, HWID, controller and partnership cases.
+- `tests/tools/llmTriageHarness.test.mjs` — planner contract/validation/lookup exposure/representability tests.
+- `tests/tools/llmTriageEvaluation.test.mjs`
+- `tests/tools/groqTriageProvider.test.mjs`
 
-All prior config/auth/refund/Aura/wallet/leaderboard/lifecycle/logging tests remain part of the root `npm test` gate.
+Production-side Groq coverage also includes `tests/ai/groqClient.test.ts` and related AI support tests.
+
+## Current benchmark checkpoint
+
+Current source V3 remains immutable. The committed adjudication overlay excludes 25 rows. Latest user-confirmed generated planner benchmark:
+
+```text
+reviewed:                 262
+adjudicated:              237
+representable records:    230
+review queue:               7
+representability:        ~97.046%
+```
+
+Six queue rows are bare order selectors; one is `0217` (delivered email + inaccessible `View Order`) with likely stale/ambiguous fulfillment clarification gold.
+
+See:
+
+```text
+docs/context/HANDOFF.md
+docs/context/AI_SUPPORT_SIDE_PROJECT.md
+docs/context/AI_SUPPORT_HANDOVER_PROMPT.md
+docs/GROQ_SUPPORT_TRIAGE.md
+```
+
+before touching these files.
+
+## Private data/specification ownership
+
+`Hermann-33/CM-Ticket-Transcripts` owns:
+
+- raw/structured transcript data;
+- deep-review/evidence graph;
+- canonical/private runtime-KB source;
+- V3 benchmark source labels;
+- adjudication overlays;
+- knowledge-engineering specifications;
+- generated private audit/evaluation artifacts.
+
+It must remain data/specification-only and never become a production filesystem/runtime dependency.
 
 ## External ownership
 
 This repo does not own website routes, Supabase migrations/RLS/grants/functions, wallet/order/payment/fulfillment accounting, OAuth/Support-role systems or production website integration-client environment values.
 
-`Hermann-33/CM-Ticket-Transcripts` owns generated historical transcript corpus and derived data-only knowledge-analysis artifacts. The production bot has no runtime dependency on that repository.
+Any website/API/database contract change is a separate task and cannot be inferred from private historical ticket data.
