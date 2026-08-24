@@ -80,7 +80,7 @@ export function reviewFirstTurnObservability(query, aliases) {
   if (has(/\b(?:do|make|create|be|become|apply for|looking for|looking to do|need)\s+(?:some\s+)?media\b|\bmedia\s+(?:creator|application)\b|\bmedia\b.{0,24}\b(?:tiktok|youtube)\b/u)) {
     return { ...result, ...exactCase('case.media.application', 'The first turn explicitly asks about media or creator work.') };
   }
-  if (has(/\b(?:rebrand(?:ed|ing)?|white ?label|cooperat(?:e|ion)|partner(?:ship)?|affiliate|resell(?:er|ing)?|resold)\b/u) || has(/\b(?:interested in|offer|use)\b.{0,35}\b(?:discord )?payment bot\b/u)) {
+  if (has(/\b(?:rebrand(?:ed|ing)?|white ?label|cooperat(?:e|ion)|partner(?:ship)?|affiliate|resell(?:er|ing)?|resold)\b/u) || has(/\b(?:(?:interested|intrested) in|offer|use)\b.{0,35}\b(?:discord )?payment bot\b/u)) {
     return { ...result, ...exactCase('case.reseller.application', 'The first turn explicitly asks about reselling, rebranding, partnership, or cooperation.') };
   }
   if (has(/\bhwid\b.{0,20}\breset\b|\breset\b.{0,20}\bhwid\b/u)) {
@@ -92,7 +92,10 @@ export function reviewFirstTurnObservability(query, aliases) {
   if (has(/\b(?:where(?: is|'s)? (?:the )?(?:config(?:uration)? file|guide|setup guide)|how (?:do i|to) (?:start|set up|setup|install|configure)|defender is (?:on|off)|windows defender)\b/u)) {
     return { ...result, ...exactCase('case.product.requirements', 'The opening message explicitly asks for setup, guide, configuration, or prerequisite help.') };
   }
-  if (has(/\b(?:compatible|compatibility|controller|gamepad|work (?:on|with) windows|windows 11|win 11|support (?:valorant|fortnite|rust|cs2))\b/u)) {
+  if (
+    has(/\b(?:compatible|compatibility|work (?:on|with) windows|windows 11|win 11|support (?:valorant|fortnite|rust|cs2))\b/u) ||
+    has(/\b(?:work|works|working|support(?:ed)?|compatible|use)\b.{0,24}\b(?:controller|gamepad)\b|\b(?:controller|gamepad)\b.{0,24}\b(?:work|works|working|support(?:ed)?|compatible)\b/u)
+  ) {
     return { ...result, ...exactCase('case.product.compatibility', 'The first turn explicitly asks about product, platform, or controller compatibility.') };
   }
   if (spooferSignal && has(/\b(?:perm(?:anent)?|temp(?:orary)?|duration|lifetime|how long)\b/u)) {
@@ -105,13 +108,13 @@ export function reviewFirstTurnObservability(query, aliases) {
   if (has(/\b(?:aura)\b/u)) return { ...result, ...control('direct_dynamic_lookup', ['case.aura.balance_or_adjustment'], 'Aura state is current user data and requires an approved lookup.', { lookupIds: ['aura.lookup.read'], observableFamilyIds: ['commerce.aura'] }) };
   if (has(/\b(?:wallet balance|site balance|balance (?:didnt|doesnt|not|missing)|convert .* balance)\b/u)) return { ...result, ...control('direct_dynamic_lookup', ['case.wallet.balance'], 'Current wallet/user state is required before answering.', { lookupIds: ['users.overview.read'], observableFamilyIds: ['commerce.wallet'] }) };
 
-  const explicitPaymentMethodPurchase = has(/\b(?:buy|get|purchase|pay)\b.{0,50}\b(?:with|using|via|w|through)\s+(?:paypal|pp|card|venmo|gift ?card|crypto|btc)\b|\b(?:paypal|pp|venmo|gift ?card)\b.{0,50}\b(?:buy|get|purchase|pay)\b/u);
-  if (paymentSignal && (explicitPaymentMethodPurchase || has(/\b(?:pending|processing|under review|checking|charged|paid|completed|declined|disabled|unavailable|locked|processor down|failed|wont work|doesnt work|didnt go through|doesnt go through|did not arrive|nothing (?:appeared|arrived)|not credited|can i (?:buy|pay))\b/u))) {
+  const explicitPaymentMethodPurchase = has(/\b(?:buy|buyed|bought|get|purchase|purchased|pay)\b.{0,50}\b(?:with|using|via|w|through)\s+(?:paypal|pp|card|venmo|gift ?card|crypto|btc)\b|\b(?:paypal|pp|venmo|gift ?card)\b.{0,50}\b(?:buy|buyed|bought|get|purchase|purchased|pay)\b/u);
+  if (paymentSignal && (explicitPaymentMethodPurchase || has(/\b(?:pending|processing|under review|checking|charged|paid|completed|declined|disabled|unavailable|locked|processor down|failed|wont work|doesnt work|didnt go through|doesnt go through|did not arrive|nothing (?:appeared|arrived)|not credited|can i (?:buy|pay)|isnt detecting|not detecting|not detected)\b/u))) {
     const cases = [];
     if (has(/\b(?:card payments? (?:are )?(?:disabled|unavailable)|card|stripe|processor down|declined|locked)\b/u)) cases.push('case.payment.card_declined');
     if (has(/\b(?:paypal|\bpp\b)\b/u)) cases.push('case.payment.paypal_unavailable');
-    if (has(/\b(?:pending|processing|under review|checking|failed|didnt go through|doesnt go through|did not arrive|wont work|doesnt work)\b/u)) cases.push('case.payment.failed_or_pending');
-    if (has(/\b(?:paid|completed|charged)\b/u) && has(/\b(?:nothing|didnt receive|did not receive|not credited|not appear|did not arrive)\b/u)) cases.push('case.payment.completed_missing_order');
+    if (has(/\b(?:pending|processing|under review|checking|failed|didnt go through|doesnt go through|did not arrive|wont work|doesnt work|isnt detecting|not detecting|not detected)\b/u)) cases.push('case.payment.failed_or_pending');
+    if (has(/\b(?:paid|completed|charged|bought|buyed|purchased)\b/u) && has(/\b(?:nothing|didnt receive|did not receive|not credited|not appear|did not arrive)\b/u)) cases.push('case.payment.completed_missing_order');
     if (has(/\b(?:crypto|btc|ltc|eth|solana)\b/u)) cases.push('case.payment.crypto_pending');
     return { ...result, ...control('direct_dynamic_lookup', cases, 'Payment state or current payment-method availability is time-sensitive and must use approved purchase-intent context.', { lookupIds: ['purchase-intents.lookup.read','purchase-intents.process.status.read'], observableFamilyIds: ['commerce.payment'] }) };
   }
@@ -147,6 +150,10 @@ export function reviewFirstTurnObservability(query, aliases) {
     return { ...result, ...clarification('family_only','family_scoped_clarification','clarify.technical.failure_stage',['case.product.requirements','case.product.launch_failure','case.game.crash_loading','case.game.crash_general'],['technical.product','technical.game'],'A spoofer/product technical problem is explicit, but the failure stage still needs to be established.') };
   }
 
+  if (has(/\b(?:not like|different from|different than|compared? (?:to|with)|compare .{0,25} (?:to|with))\b/u) && (has(/\b(?:cheat|product|loader|spoofer)\b/u) || entities.length > 0)) {
+    return { ...result, ...clarification('family_only','family_scoped_clarification','clarify.technical.failure_stage',['case.product.requirements','case.product.launch_failure','case.game.crash_loading','case.game.crash_general','case.game.feature_behavior'],['technical.product','technical.game'],'A product comparison or behavior mismatch is explicit, but the exact technical surface still needs clarification.') };
+  }
+
   if (has(/\b(?:website|site)\b/u) && has(/\b(?:login|sign in|link discord)\b/u)) return { ...result, ...exactCase('case.website.login', 'The website login/linking surface is explicit.') };
   if (has(/\b(?:website|site|checkout)\b/u) && has(/\b(?:not work|doesnt work|wont work|error|invalid|down|cant buy|cannot buy)\b/u)) return { ...result, ...clarification('family_only','family_scoped_clarification','clarify.website_stage',['case.website.login','case.website.checkout_failure','case.dashboard.verification'],['website.account','website.checkout','website.dashboard'],'The website surface is clear, but the failing stage is not specific enough.') };
 
@@ -154,6 +161,10 @@ export function reviewFirstTurnObservability(query, aliases) {
   if (has(/\b(?:account|acc)\b/u) && has(/\b(?:login|log in|access|password)\b/u)) return { ...result, ...clarification('family_only','family_scoped_clarification','clarify.account.delivery_state',['case.account.login_access','case.account.wrong_specification','case.order.fulfillment_delayed'],['accounts.access','accounts.delivery'],'An account access/delivery family is observable, but delivery versus access failure remains ambiguous.') };
   if (paymentSignal) return { ...result, ...clarification('family_only','family_scoped_clarification','clarify.payment_state',['case.payment.card_declined','case.payment.failed_or_pending','case.payment.completed_missing_order','case.payment.crypto_pending'],['commerce.payment'],'A payment issue is observable, but the current payment state is not.') };
   if (has(/\b(?:order|delivery|key)\b/u)) return { ...result, ...clarification('family_only','family_scoped_clarification','clarify.order.fulfillment_state',['case.order.status','case.order.fulfillment_delayed','case.order.wrong_delivery','case.order.refund_cancel'],['commerce.order','commerce.fulfillment'],'The commerce/order family is observable, but the requested state or remedy is unclear.') };
+
+  if (technicalSignal && has(/\b(?:i only use|i dont use|i do not use)\b/u) && !has(/\b(?:not working|doesnt work|dont work|wont work|help|issue|problem|error|why|how|can|does|will)\b/u)) {
+    return { ...result, ...clarification('insufficient_context','generic_clarification','clarify.support_surface',[],[],'The message names technical features but does not contain an observable support request.') };
+  }
   if (technicalSignal) return { ...result, ...clarification('family_only','family_scoped_clarification','clarify.technical.failure_stage',['case.product.requirements','case.product.launch_failure','case.game.crash_loading','case.game.crash_general','case.game.feature_behavior'],['technical.product','technical.game'],'A technical/product issue is observable, but the failure stage is not sufficiently specified.') };
 
   if (entities.length > 0) return { ...result, ...clarification('entity_only','entity_scoped_clarification','clarify.support_surface',[],[],'An entity is explicit, but the support surface and requested action are not.') };
