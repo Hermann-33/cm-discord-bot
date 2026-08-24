@@ -62,11 +62,29 @@ test('explicit NFA activation beats broad account-delivery heuristics', () => {
   assert.deepEqual(result.observableCaseIds, ['case.nfa.redemption_activation']);
 });
 
-test('explicit order identifier on an NFA routes to current order lookup', () => {
+test('order selector without requested action asks what the customer needs', () => {
   const result = reviewFirstTurnObservability('Hello. CS2 NFA - Order ID: [order identifier omitted]', aliases);
+  assert.equal(result.primaryDecision, 'family_scoped_clarification');
+  assert.equal(result.clarificationId, 'clarify.order.fulfillment_state');
+  assert.ok(result.observableFamilyIds.includes('commerce.order'));
+  assert.ok(result.observableFamilyIds.includes('commerce.fulfillment'));
+
+  const continuation = reviewFirstTurnObservability('this order too sorry [order identifier omitted]', aliases);
+  assert.equal(continuation.primaryDecision, 'family_scoped_clarification');
+  assert.equal(continuation.clarificationId, 'clarify.order.fulfillment_state');
+});
+
+test('order selector with explicit status intent routes to current order lookup', () => {
+  const result = reviewFirstTurnObservability('check my order [order identifier omitted]', aliases);
   assert.equal(result.primaryDecision, 'direct_dynamic_lookup');
   assert.ok(result.lookupIds.includes('orders.details.read'));
   assert.ok(result.observableFamilyIds.includes('commerce.order'));
+});
+
+test('delivered email with blocked View Order access routes to dashboard verification', () => {
+  const result = reviewFirstTurnObservability('it says delivered on my gmail but when i go to click view order it dont let me click it', aliases);
+  assert.equal(result.primaryDecision, 'direct_static_case');
+  assert.deepEqual(result.observableCaseIds, ['case.dashboard.verification']);
 });
 
 test('HWID reset is recognized as a spoofer-state case', () => {
