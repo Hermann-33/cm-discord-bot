@@ -167,6 +167,10 @@ export async function buildLlmTriageBenchmark(dataDir, {
   const reviewedRows = records.map((record) => {
     const baseline = reviewFirstTurnObservability(record.query, aliases);
     const candidateCases = candidateCasesFor(record, baseline, cases, maxCases);
+    const candidateDynamicLookupIds = unique([
+      ...(baseline.lookupIds ?? []),
+      ...(baseline.dynamicLookupIds ?? [])
+    ]);
     const input = buildLlmTriageInput({
       customerText: record.query,
       state: {
@@ -178,6 +182,7 @@ export async function buildLlmTriageBenchmark(dataDir, {
       },
       candidateCases,
       candidateFamilies: baseline.observableFamilyIds ?? [],
+      candidateDynamicLookupIds,
       clarifications,
       dynamicLookups,
       policies,
