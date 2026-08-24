@@ -6,7 +6,9 @@ This documentation system is the durable memory and governance layer for the Che
 
 - `../AGENTS.md` — mandatory operating rules
 - `context/ACTIVE_CONTEXT.md` — concise present state
-- `context/AI_SUPPORT_SIDE_PROJECT.md` — authoritative compact handoff for the ticket-knowledge/AI-support workstream, Groq planner, benchmark state and next-step rules
+- `context/AI_SUPPORT_SIDE_PROJECT.md` — authoritative compact context for the ticket-knowledge/AI-support workstream, Groq planner, benchmark history and current checkpoint
+- `context/HANDOFF.md` — exact latest pause point and resume sequence
+- `context/AI_SUPPORT_HANDOVER_PROMPT.md` — copy-paste handover prompt plus ordered guide to all public/private AI-support documents
 - `context/PROJECT_BRIEF.md` — stable product purpose and scope
 - `context/SIDE_PROJECTS.md` — adjacent/non-runtime workstreams, including the ticket transcript corpus
 - `context/ARCHITECTURE.md` — accepted current architecture
@@ -15,11 +17,10 @@ This documentation system is the durable memory and governance layer for the Che
 - `context/COMMANDS.md` — current and accepted command policy
 - `context/ROADMAP.md` — roadmap and completion gates
 - `context/WORKFLOW.md` — task/audit/Git lifecycle
-- `context/HANDOFF.md` — latest handoff and exact next action
 - `context/AUDIT_LOG.md` — chronological material findings and verdicts
 - `context/PROJECT_HISTORY.md` — durable project chronology
 
-For AI-support work, read `context/AI_SUPPORT_SIDE_PROJECT.md` before modifying routing, planner contracts, Groq/OpenRouter integration, benchmark/evaluation logic, `support-runtime/`, or the private `CM-Ticket-Transcripts` derivative workflow.
+For AI-support work, read `context/AI_SUPPORT_HANDOVER_PROMPT.md` and follow its ordered reading list before modifying routing, planner contracts, Groq/OpenRouter integration, benchmark/evaluation logic, `support-runtime/`, or private `CM-Ticket-Transcripts` artifacts.
 
 ## Full audit reports
 
@@ -41,14 +42,14 @@ For AI-support work, read `context/AI_SUPPORT_SIDE_PROJECT.md` before modifying 
 - `decisions/ADR-0007-admin-balance-adjustment-confirmation-model.md` — current Aura/wallet confirmation, fresh-state binding, idempotency and audit model
 - `decisions/ADR-0008-admin-panel-customer-safe-sharing.md` — base customer-safe public-copy/control boundary and Discord lookup/time/audit presentation policy
 - `decisions/ADR-0009-customer-email-in-shared-panels.md` — supersedes ADR-0008 only for the previous full-email prohibition; shared customer identity includes canonical account email
-- `decisions/ADR-0010-ticket-transcript-data-repository-boundary.md` — keeps the parallel `CM-Ticket-Transcripts` repository private, data-only and independent from production runtime
+- `decisions/ADR-0010-ticket-transcript-data-repository-boundary.md` — keeps the parallel `CM-Ticket-Transcripts` repository private, data/specification-only and independent from production runtime
 - `decisions/ADR-0011-pending-purchase-and-fulfillment-support-view.md` — order-first pending-purchase fallback, optional private masked fulfillment support, and public-share exclusions
 - `decisions/ADR-0012-bundled-support-runtime-and-openrouter-planner.md` — sanitized bundled support runtime, constrained optional hosted planner, stateful deterministic service boundary, and benchmark-before-activation gate; provider preference superseded by ADR-0013
 - `decisions/ADR-0013-groq-primary-support-triage-provider.md` — Groq `openai/gpt-oss-120b` is the primary hosted triage candidate; deterministic validation and the ADR-0012 runtime boundary remain authoritative
 
 ## Specialist references
 
-- `GROQ_SUPPORT_TRIAGE.md` — primary Groq GPT-OSS provider setup, privacy boundary, benchmark pacing, and activation gate
+- `GROQ_SUPPORT_TRIAGE.md` — primary Groq GPT-OSS provider setup, privacy boundary, benchmark pacing, current benchmark checkpoint and activation gate
 - `OPENROUTER_SUPPORT_TRIAGE.md` — secondary OpenRouter provider setup and compatibility notes
 - `security/ADMIN_MUTATION_MODEL.md` — Aura/wallet/refund mutation security model
 - `security/CM_ADMIN_CONSOLE_SECURITY.md` — current `/cm` authorization/session/share/user/order/pending/refund/balance-control security model
@@ -58,6 +59,6 @@ For AI-support work, read `context/AI_SUPPORT_SIDE_PROJECT.md` before modifying 
 
 Current source code and verified external state override stale chat memory. Later accepted ADRs supersede conflicting earlier ADRs. Historical audits describe their point-in-time conclusion and may be superseded. External backend facts are dependency context, never permission for the bot to bypass the website Internal Integrations API.
 
-Adjacent side projects remain outside the production bot runtime unless an explicit later architecture decision says otherwise. In particular, `CM-Ticket-Transcripts` is a private data corpus, not an executable bot/tool repository.
+Adjacent side projects remain outside the production bot runtime unless an explicit later architecture decision says otherwise. In particular, `CM-Ticket-Transcripts` is a private data/specification corpus, not an executable bot/tool repository.
 
 ADR-0012 permits only an operator-generated, provenance-free `support-runtime/` derivative in this public repository. ADR-0013 changes the preferred hosted planner provider only; it does not weaken that data boundary.
