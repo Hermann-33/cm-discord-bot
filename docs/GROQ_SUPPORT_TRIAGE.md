@@ -10,6 +10,8 @@ The model is used only to choose the next support action. Canonical support trut
 
 Customer-facing Discord support is still disabled until the hosted model passes the benchmark gate.
 
+For the broader workstream context, read `docs/context/AI_SUPPORT_SIDE_PROJECT.md`.
+
 ## Environment
 
 Add the following to the local `.env` or deployment secret store:
@@ -42,7 +44,7 @@ Every request uses:
 - strict JSON-schema structured output;
 - no model tools, browser search, code execution, MCP, or external actions.
 
-GPT-OSS 120B supports Groq strict Structured Outputs. The deterministic CM validator still validates the returned JSON independently and remains the final authority.
+The deterministic CM validator validates returned JSON independently and remains the final authority.
 
 ## Outbound privacy boundary
 
@@ -75,7 +77,11 @@ A model decision is rejected if it contains or attempts:
 
 Transport failures, HTTP failures, timeouts, and invalid outputs fail closed to the existing canonical fallback. The client does not retry automatically, including on HTTP 429.
 
-Planner input construction also avoids offering the global `clarify.support_surface` question when it does not distinguish the currently scoped candidate cases/families. Specific applicable clarifications are preferred over the generic fallback.
+Planner input construction prefers specific applicable clarifications over generic support-surface fallback and avoids offering irrelevant clarifications.
+
+Dynamic lookup exposure is now turn-scoped. The LLM is not handed the global lookup catalog. Lookup IDs are included only when justified by the deterministic route, the candidate case, or a relevant clarification. When a deterministic live-lookup route is already selected, those lookup IDs are authoritative for that turn and unrelated alternatives are suppressed.
+
+This change was required after a real Groq run showed `hwid reset plssss` incorrectly choosing `users.overview.read` solely because unrelated global lookup tools had been exposed.
 
 ## Development benchmark source
 
@@ -83,6 +89,12 @@ Hosted model selection uses the already-consumed, independently reviewed V3 firs
 
 ```text
 knowledge-canonical/Evaluation/historical-first-turn-action-v3.jsonl
+```
+
+The original V3 labels are preserved. A separate adjudication overlay records rows that are known-bad, ambiguous, or conflict with current safety boundaries:
+
+```text
+knowledge-canonical/Evaluation/historical-first-turn-action-v3-adjudication.json
 ```
 
 The older V1/V2 reviewed file is not valid semantic gold for hosted model selection because a substantial portion of its labels were reproducible from the deterministic router rather than independently adjudicated.
@@ -93,7 +105,7 @@ Regenerate the compact hosted planner inputs after pulling benchmark changes:
 npm.cmd run build:llm-triage-benchmark -- --data-dir ..\CM-Ticket-Transcripts
 ```
 
-The builder now separates **planner-quality evaluation** from **candidate-generation failures**. A row is eligible for hosted planner scoring only when the planner input can actually express the reviewed gold action. For example, an exact-case row is not sent to Groq when its gold case was never included in `allowed.caseIds`, and a gold clarification is not scored when that clarification was never offered.
+The builder separates **planner-quality evaluation** from **candidate-generation/gold failures**. A row is eligible for hosted planner scoring only when the planner input can actually express the retained adjudicated gold action.
 
 Eligible rows are written to:
 
@@ -107,27 +119,61 @@ Unrepresentable rows are preserved for deterministic/router or gold-label review
 knowledge-canonical/Audit/llm-triage-development-inputs-review-queue.jsonl
 ```
 
-The benchmark summary reports reviewed-row count, eligible-row count, representability rate, and reason counts. Nothing is silently discarded.
+Adjudication-excluded rows are also preserved separately for audit. Nothing is silently discarded or rewritten to inflate model metrics.
 
-Hosted Groq/OpenRouter evaluation fails closed if the development file contains stale/non-independent labels or rows without an explicit positive representability result.
+## Current clean benchmark preflight
+
+Latest confirmed V3 development state:
+
+```text
+source V3 records:          300
+independently reviewed:     262
+excluded by adjudication:    26
+  bad_gold:                  14
+  ambiguous_gold:             8
+  safety_boundary_conflict:   3
+  safety_boundary_review:     1
+retained adjudicated gold:  236
+planner-representable:      236
+review queue:                 0
+representability rate:      100%
+```
+
+Current planner token estimate after lookup/candidate pruning:
+
+```text
+average: 1,250.99
+median:    799
+p95:     2,355
+```
+
+This preflight is the authoritative consumed-development input state until a later documented rebuild changes it.
+
+## Important debugging lessons already incorporated
+
+Do not treat every historical reviewed row as correct current gold. Specific reviewed examples were found to be semantically wrong or stale, including NFA failure messages labeled as catalog-status lookups and reseller offers labeled as technical failure-stage questions.
+
+Do not penalize the LLM when the correct action was not offered in its allowed action space. Representability is checked before hosted scoring.
+
+Do not expose every lookup merely because the website supports it. Turn-scoped lookup exposure is part of the planner safety contract.
+
+Do not infer support intent from an identifier alone. A bare order selector now asks what the customer needs; an order selector plus explicit status/payment/delivery intent may route to the relevant live lookup.
+
+Do not infer compatibility from ordinary feature statements. `I play on controller` is not automatically a controller-compatibility question.
+
+Do not tune the LLM to reproduce gold rows already adjudicated as unreliable.
 
 ## Benchmark command
 
-After `GROQ_API_KEY` is added locally and the V3 benchmark input has been rebuilt, start with a very small smoke run:
+The hosted evaluator is restricted to the already-consumed development planner input. It must not be pointed at a new/final holdout during model selection.
 
-```powershell
-npm.cmd run evaluate:groq-triage -- --data-dir ..\CM-Ticket-Transcripts --limit 3
-```
-
-If those requests are accepted, continue with:
+Normal development smoke:
 
 ```powershell
 npm.cmd run evaluate:groq-triage -- --data-dir ..\CM-Ticket-Transcripts --limit 20
 ```
 
-The hosted evaluator is restricted to the already-consumed `llm-triage-development-inputs.jsonl`. It will not accept a new/final holdout file during model selection.
-
-The Groq benchmark is token-paced by default using an estimated 6,500-token-per-minute budget. The pace accounts for each planner's estimated input tokens plus the completion cap and intentionally stays below the current free-plan GPT-OSS token-per-minute ceiling. The value can be overridden for a different account tier with:
+The Groq benchmark is token-paced by default using an estimated 6,500-token-per-minute budget. The pace accounts for each planner's estimated input tokens plus the completion cap and intentionally stays below the expected free-tier GPT-OSS token-per-minute ceiling. The value can be overridden for a different account tier with:
 
 ```text
 --benchmark-tpm-budget <tokens-per-minute>
@@ -135,12 +181,20 @@ The Groq benchmark is token-paced by default using an estimated 6,500-token-per-
 
 The benchmark stops early on a provider HTTP 429 rather than repeatedly consuming failed requests.
 
+## Current hosted-run state
+
+Groq authentication and strict structured output are working. Previous runs established that valid structured decisions can be accepted with zero fallback and sub-second/about-one-second model latency.
+
+Older 20-record semantic summaries are retained only as debugging history because they were contaminated by bad gold, unrepresentable actions or planner-contract leakage.
+
+A new 20-record Groq triage run is currently in progress against the repaired 236-row benchmark and tighter lookup contract. Do not record a final planner-quality result until that actual output is available and its problem rows are reviewed offline.
+
 ## Acceptance gate
 
 Do not enable customer-facing support until both layers pass:
 
-1. deterministic candidate/gold representability is high enough that the planner is normally offered the correct action space;
-2. on representable independently reviewed rows, the selected provider/model demonstrates:
+1. deterministic candidate/gold representability remains clean;
+2. on representable independently reviewed/adjudicated rows, the selected provider/model demonstrates:
 
 ```text
 safe-progress-or-better >= 95%
@@ -148,7 +202,7 @@ unsafe route <= 2%
 scope leakage = 0
 ```
 
-Structured-output acceptance, fallback rate, latency, clarification quality, and eventual multi-turn routing must also be reviewed before activation.
+Structured-output acceptance, fallback rate, latency, clarification quality, privacy, rate-limit behavior, product/variant/account-model isolation, dynamic lookup correctness and eventual multi-turn routing must also be reviewed before activation.
 
 ## OpenRouter status
 
