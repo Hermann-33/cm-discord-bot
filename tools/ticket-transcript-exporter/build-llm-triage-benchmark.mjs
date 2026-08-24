@@ -6,6 +6,7 @@ import { reviewFirstTurnObservability } from './first-turn-action-router.mjs';
 import { estimatePlannerTokens } from './llm-triage-prompt.mjs';
 
 const DEFAULT_DEVELOPMENT_DATASET = 'historical-first-turn-action-v3.jsonl';
+const DEFAULT_ADJUDICATION_FILE = 'historical-first-turn-action-v3-adjudication.json';
 const INDEPENDENT_LABEL_METHOD = 'independent_semantic_review_first_turn_decision';
 const FAMILY_EQUIVALENTS = new Map([
   ['business.media', 'business.application']
@@ -88,6 +89,26 @@ function mergeLookups(...groups) {
   return [...byId.values()];
 }
 
+function buildAdjudicationIndex(document, dataset, reviewedRecordIds) {
+  if (!document || typeof document !== 'object' || Array.isArray(document)) {
+    throw new Error('V3 hosted benchmark adjudication must be a JSON object');
+  }
+  if (document.dataset !== dataset) {
+    throw new Error(`Adjudication dataset mismatch: expected ${dataset}, got ${document.dataset ?? 'missing'}`);
+  }
+  const entries = document.entries ?? [];
+  if (!Array.isArray(entries)) throw new Error('Adjudication entries must be an array');
+  const byId = new Map();
+  for (const entry of entries) {
+    if (!entry?.id || typeof entry.id !== 'string') throw new Error('Adjudication entry is missing id');
+    if (!['exclude','retain'].includes(entry.disposition)) throw new Error(`Unknown adjudication disposition for ${entry.id}`);
+    if (!reviewedRecordIds.has(entry.id)) throw new Error(`Adjudication references unknown or non-reviewed record ${entry.id}`);
+    if (byId.has(entry.id)) throw new Error(`Duplicate adjudication entry ${entry.id}`);
+    byId.set(entry.id, entry);
+  }
+  return byId;
+}
+
 export function assessGoldRepresentability(gold, input) {
   const reasons = [];
   const allowedCases = new Set(input?.allowed?.caseIds ?? []);
@@ -118,12 +139,19 @@ export function assessGoldRepresentability(gold, input) {
   return { eligible: reasons.length === 0, reasons: unique(reasons) };
 }
 
-export async function buildLlmTriageBenchmark(dataDir, { dataset = DEFAULT_DEVELOPMENT_DATASET, output = 'llm-triage-development-inputs.jsonl', maxCases = 8 } = {}) {
+export async function buildLlmTriageBenchmark(dataDir, {
+  dataset = DEFAULT_DEVELOPMENT_DATASET,
+  adjudication = DEFAULT_ADJUDICATION_FILE,
+  output = 'llm-triage-development-inputs.jsonl',
+  maxCases = 8
+} = {}) {
   const evaluationDir = path.join(dataDir, 'knowledge-canonical', 'Evaluation');
   const auditDir = path.join(dataDir, 'knowledge-canonical', 'Audit');
   const runtimeDir = path.join(dataDir, 'runtime-kb');
   const allRecords = await readJsonl(path.join(evaluationDir, dataset));
   const records = allRecords.filter((row) => row.goldStatus === 'reviewed');
+  const adjudicationDocument = await readJson(path.join(evaluationDir, adjudication));
+  const adjudicationById = buildAdjudicationIndex(adjudicationDocument, dataset, new Set(records.map((row) => row.id)));
   const cases = await readJsonl(path.join(runtimeDir, 'cases.jsonl'));
   const clarificationsFile = await readJson(path.join(runtimeDir, 'clarifications.json'));
   const clarifications = clarificationsFile.clarifications ?? clarificationsFile;
@@ -162,6 +190,7 @@ export async function buildLlmTriageBenchmark(dataDir, { dataset = DEFAULT_DEVEL
       sourceTranscriptIds: record.sourceTranscriptIds,
       goldLabelMethod: record.labelMethod ?? null,
       goldReviewReason: record.reviewReason ?? record.decisionReason ?? null,
+      benchmarkAdjudication: adjudicationById.get(record.id) ?? { disposition: 'retain', category: 'not_flagged' },
       input,
       gold,
       baseline: {
@@ -175,8 +204,11 @@ export async function buildLlmTriageBenchmark(dataDir, { dataset = DEFAULT_DEVEL
     };
   });
 
-  const rows = reviewedRows.filter((row) => row.benchmarkEligibility.eligible);
-  const reviewQueue = reviewedRows.filter((row) => !row.benchmarkEligibility.eligible);
+  const adjudicatedRows = reviewedRows.filter((row) => row.benchmarkAdjudication.disposition !== 'exclude');
+  const excludedRows = reviewedRows.filter((row) => row.benchmarkAdjudication.disposition === 'exclude');
+  const rows = adjudicatedRows.filter((row) => row.benchmarkEligibility.eligible);
+  const reviewQueue = adjudicatedRows.filter((row) => !row.benchmarkEligibility.eligible);
+  const rawRepresentable = reviewedRows.filter((row) => row.benchmarkEligibility.eligible).length;
   const tokenValues = rows.map((row) => row.plannerTokenEstimate).sort((a, b) => a - b);
   const percentile = (p) => tokenValues.length ? tokenValues[Math.min(tokenValues.length - 1, Math.ceil(tokenValues.length * p) - 1)] : 0;
   const independentReviewed = reviewedRows.filter((row) => row.goldLabelMethod === INDEPENDENT_LABEL_METHOD).length;
@@ -184,14 +216,23 @@ export async function buildLlmTriageBenchmark(dataDir, { dataset = DEFAULT_DEVEL
     reason,
     reviewQueue.filter((row) => row.benchmarkEligibility.reasons.includes(reason)).length
   ]));
+  const adjudicationCategories = Object.fromEntries(unique(excludedRows.map((row) => row.benchmarkAdjudication.category ?? 'unspecified')).map((category) => [
+    category,
+    excludedRows.filter((row) => (row.benchmarkAdjudication.category ?? 'unspecified') === category).length
+  ]));
   const summary = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     dataset,
+    adjudicationFile: adjudication,
     sourceRecords: allRecords.length,
     reviewedRecords: reviewedRows.length,
+    adjudicatedRecords: adjudicatedRows.length,
+    excludedByAdjudication: excludedRows.length,
+    adjudicationCategories,
     records: rows.length,
     reviewQueueRecords: reviewQueue.length,
-    representabilityRate: reviewedRows.length ? rows.length / reviewedRows.length : 0,
+    rawRepresentabilityRate: reviewedRows.length ? rawRepresentable / reviewedRows.length : 0,
+    representabilityRate: adjudicatedRows.length ? rows.length / adjudicatedRows.length : 0,
     representabilityReasons: reasonCounts,
     independentReviewed,
     independentReviewRate: reviewedRows.length ? independentReviewed / reviewedRows.length : 0,
@@ -207,8 +248,10 @@ export async function buildLlmTriageBenchmark(dataDir, { dataset = DEFAULT_DEVEL
     }
   };
   const reviewQueuePath = output.replace(/\.jsonl$/u, '-review-queue.jsonl');
+  const excludedPath = output.replace(/\.jsonl$/u, '-adjudication-excluded.jsonl');
   await writeFile(path.join(auditDir, output), `${rows.map((row) => JSON.stringify(row)).join('\n')}\n`, 'utf8');
   await writeFile(path.join(auditDir, reviewQueuePath), reviewQueue.length ? `${reviewQueue.map((row) => JSON.stringify(row)).join('\n')}\n` : '', 'utf8');
+  await writeFile(path.join(auditDir, excludedPath), excludedRows.length ? `${excludedRows.map((row) => JSON.stringify(row)).join('\n')}\n` : '', 'utf8');
   await writeFile(path.join(auditDir, output.replace(/\.jsonl$/u, '-summary.json')), `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
   return summary;
 }
@@ -216,8 +259,10 @@ export async function buildLlmTriageBenchmark(dataDir, { dataset = DEFAULT_DEVEL
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   const dataIndex = args.indexOf('--data-dir');
-  if (dataIndex < 0 || !args[dataIndex + 1]) throw new Error('Usage: node build-llm-triage-benchmark.mjs --data-dir <private-data-dir> [--dataset file.jsonl]');
+  if (dataIndex < 0 || !args[dataIndex + 1]) throw new Error('Usage: node build-llm-triage-benchmark.mjs --data-dir <private-data-dir> [--dataset file.jsonl] [--adjudication file.json]');
   const datasetIndex = args.indexOf('--dataset');
   const dataset = datasetIndex >= 0 ? args[datasetIndex + 1] : undefined;
-  console.log(JSON.stringify(await buildLlmTriageBenchmark(path.resolve(args[dataIndex + 1]), { dataset }), null, 2));
+  const adjudicationIndex = args.indexOf('--adjudication');
+  const adjudication = adjudicationIndex >= 0 ? args[adjudicationIndex + 1] : undefined;
+  console.log(JSON.stringify(await buildLlmTriageBenchmark(path.resolve(args[dataIndex + 1]), { dataset, adjudication }), null, 2));
 }
