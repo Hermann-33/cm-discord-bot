@@ -69,6 +69,7 @@ export function buildLlmTriageInput({
   resolvedEntities = state.resolvedEntities ?? [],
   candidateCases = [],
   candidateFamilies = state.candidateFamilyIds ?? [],
+  candidateDynamicLookupIds = state.candidateDynamicLookupIds ?? [],
   clarifications = [],
   dynamicLookups = [],
   policies = [],
@@ -92,6 +93,15 @@ export function buildLlmTriageInput({
     .sort((a, b) => Number(a.id === 'clarify.support_surface') - Number(b.id === 'clarify.support_surface'))
     .slice(0, maxClarifications)
     .map(compactClarification);
+
+  const relevantLookupIds = new Set(unique([
+    ...candidateDynamicLookupIds,
+    ...cases.flatMap((item) => item.dynamic ?? []),
+    ...clarificationRows.flatMap((item) => item.liveLookupCanReplace ?? [])
+  ]));
+  const dynamicLookupRows = (dynamicLookups ?? [])
+    .filter((item) => relevantLookupIds.has(item.id))
+    .map((item) => ({ id: item.id, purpose: item.purpose ?? item.description ?? null }));
 
   return {
     schemaVersion: 1,
@@ -119,8 +129,8 @@ export function buildLlmTriageInput({
       familyIds,
       clarifications: clarificationRows,
       clarificationIds: clarificationRows.map((item) => item.id),
-      dynamicLookups: (dynamicLookups ?? []).map((item) => ({ id: item.id, purpose: item.purpose ?? item.description ?? null })),
-      dynamicLookupIds: (dynamicLookups ?? []).map((item) => item.id),
+      dynamicLookups: dynamicLookupRows,
+      dynamicLookupIds: dynamicLookupRows.map((item) => item.id),
       policies: (policies ?? []).map((item) => ({ id: item.id, displayName: item.displayName ?? item.name ?? item.id })),
       policyIds: (policies ?? []).map((item) => item.id)
     },
