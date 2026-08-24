@@ -42,6 +42,8 @@ const row = (id, plannerTokenEstimate = 100) => ({
 
 const retainedHostedRow = (overrides = {}) => ({
   ...row('hosted.row'),
+  benchmarkDataset: 'historical-first-turn-action-v3.jsonl',
+  benchmarkAdjudicationFile: 'historical-first-turn-action-v3-adjudication.json',
   goldLabelMethod: 'independent_semantic_review_first_turn_decision',
   benchmarkAdjudication: { disposition: 'retain', category: 'not_flagged' },
   benchmarkEligibility: { eligible: true, reasons: [] },
@@ -132,8 +134,16 @@ test('runtime dynamic lookup IDs are valid hosted-planner actions when supplied 
   assert.deepEqual(result, { eligible: true, reasons: [] });
 });
 
-test('hosted benchmark guard requires retained adjudicated representable rows', () => {
+test('hosted benchmark guard requires V3 provenance plus retained adjudicated representable rows', () => {
   assert.doesNotThrow(() => assertIndependentDevelopmentRows([retainedHostedRow()]));
+  assert.throws(
+    () => assertIndependentDevelopmentRows([retainedHostedRow({ benchmarkDataset: 'custom-development.jsonl' })]),
+    /different benchmark provenance/
+  );
+  assert.throws(
+    () => assertIndependentDevelopmentRows([retainedHostedRow({ benchmarkAdjudicationFile: null })]),
+    /different benchmark provenance/
+  );
   assert.throws(
     () => assertIndependentDevelopmentRows([retainedHostedRow({ benchmarkAdjudication: undefined })]),
     /adjudicated retained development inputs/
