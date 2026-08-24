@@ -8,17 +8,18 @@ Before implementation, audit, refactor, cleanup, deployment work, or workflow de
 
 1. `docs/README.md`
 2. `docs/context/ACTIVE_CONTEXT.md`
-3. `docs/context/PROJECT_BRIEF.md`
-4. `docs/context/SIDE_PROJECTS.md`
-5. `docs/context/ARCHITECTURE.md`
-6. `docs/context/DATA_STATUS.md`
-7. `docs/context/CODEBASE_MAP.md`
-8. `docs/context/COMMANDS.md`
-9. `docs/context/ROADMAP.md`
-10. `docs/context/WORKFLOW.md`
-11. `docs/context/HANDOFF.md`
-12. relevant `docs/decisions/ADR-*.md`
-13. relevant specialist documents such as `docs/security/ADMIN_MUTATION_MODEL.md` and `docs/security/CM_ADMIN_CONSOLE_SECURITY.md`
+3. `docs/context/AI_SUPPORT_SIDE_PROJECT.md` when the task touches ticket knowledge, support AI, routing, Groq/OpenRouter, benchmark/evaluation, `support-runtime/`, or `CM-Ticket-Transcripts`
+4. `docs/context/PROJECT_BRIEF.md`
+5. `docs/context/SIDE_PROJECTS.md`
+6. `docs/context/ARCHITECTURE.md`
+7. `docs/context/DATA_STATUS.md`
+8. `docs/context/CODEBASE_MAP.md`
+9. `docs/context/COMMANDS.md`
+10. `docs/context/ROADMAP.md`
+11. `docs/context/WORKFLOW.md`
+12. `docs/context/HANDOFF.md`
+13. relevant `docs/decisions/ADR-*.md`
+14. relevant specialist documents such as `docs/GROQ_SUPPORT_TRIAGE.md`, `docs/security/ADMIN_MUTATION_MODEL.md` and `docs/security/CM_ADMIN_CONSOLE_SECURITY.md`
 
 If repository context conflicts with the requested task, stop and report the conflict before changing files.
 
@@ -32,10 +33,11 @@ When sources conflict, use this order:
 4. verified `DATA_STATUS.md`
 5. `PROJECT_BRIEF.md`
 6. `SIDE_PROJECTS.md` for explicitly adjacent/non-runtime workstreams
-7. `CODEBASE_MAP.md` and `COMMANDS.md`
-8. `ROADMAP.md`
-9. current task instruction
-10. chat history or old handovers
+7. `AI_SUPPORT_SIDE_PROJECT.md` for the current AI-support workstream, provided it does not conflict with a higher-authority ADR/context document
+8. `CODEBASE_MAP.md` and `COMMANDS.md`
+9. `ROADMAP.md`
+10. current task instruction
+11. chat history or old handovers
 
 Do not silently reconcile contradictions.
 
