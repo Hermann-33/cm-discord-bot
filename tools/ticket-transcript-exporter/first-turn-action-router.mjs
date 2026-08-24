@@ -38,6 +38,8 @@ export function reviewFirstTurnObservability(query, aliases) {
     has(/\baccount\b/u) &&
     has(/\b(?:didnt receive|did not receive|never received|missing|waiting for|where is)\b/u)
   );
+  const explicitOrderStateIntent = deliverySignal || has(/\b(?:where is my order|order status|check (?:my )?order|check order|didnt get (?:my )?(?:key|account|order)|need (?:my )?key|manual fulfil|manual fulfill)\b/u) || has(/\border\b.{0,24}\b(?:pending|processing|delivered|missing|wrong|failed)\b|\b(?:pending|processing|delivered|missing|wrong|failed)\b.{0,24}\border\b/u);
+  const deliveredOrderAccessProblem = has(/\bdelivered\b/u) && has(/\b(?:view order|order link|order page)\b/u) && has(/\b(?:cant|cannot|dont|doesnt|wont|unable|not able)\b.{0,24}\b(?:click|open|view)\b/u);
   const nfaSignal = has(/\bnfa\b/u) || entities.includes('account_model.nfa');
   const spooferSignal = has(/\b(?:spoofer|spoof(?:er|ing)?|hwid)\b/u);
   const loaderSignal = has(/\b(?:loader|loadder|loder|nfa\.exe)\b/u);
@@ -119,9 +121,15 @@ export function reviewFirstTurnObservability(query, aliases) {
     if (has(/\b(?:crypto|btc|ltc|eth|solana)\b/u)) cases.push('case.payment.crypto_pending');
     return { ...result, ...control('direct_dynamic_lookup', cases, 'Payment state or current payment-method availability is time-sensitive and must use approved purchase-intent context.', { lookupIds: ['purchase-intents.lookup.read','purchase-intents.process.status.read'], observableFamilyIds: ['commerce.payment'] }) };
   }
-  if (explicitOrderReference || deliverySignal || has(/\b(?:where is my order|order status|didnt get (?:my )?(?:key|account|order)|need (?:my )?key|manual fulfil|manual fulfill)\b/u)) {
+  if (deliveredOrderAccessProblem) {
+    return { ...result, ...exactCase('case.dashboard.verification', 'The customer says the order is delivered but the View Order access path itself cannot be opened.') };
+  }
+  if (explicitOrderReference && !explicitOrderStateIntent) {
+    return { ...result, ...clarification('family_only','family_scoped_clarification','clarify.order.fulfillment_state',['case.order.status','case.order.fulfillment_delayed','case.order.wrong_delivery','case.order.refund_cancel'],['commerce.order','commerce.fulfillment'],'An order selector is observable, but the customer has not said what they need about that order.') };
+  }
+  if (explicitOrderStateIntent) {
     const cases = has(/\b(?:where|status|check)\b/u) ? ['case.order.status'] : ['case.order.fulfillment_delayed'];
-    return { ...result, ...control('direct_dynamic_lookup', cases, 'The current order or fulfillment state is required instead of a historical guess.', { lookupIds: ['orders.lookup.read','orders.details.read','orders.fulfillment.read'], observableFamilyIds: ['commerce.order','commerce.fulfillment'] }) };
+    return { ...result, ...control('direct_dynamic_lookup', cases, 'The customer explicitly asks about current order or fulfillment state, so live order context is required.', { lookupIds: ['orders.lookup.read','orders.details.read','orders.fulfillment.read'], observableFamilyIds: ['commerce.order','commerce.fulfillment'] }) };
   }
   if (has(/\b(?:in stock|out of stock|restock|available|status|working rn|up rn|price|how much|is .{0,30} working)\b/u) && (has(/\b(?:product|cheat|spoofer|account|nfa|rust|cs2|fortnite|apex|pubg|eft|warzone|r6|exodus|ancient|venom)\b/u) || entities.length > 0)) {
     const cases = has(/\b(?:price|how much)\b/u) ? ['case.catalog.pricing_duration'] : ['case.catalog.availability_status'];
