@@ -26,29 +26,6 @@ export const TRIAGE_OUTPUT_SCHEMA = Object.freeze({
   }
 });
 
-const unique = (values) => [...new Set((values ?? []).filter(Boolean))];
-
-export function buildTriageOutputSchema(input) {
-  const allowedLookupIds = new Set(input?.allowed?.dynamicLookupIds ?? []);
-  const deterministicLookupIds = unique(input?.allowed?.deterministicDynamicLookupIds ?? [])
-    .filter((id) => allowedLookupIds.has(id));
-
-  if (deterministicLookupIds.length === 0) return TRIAGE_OUTPUT_SCHEMA;
-
-  return {
-    ...TRIAGE_OUTPUT_SCHEMA,
-    properties: {
-      ...TRIAGE_OUTPUT_SCHEMA.properties,
-      nextAction: { type: 'string', enum: ['request_dynamic_lookup'] },
-      clarificationId: { type: 'null' },
-      dynamicLookupIds: {
-        type: 'array',
-        items: { type: 'string', enum: deterministicLookupIds }
-      }
-    }
-  };
-}
-
 export function buildTriageMessages(input) {
   const system = [
     'You are a constrained support triage planner.',
