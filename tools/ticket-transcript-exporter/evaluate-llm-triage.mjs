@@ -26,11 +26,17 @@ function providerRateLimited(errors) {
   return (errors ?? []).some((value) => /provider_error:.*HTTP 429/iu.test(String(value)));
 }
 
-function assertIndependentDevelopmentRows(rows) {
+export function assertIndependentDevelopmentRows(rows) {
   const invalid = rows.filter((row) => row.goldLabelMethod !== INDEPENDENT_LABEL_METHOD);
   if (invalid.length > 0) {
     throw new Error(
       `Hosted evaluation requires independently reviewed V3 development inputs; ${invalid.length}/${rows.length} rows are stale or non-independent. Rebuild with npm.cmd run build:llm-triage-benchmark -- --data-dir <private-data-dir>`
+    );
+  }
+  const staleAdjudication = rows.filter((row) => row.benchmarkAdjudication?.disposition !== 'retain');
+  if (staleAdjudication.length > 0) {
+    throw new Error(
+      `Hosted evaluation requires adjudicated retained development inputs; ${staleAdjudication.length}/${rows.length} rows are missing benchmark adjudication or are not retained. Rebuild with npm.cmd run build:llm-triage-benchmark -- --data-dir <private-data-dir>`
     );
   }
   const unrepresentable = rows.filter((row) => row.benchmarkEligibility?.eligible !== true);
