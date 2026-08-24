@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { assessGoldRepresentability } from '../../tools/ticket-transcript-exporter/build-llm-triage-benchmark.mjs';
-import { evaluateGroqLlmTriage, evaluateLlmTriageRows, evaluateOpenRouterLlmTriage, triageOutputToPrediction } from '../../tools/ticket-transcript-exporter/evaluate-llm-triage.mjs';
+import { assertIndependentDevelopmentRows, evaluateGroqLlmTriage, evaluateLlmTriageRows, evaluateOpenRouterLlmTriage, triageOutputToPrediction } from '../../tools/ticket-transcript-exporter/evaluate-llm-triage.mjs';
 
 const input = {
   state: { resolvedEntities: [], questionsAsked: [], activeCaseId: null },
@@ -38,6 +38,14 @@ const row = (id, plannerTokenEstimate = 100) => ({
   plannerTokenEstimate,
   input,
   gold
+});
+
+const retainedHostedRow = (overrides = {}) => ({
+  ...row('hosted.row'),
+  goldLabelMethod: 'independent_semantic_review_first_turn_decision',
+  benchmarkAdjudication: { disposition: 'retain', category: 'not_flagged' },
+  benchmarkEligibility: { eligible: true, reasons: [] },
+  ...overrides
 });
 
 test('maps structured triage actions to conversational-safety decisions', () => {
@@ -122,6 +130,22 @@ test('runtime dynamic lookup IDs are valid hosted-planner actions when supplied 
     policyIds: []
   }, triageInput);
   assert.deepEqual(result, { eligible: true, reasons: [] });
+});
+
+test('hosted benchmark guard requires retained adjudicated representable rows', () => {
+  assert.doesNotThrow(() => assertIndependentDevelopmentRows([retainedHostedRow()]));
+  assert.throws(
+    () => assertIndependentDevelopmentRows([retainedHostedRow({ benchmarkAdjudication: undefined })]),
+    /adjudicated retained development inputs/
+  );
+  assert.throws(
+    () => assertIndependentDevelopmentRows([retainedHostedRow({ benchmarkAdjudication: { disposition: 'exclude' } })]),
+    /adjudicated retained development inputs/
+  );
+  assert.throws(
+    () => assertIndependentDevelopmentRows([retainedHostedRow({ benchmarkEligibility: { eligible: false, reasons: ['x'] } })]),
+    /planner-representable gold/
+  );
 });
 
 test('hosted benchmarks refuse a new holdout input file before provider creation', async () => {
