@@ -10,6 +10,8 @@ import { createOpenRouterTriageProvider } from './openrouter-triage-provider.mjs
 import { createGroqTriageProvider } from './groq-triage-provider.mjs';
 
 const DEVELOPMENT_INPUT_FILE = 'llm-triage-development-inputs.jsonl';
+const DEVELOPMENT_DATASET = 'historical-first-turn-action-v3.jsonl';
+const DEVELOPMENT_ADJUDICATION_FILE = 'historical-first-turn-action-v3-adjudication.json';
 const INDEPENDENT_LABEL_METHOD = 'independent_semantic_review_first_turn_decision';
 const readJsonl = async (file) => (await readFile(file, 'utf8')).split(/\r?\n/u).filter(Boolean).map((line) => JSON.parse(line));
 const safeName = (value) => String(value).replace(/[^a-z0-9._-]+/giu, '-').replace(/^-+|-+$/gu, '').toLowerCase() || 'model';
@@ -27,6 +29,15 @@ function providerRateLimited(errors) {
 }
 
 export function assertIndependentDevelopmentRows(rows) {
+  const wrongProvenance = rows.filter((row) =>
+    row.benchmarkDataset !== DEVELOPMENT_DATASET ||
+    row.benchmarkAdjudicationFile !== DEVELOPMENT_ADJUDICATION_FILE
+  );
+  if (wrongProvenance.length > 0) {
+    throw new Error(
+      `Hosted evaluation requires the consumed adjudicated V3 development dataset; ${wrongProvenance.length}/${rows.length} rows are stale or have different benchmark provenance. Rebuild with npm.cmd run build:llm-triage-benchmark -- --data-dir <private-data-dir>`
+    );
+  }
   const invalid = rows.filter((row) => row.goldLabelMethod !== INDEPENDENT_LABEL_METHOD);
   if (invalid.length > 0) {
     throw new Error(
