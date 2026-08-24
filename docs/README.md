@@ -6,6 +6,7 @@ This documentation system is the durable memory and governance layer for the Che
 
 - `../AGENTS.md` — mandatory operating rules
 - `context/ACTIVE_CONTEXT.md` — concise present state
+- `context/AI_SUPPORT_SIDE_PROJECT.md` — authoritative compact handoff for the ticket-knowledge/AI-support workstream, Groq planner, benchmark state and next-step rules
 - `context/PROJECT_BRIEF.md` — stable product purpose and scope
 - `context/SIDE_PROJECTS.md` — adjacent/non-runtime workstreams, including the ticket transcript corpus
 - `context/ARCHITECTURE.md` — accepted current architecture
@@ -17,6 +18,8 @@ This documentation system is the durable memory and governance layer for the Che
 - `context/HANDOFF.md` — latest handoff and exact next action
 - `context/AUDIT_LOG.md` — chronological material findings and verdicts
 - `context/PROJECT_HISTORY.md` — durable project chronology
+
+For AI-support work, read `context/AI_SUPPORT_SIDE_PROJECT.md` before modifying routing, planner contracts, Groq/OpenRouter integration, benchmark/evaluation logic, `support-runtime/`, or the private `CM-Ticket-Transcripts` derivative workflow.
 
 ## Full audit reports
 
