@@ -1,8 +1,22 @@
 import { buildTriageMessages, TRIAGE_OUTPUT_SCHEMA } from './llm-triage-prompt.mjs';
-import { sanitizeSupportPlannerPayload } from './support-runtime-privacy.mjs';
+import { sanitizeSupportPlannerPayload, sanitizeSupportPlannerText } from './support-runtime-privacy.mjs';
 
 export const DEFAULT_GROQ_TRIAGE_MODEL = 'openai/gpt-oss-120b';
 export const DEFAULT_GROQ_REASONING_EFFORT = 'low';
+
+async function groqErrorDetail(response) {
+  try {
+    const payload = await response.json();
+    const error = payload?.error;
+    const parts = [error?.type, error?.code, error?.message]
+      .filter((value) => value !== undefined && value !== null)
+      .map((value) => sanitizeSupportPlannerText(String(value)))
+      .filter(Boolean);
+    return parts.join(': ').slice(0, 400) || null;
+  } catch {
+    return null;
+  }
+}
 
 export function createGroqTriageProvider({
   apiKey,
@@ -52,7 +66,10 @@ export function createGroqTriageProvider({
         }),
         signal: controller.signal
       });
-      if (!response.ok) throw new Error(`Groq triage provider returned HTTP ${response.status}`);
+      if (!response.ok) {
+        const detail = await groqErrorDetail(response);
+        throw new Error(`Groq triage provider returned HTTP ${response.status}${detail ? ` (${detail})` : ''}`);
+      }
       const payload = await response.json();
       const content = payload?.choices?.[0]?.message?.content;
       if (typeof content !== 'string') throw new Error('Groq triage response did not contain message.content');
