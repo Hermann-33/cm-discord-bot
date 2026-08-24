@@ -81,7 +81,9 @@ export function buildLlmTriageInput({
   const familyIds = unique([...candidateFamilies, ...cases.map((item) => item.family)]);
   const candidateCaseIds = new Set(cases.map((item) => item.id));
   const hasScopedCandidates = candidateCaseIds.size > 0 || familyIds.length > 0;
-  const clarificationRows = clarifications
+  const deterministicLookupIds = new Set(unique(candidateDynamicLookupIds));
+  const hasDeterministicLookupRoute = deterministicLookupIds.size > 0;
+  const clarificationRows = (hasDeterministicLookupRoute ? [] : clarifications)
     .filter((item) => {
       const caseHit = (item.distinguishesCases ?? []).some((id) => candidateCaseIds.has(id));
       const familyHit = (item.distinguishesFamilies ?? []).some((id) => familyIds.includes(id));
@@ -94,11 +96,12 @@ export function buildLlmTriageInput({
     .slice(0, maxClarifications)
     .map(compactClarification);
 
-  const relevantLookupIds = new Set(unique([
-    ...candidateDynamicLookupIds,
-    ...cases.flatMap((item) => item.dynamic ?? []),
-    ...clarificationRows.flatMap((item) => item.liveLookupCanReplace ?? [])
-  ]));
+  const relevantLookupIds = hasDeterministicLookupRoute
+    ? deterministicLookupIds
+    : new Set(unique([
+      ...cases.flatMap((item) => item.dynamic ?? []),
+      ...clarificationRows.flatMap((item) => item.liveLookupCanReplace ?? [])
+    ]));
   const dynamicLookupRows = (dynamicLookups ?? [])
     .filter((item) => relevantLookupIds.has(item.id))
     .map((item) => ({ id: item.id, purpose: item.purpose ?? item.description ?? null }));
