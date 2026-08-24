@@ -1,10 +1,10 @@
 # Related Side Projects
 
-Updated: 2026-08-24
+Updated: 2026-08-24 10:49 +08:00
 
 This document records adjacent Cheater's Market workstreams that are intentionally outside the standalone Discord bot runtime but are relevant enough that future agents must understand the boundary.
 
-For the current AI-support implementation, benchmark history and exact handoff, read `docs/context/AI_SUPPORT_SIDE_PROJECT.md`.
+For the current AI-support implementation, benchmark history and exact handoff, read `docs/context/AI_SUPPORT_HANDOVER_PROMPT.md`, `docs/context/AI_SUPPORT_SIDE_PROJECT.md`, and `docs/context/HANDOFF.md`.
 
 ## CM Ticket Transcript Corpus
 
@@ -17,7 +17,7 @@ Hermann-33/CM-Ticket-Transcripts
 Repository role:
 
 - private;
-- data-only;
+- data/specification-only;
 - no executable application or extraction code;
 - not a runtime dependency of `cm-discord-bot`;
 - developed in parallel with normal Discord bot work.
@@ -150,6 +150,7 @@ deep-review/
 knowledge-deep/
 knowledge-canonical/
 runtime-kb/
+knowledge-engineering/
 ```
 
 The deep-review/canonicalization layers preserve source evidence, duplicate relationships, historical-only observations, current-state/dynamic facts, restricted technical material, unresolved questions and contradictions.
@@ -158,6 +159,7 @@ The corpus-level coverage currently accounts for:
 
 ```text
 structured tickets:      1,578 / 1,578
+messages:                39,090
 historical fact nodes:    3,949
 canonical runtime cases:  55
 ```
@@ -239,6 +241,32 @@ Data repo:                    private, data/specification-only
 Public runtime derivative:    sanitized support-runtime/ only
 Hosted planner candidate:     Groq openai/gpt-oss-120b
 Customer-facing AI:           disabled / unwired
+Workstream state:             paused at benchmark cleanup checkpoint
 ```
 
-The current consumed-development V3 benchmark is separately adjudicated instead of rewriting source labels. As of 2026-08-24 it contains 236 retained adjudicated rows, all 236 planner-representable, with a zero-row representability review queue. See `AI_SUPPORT_SIDE_PROJECT.md`, `HANDOFF.md`, and `GROQ_SUPPORT_TRIAGE.md` for the exact current benchmark and next action.
+### Current V3 benchmark checkpoint
+
+The original independently reviewed V3 source remains immutable. The separate committed adjudication overlay currently excludes **25** rows:
+
+```text
+bad_gold:                  14
+ambiguous_gold:             7
+safety_boundary_conflict:   3
+safety_boundary_review:     1
+```
+
+The latest user-confirmed generated planner benchmark is:
+
+```text
+reviewedRecords:           262
+adjudicatedRecords:        237
+records:                   230
+reviewQueueRecords:          7
+representabilityRate:      0.9704641350210971
+```
+
+Six queue rows are bare order selectors that the deterministic router currently over-interprets as a direct live lookup. One row (`0217`) is a likely stale/ambiguous fulfillment-state gold label because the user already states the order is delivered and describes an inaccessible `View Order` link.
+
+The proposed future `0217` exclusion is not committed. A 236/236, queue-0 benchmark is therefore a projection, not current truth.
+
+Do not spend more Groq quota until those seven rows are resolved and the benchmark is rebuilt to review queue 0 / representability 1. See `AI_SUPPORT_HANDOVER_PROMPT.md`, `AI_SUPPORT_SIDE_PROJECT.md`, `HANDOFF.md`, and `GROQ_SUPPORT_TRIAGE.md` for the exact resume sequence.
