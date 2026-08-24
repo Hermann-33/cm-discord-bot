@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildLlmTriageInput } from '../../tools/ticket-transcript-exporter/llm-triage-contract.mjs';
+import { buildLlmTriageInput, chooseSafeTriageFallback, runLlmTriage } from '../../tools/ticket-transcript-exporter/llm-triage-contract.mjs';
 
 const paymentCases = [
   {
@@ -42,8 +42,8 @@ const lookups = [
   { id: 'dynamic.purchase_intent.status', purpose: 'semantic payment status' }
 ];
 
-test('deterministic live-lookup route suppresses unrelated lookup expansion and clarification detours', () => {
-  const input = buildLlmTriageInput({
+function deterministicPaymentInput() {
+  return buildLlmTriageInput({
     customerText: 'i just payed again its wtv bro',
     state: { candidateFamilyIds: ['commerce.payment'], questionsAsked: [] },
     candidateCases: paymentCases,
@@ -53,12 +53,51 @@ test('deterministic live-lookup route suppresses unrelated lookup expansion and 
     dynamicLookups: lookups,
     policies: []
   });
+}
+
+test('deterministic live-lookup route suppresses unrelated lookup expansion and clarification detours', () => {
+  const input = deterministicPaymentInput();
 
   assert.deepEqual(input.allowed.dynamicLookupIds, [
     'purchase-intents.lookup.read',
     'purchase-intents.process.status.read'
   ]);
+  assert.deepEqual(input.allowed.deterministicDynamicLookupIds, [
+    'purchase-intents.lookup.read',
+    'purchase-intents.process.status.read'
+  ]);
   assert.deepEqual(input.allowed.clarificationIds, []);
+});
+
+test('provider failure preserves deterministic live-lookup route instead of escalating', async () => {
+  const input = deterministicPaymentInput();
+  const result = await runLlmTriage({
+    provider: async () => { throw new Error('provider unavailable'); },
+    input
+  });
+
+  assert.equal(result.accepted, false);
+  assert.equal(result.output.nextAction, 'request_dynamic_lookup');
+  assert.deepEqual(result.output.dynamicLookupIds, [
+    'purchase-intents.lookup.read',
+    'purchase-intents.process.status.read'
+  ]);
+  assert.equal(result.output.reasonCode, 'deterministic_lookup_route');
+});
+
+test('fallback does not promote case-derived lookup dependencies to deterministic routes', () => {
+  const input = buildLlmTriageInput({
+    customerText: 'payment issue',
+    state: { candidateFamilyIds: ['commerce.payment'], questionsAsked: [] },
+    candidateCases: paymentCases,
+    candidateFamilies: ['commerce.payment'],
+    clarifications,
+    dynamicLookups: lookups,
+    policies: []
+  });
+
+  assert.deepEqual(input.allowed.deterministicDynamicLookupIds, []);
+  assert.notEqual(chooseSafeTriageFallback(input).reasonCode, 'deterministic_lookup_route');
 });
 
 test('case and clarification lookup dependencies still apply without a deterministic lookup route', () => {
