@@ -204,6 +204,8 @@ export async function buildLlmTriageBenchmark(dataDir, {
     return {
       id: record.id,
       sourceTranscriptIds: record.sourceTranscriptIds,
+      benchmarkDataset: dataset,
+      benchmarkAdjudicationFile: adjudicationFile,
       goldLabelMethod: record.labelMethod ?? null,
       goldReviewReason: record.reviewReason ?? record.decisionReason ?? null,
       benchmarkAdjudication: adjudicationById.get(record.id) ?? { disposition: 'retain', category: adjudicationFile ? 'not_flagged' : 'not_adjudicated' },
