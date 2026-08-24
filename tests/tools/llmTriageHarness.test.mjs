@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { assessGoldRepresentability } from '../../tools/ticket-transcript-exporter/build-llm-triage-benchmark.mjs';
+import { assessGoldRepresentability, resolveBenchmarkAdjudicationFile } from '../../tools/ticket-transcript-exporter/build-llm-triage-benchmark.mjs';
 import { buildLlmTriageInput, chooseSafeTriageFallback, runLlmTriage, validateLlmTriageOutput } from '../../tools/ticket-transcript-exporter/llm-triage-contract.mjs';
 import { buildTriageMessages, estimatePlannerTokens } from '../../tools/ticket-transcript-exporter/llm-triage-prompt.mjs';
 import { isLocalTriageEndpoint } from '../../tools/ticket-transcript-exporter/llm-triage-provider.mjs';
@@ -230,6 +230,12 @@ test('gold representability accepts a clarification available in the planner con
     policyIds: []
   }, triageInput);
   assert.deepEqual(result, { eligible: true, reasons: [] });
+});
+
+test('V3 adjudication defaults only apply to the default development dataset', () => {
+  assert.equal(resolveBenchmarkAdjudicationFile('historical-first-turn-action-v3.jsonl', undefined), 'historical-first-turn-action-v3-adjudication.json');
+  assert.equal(resolveBenchmarkAdjudicationFile('custom-development.jsonl', undefined), null);
+  assert.equal(resolveBenchmarkAdjudicationFile('custom-development.jsonl', 'custom-adjudication.json'), 'custom-adjudication.json');
 });
 
 test('local provider guard refuses non-local endpoints', () => {
