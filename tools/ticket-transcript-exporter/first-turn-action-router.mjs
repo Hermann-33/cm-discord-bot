@@ -94,7 +94,8 @@ export function reviewFirstTurnObservability(query, aliases) {
   }
   if (
     has(/\b(?:compatible|compatibility|work (?:on|with) windows|windows 11|win 11|support (?:valorant|fortnite|rust|cs2))\b/u) ||
-    has(/\b(?:work|works|working|support(?:ed)?|compatible|use)\b.{0,24}\b(?:controller|gamepad)\b|\b(?:controller|gamepad)\b.{0,24}\b(?:work|works|working|support(?:ed)?|compatible)\b/u)
+    has(/\b(?:work|works|working|support(?:ed)?|compatible)\b.{0,24}\b(?:controller|gamepad)\b|\b(?:controller|gamepad)\b.{0,24}\b(?:work|works|working|support(?:ed)?|compatible)\b/u) ||
+    has(/\b(?:can|could|may)\b.{0,16}\buse\b.{0,16}\b(?:a\s+)?(?:controller|gamepad)\b/u)
   ) {
     return { ...result, ...exactCase('case.product.compatibility', 'The first turn explicitly asks about product, platform, or controller compatibility.') };
   }
