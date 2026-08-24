@@ -89,6 +89,11 @@ function mergeLookups(...groups) {
   return [...byId.values()];
 }
 
+export function resolveBenchmarkAdjudicationFile(dataset, adjudication) {
+  if (adjudication !== undefined && adjudication !== null) return adjudication;
+  return dataset === DEFAULT_DEVELOPMENT_DATASET ? DEFAULT_ADJUDICATION_FILE : null;
+}
+
 function buildAdjudicationIndex(document, dataset, reviewedRecordIds) {
   if (!document || typeof document !== 'object' || Array.isArray(document)) {
     throw new Error('V3 hosted benchmark adjudication must be a JSON object');
@@ -141,7 +146,7 @@ export function assessGoldRepresentability(gold, input) {
 
 export async function buildLlmTriageBenchmark(dataDir, {
   dataset = DEFAULT_DEVELOPMENT_DATASET,
-  adjudication = DEFAULT_ADJUDICATION_FILE,
+  adjudication = undefined,
   output = 'llm-triage-development-inputs.jsonl',
   maxCases = 8
 } = {}) {
@@ -150,8 +155,14 @@ export async function buildLlmTriageBenchmark(dataDir, {
   const runtimeDir = path.join(dataDir, 'runtime-kb');
   const allRecords = await readJsonl(path.join(evaluationDir, dataset));
   const records = allRecords.filter((row) => row.goldStatus === 'reviewed');
-  const adjudicationDocument = await readJson(path.join(evaluationDir, adjudication));
-  const adjudicationById = buildAdjudicationIndex(adjudicationDocument, dataset, new Set(records.map((row) => row.id)));
+  const adjudicationFile = resolveBenchmarkAdjudicationFile(dataset, adjudication);
+  const adjudicationById = adjudicationFile
+    ? buildAdjudicationIndex(
+        await readJson(path.join(evaluationDir, adjudicationFile)),
+        dataset,
+        new Set(records.map((row) => row.id))
+      )
+    : new Map();
   const cases = await readJsonl(path.join(runtimeDir, 'cases.jsonl'));
   const clarificationsFile = await readJson(path.join(runtimeDir, 'clarifications.json'));
   const clarifications = clarificationsFile.clarifications ?? clarificationsFile;
@@ -195,7 +206,7 @@ export async function buildLlmTriageBenchmark(dataDir, {
       sourceTranscriptIds: record.sourceTranscriptIds,
       goldLabelMethod: record.labelMethod ?? null,
       goldReviewReason: record.reviewReason ?? record.decisionReason ?? null,
-      benchmarkAdjudication: adjudicationById.get(record.id) ?? { disposition: 'retain', category: 'not_flagged' },
+      benchmarkAdjudication: adjudicationById.get(record.id) ?? { disposition: 'retain', category: adjudicationFile ? 'not_flagged' : 'not_adjudicated' },
       input,
       gold,
       baseline: {
@@ -228,7 +239,7 @@ export async function buildLlmTriageBenchmark(dataDir, {
   const summary = {
     schemaVersion: 3,
     dataset,
-    adjudicationFile: adjudication,
+    adjudicationFile,
     sourceRecords: allRecords.length,
     reviewedRecords: reviewedRows.length,
     adjudicatedRecords: adjudicatedRows.length,
