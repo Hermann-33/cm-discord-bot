@@ -8,18 +8,19 @@ Before implementation, audit, refactor, cleanup, deployment work, or workflow de
 
 1. `docs/README.md`
 2. `docs/context/ACTIVE_CONTEXT.md`
-3. `docs/context/AI_SUPPORT_SIDE_PROJECT.md` when the task touches ticket knowledge, support AI, routing, Groq/OpenRouter, benchmark/evaluation, `support-runtime/`, or `CM-Ticket-Transcripts`
-4. `docs/context/PROJECT_BRIEF.md`
-5. `docs/context/SIDE_PROJECTS.md`
-6. `docs/context/ARCHITECTURE.md`
-7. `docs/context/DATA_STATUS.md`
-8. `docs/context/CODEBASE_MAP.md`
-9. `docs/context/COMMANDS.md`
-10. `docs/context/ROADMAP.md`
-11. `docs/context/WORKFLOW.md`
-12. `docs/context/HANDOFF.md`
-13. relevant `docs/decisions/ADR-*.md`
-14. relevant specialist documents such as `docs/GROQ_SUPPORT_TRIAGE.md`, `docs/security/ADMIN_MUTATION_MODEL.md` and `docs/security/CM_ADMIN_CONSOLE_SECURITY.md`
+3. `docs/context/AI_SUPPORT_HANDOVER_PROMPT.md` when the task touches ticket knowledge, support AI, routing, Groq/OpenRouter, benchmark/evaluation, `support-runtime/`, or `CM-Ticket-Transcripts`
+4. `docs/context/AI_SUPPORT_SIDE_PROJECT.md` when the task touches the same AI-support workstream
+5. `docs/context/PROJECT_BRIEF.md`
+6. `docs/context/SIDE_PROJECTS.md`
+7. `docs/context/ARCHITECTURE.md`
+8. `docs/context/DATA_STATUS.md`
+9. `docs/context/CODEBASE_MAP.md`
+10. `docs/context/COMMANDS.md`
+11. `docs/context/ROADMAP.md`
+12. `docs/context/WORKFLOW.md`
+13. `docs/context/HANDOFF.md`
+14. relevant `docs/decisions/ADR-*.md`
+15. relevant specialist documents such as `docs/GROQ_SUPPORT_TRIAGE.md`, `docs/security/ADMIN_MUTATION_MODEL.md` and `docs/security/CM_ADMIN_CONSOLE_SECURITY.md`
 
 If repository context conflicts with the requested task, stop and report the conflict before changing files.
 
@@ -36,8 +37,9 @@ When sources conflict, use this order:
 7. `AI_SUPPORT_SIDE_PROJECT.md` for the current AI-support workstream, provided it does not conflict with a higher-authority ADR/context document
 8. `CODEBASE_MAP.md` and `COMMANDS.md`
 9. `ROADMAP.md`
-10. current task instruction
-11. chat history or old handovers
+10. `HANDOFF.md` / `AI_SUPPORT_HANDOVER_PROMPT.md` as current-session navigation aids, provided they do not conflict with higher-authority documents
+11. current task instruction
+12. chat history or old handovers
 
 Do not silently reconcile contradictions.
 
