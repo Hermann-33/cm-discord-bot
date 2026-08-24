@@ -182,18 +182,21 @@ export async function buildLlmTriageBenchmark(dataDir, {
       ...(baseline.lookupIds ?? []),
       ...(baseline.dynamicLookupIds ?? [])
     ]);
+    const candidateClarificationIds = baseline.clarificationId ? [baseline.clarificationId] : [];
     const input = buildLlmTriageInput({
       customerText: record.query,
       state: {
         resolvedEntities: baseline.observableEntityIds ?? [],
         candidateCaseIds: baseline.observableCaseIds ?? [],
         candidateFamilyIds: baseline.observableFamilyIds ?? [],
+        candidateClarificationIds,
         knownContext: {},
         questionsAsked: []
       },
       candidateCases,
       candidateFamilies: baseline.observableFamilyIds ?? [],
       candidateDynamicLookupIds,
+      candidateClarificationIds,
       clarifications,
       dynamicLookups,
       policies,

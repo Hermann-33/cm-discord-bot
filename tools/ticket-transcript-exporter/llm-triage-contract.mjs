@@ -70,6 +70,7 @@ export function buildLlmTriageInput({
   candidateCases = [],
   candidateFamilies = state.candidateFamilyIds ?? [],
   candidateDynamicLookupIds = state.candidateDynamicLookupIds ?? [],
+  candidateClarificationIds = state.candidateClarificationIds ?? [],
   clarifications = [],
   dynamicLookups = [],
   policies = [],
@@ -77,14 +78,19 @@ export function buildLlmTriageInput({
   maxCases = 8,
   maxClarifications = 6
 }) {
-  const cases = candidateCases.slice(0, maxCases).map(compactCase);
-  const familyIds = unique([...candidateFamilies, ...cases.map((item) => item.family)]);
+  const deterministicLookupIds = new Set(unique(candidateDynamicLookupIds));
+  const deterministicClarificationIdSet = new Set(unique(candidateClarificationIds));
+  const hasDeterministicLookupRoute = deterministicLookupIds.size > 0;
+  const hasDeterministicClarificationRoute = !hasDeterministicLookupRoute && deterministicClarificationIdSet.size > 0;
+  const supportSurfaceOnly = hasDeterministicClarificationRoute && deterministicClarificationIdSet.has('clarify.support_surface');
+  const cases = (supportSurfaceOnly ? [] : candidateCases.slice(0, maxCases)).map(compactCase);
+  const familyIds = unique([...(supportSurfaceOnly ? [] : candidateFamilies), ...cases.map((item) => item.family)]);
   const candidateCaseIds = new Set(cases.map((item) => item.id));
   const hasScopedCandidates = candidateCaseIds.size > 0 || familyIds.length > 0;
-  const deterministicLookupIds = new Set(unique(candidateDynamicLookupIds));
-  const hasDeterministicLookupRoute = deterministicLookupIds.size > 0;
+
   const clarificationRows = (hasDeterministicLookupRoute ? [] : clarifications)
     .filter((item) => {
+      if (hasDeterministicClarificationRoute) return deterministicClarificationIdSet.has(item.id);
       const caseHit = (item.distinguishesCases ?? []).some((id) => candidateCaseIds.has(id));
       const familyHit = (item.distinguishesFamilies ?? []).some((id) => familyIds.includes(id));
       const genericFallback = item.id === 'clarify.support_surface' && !hasScopedCandidates;
@@ -98,26 +104,32 @@ export function buildLlmTriageInput({
 
   const relevantLookupIds = hasDeterministicLookupRoute
     ? deterministicLookupIds
-    : new Set(unique([
-      ...cases.flatMap((item) => item.dynamic ?? []),
-      ...clarificationRows.flatMap((item) => item.liveLookupCanReplace ?? [])
-    ]));
+    : hasDeterministicClarificationRoute
+      ? new Set()
+      : new Set(unique([
+        ...cases.flatMap((item) => item.dynamic ?? []),
+        ...clarificationRows.flatMap((item) => item.liveLookupCanReplace ?? [])
+      ]));
   const dynamicLookupRows = (dynamicLookups ?? [])
     .filter((item) => relevantLookupIds.has(item.id))
     .map((item) => ({ id: item.id, purpose: item.purpose ?? item.description ?? null }));
   const deterministicDynamicLookupIds = dynamicLookupRows
     .filter((item) => deterministicLookupIds.has(item.id))
     .map((item) => item.id);
+  const deterministicClarificationIds = clarificationRows
+    .filter((item) => deterministicClarificationIdSet.has(item.id))
+    .map((item) => item.id);
 
   return {
     schemaVersion: 1,
-    instruction: 'Choose only the safest next support action. Never infer missing facts. Ask a canonical clarification when information is insufficient. Use only IDs supplied in this input.',
+    instruction: 'Choose only the safest next support action. Never infer missing facts. Respect deterministic lookup or clarification routes when supplied. Use only IDs supplied in this input.',
     customerText: String(customerText ?? ''),
     state: {
       resolvedEntities: unique(resolvedEntities),
       activeCaseId: state.activeCaseId ?? null,
       candidateCaseIds: unique(state.candidateCaseIds ?? []),
       candidateFamilyIds: unique(state.candidateFamilyIds ?? []),
+      candidateClarificationIds: unique(candidateClarificationIds),
       knownContext: state.knownContext ?? {},
       unknownContext: unique(state.unknownContext ?? []),
       pendingClarificationId: state.pendingClarificationId ?? null,
@@ -135,6 +147,7 @@ export function buildLlmTriageInput({
       familyIds,
       clarifications: clarificationRows,
       clarificationIds: clarificationRows.map((item) => item.id),
+      deterministicClarificationIds,
       dynamicLookups: dynamicLookupRows,
       dynamicLookupIds: dynamicLookupRows.map((item) => item.id),
       deterministicDynamicLookupIds,
@@ -186,6 +199,7 @@ export function validateLlmTriageOutput(output, input, options = {}) {
 
   const allowedCases = new Set(input?.allowed?.caseIds ?? []);
   const allowedClarifications = new Set(input?.allowed?.clarificationIds ?? []);
+  const deterministicClarifications = new Set(input?.allowed?.deterministicClarificationIds ?? []);
   const allowedLookups = new Set(input?.allowed?.dynamicLookupIds ?? []);
   const allowedPolicies = new Set(input?.allowed?.policyIds ?? []);
   const clarificationById = byId(input?.allowed?.clarifications ?? []);
@@ -194,6 +208,7 @@ export function validateLlmTriageOutput(output, input, options = {}) {
   for (const id of output.policyIds ?? []) if (!allowedPolicies.has(id)) errors.push(`unknown_policy:${id}`);
   if (output.clarificationId && !allowedClarifications.has(output.clarificationId)) errors.push(`unknown_clarification:${output.clarificationId}`);
 
+  if (deterministicClarifications.size > 0 && (output.nextAction !== 'ask_clarification' || !deterministicClarifications.has(output.clarificationId))) errors.push('deterministic_clarification_route_mismatch');
   if (input?.restricted && output.nextAction === 'answer_case') errors.push('restricted_autonomous_answer');
   if (output.nextAction === 'answer_case' && (output.caseIds ?? []).length === 0) errors.push('answer_without_case');
   if (output.nextAction === 'ask_clarification' && !output.clarificationId) errors.push('clarification_without_id');
@@ -223,6 +238,12 @@ export function chooseSafeTriageFallback(input) {
     .filter((id) => allowedLookupIds.has(id));
   if (deterministicLookupIds.length > 0) {
     return { observations: fallbackObservations(), nextAction: 'request_dynamic_lookup', caseIds: [], clarificationId: null, dynamicLookupIds: deterministicLookupIds, policyIds: [], confidence: 1, reasonCode: 'deterministic_lookup_route' };
+  }
+  const allowedClarificationIds = new Set(input?.allowed?.clarificationIds ?? []);
+  const deterministicClarificationId = unique(input?.allowed?.deterministicClarificationIds ?? [])
+    .find((id) => allowedClarificationIds.has(id));
+  if (deterministicClarificationId) {
+    return { observations: fallbackObservations(), nextAction: 'ask_clarification', caseIds: [], clarificationId: deterministicClarificationId, dynamicLookupIds: [], policyIds: [], confidence: 1, reasonCode: 'deterministic_clarification_route' };
   }
   const activeCaseId = input?.state?.activeCaseId;
   if (!input?.restricted && activeCaseId && (input?.allowed?.caseIds ?? []).includes(activeCaseId)) {
