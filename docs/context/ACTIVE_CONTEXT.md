@@ -28,6 +28,12 @@ task/ai-support-integration
 
 Customer-facing AI support is not enabled. Discord message entrypoints are intentionally unwired until the hosted planner passes the benchmark gate.
 
+For the full current handoff, read:
+
+```text
+docs/context/AI_SUPPORT_SIDE_PROJECT.md
+```
+
 ADR-0012 remains authoritative for the production data/state boundary:
 
 ```text
@@ -82,6 +88,8 @@ Every model output is checked deterministically. The bot rejects:
 
 Provider failures fail closed to the canonical state continuation / clarification / human escalation path. Provider clients do not automatically retry.
 
+The model is no longer offered the entire global lookup catalog. Lookup choices are scoped to deterministic/case/clarification relevance, and an already-selected deterministic lookup route is authoritative for that turn.
+
 ## Stateful conversation support
 
 The support-service scaffold preserves:
@@ -98,51 +106,59 @@ The support-service scaffold preserves:
 
 Short replies are interpreted relative to a pending question before a new route is considered.
 
-## Groq benchmark state
+The bot is explicitly allowed to ask clarification questions instead of forcing a one-turn answer when the user message is under-specified.
 
-Groq authentication and strict structured output are working. A 20-record run produced 20/20 accepted outputs with zero fallback and zero scope leakage, but its headline semantic rates were not valid planner-quality estimates because several reviewed gold actions were impossible to express from the deterministic candidate input supplied to the model.
+## Corpus and canonical KB state
 
-Concrete examples included:
+The private corpus remains complete at 1,578/1,578 structured tickets with zero extraction failures. The exhaustive deep-review/canonicalization work accounts for 3,949 historical fact nodes and preserves contradictions/unresolved material instead of treating all staff history as current policy.
 
-- `hwid reset plssss`: reviewed gold expected `case.spoofer.hwid_state`, but no candidate case was supplied;
-- `where is the config file?`: reviewed gold expected `case.product.requirements`, but no candidate case was supplied;
-- `my rust nfa account doesnt work` and `i got a nfa account and it dont work`: reviewed gold claimed current catalog-status lookup while the planner input was scoped to NFA/account support;
-- a reseller-offer message was reviewed as a technical-failure clarification while the deterministic input correctly exposed a reseller/partnership case.
+The runtime ontology currently contains 55 canonical support cases and remains product/variant/account-model scoped where evidence requires that distinction.
 
-Therefore the previous 70% safe-progress / 5% unsafe 20-record summary must not be treated as a clean GPT-OSS quality score.
+## Clean V3 benchmark preflight
 
-The benchmark builder now separates planner-quality evaluation from deterministic candidate/gold disagreement:
+The original V3 review file is preserved. A separate adjudication overlay excludes unreliable development gold rather than rewriting source labels.
+
+Current confirmed preflight:
 
 ```text
-historical-first-turn-action-v3.jsonl reviewed rows
-  -> build planner input
-  -> assess whether reviewed gold is expressible from allowed IDs/families
-  -> eligible rows: llm-triage-development-inputs.jsonl
-  -> unrepresentable rows: llm-triage-development-inputs-review-queue.jsonl
+source V3 records:          300
+independently reviewed:     262
+excluded by adjudication:    26
+  bad_gold:                  14
+  ambiguous_gold:             8
+  safety_boundary_conflict:   3
+  safety_boundary_review:     1
+retained adjudicated gold:  236
+planner-representable:      236
+review queue:                 0
+representability rate:      100%
 ```
 
-The summary reports representability rate and reason counts. Hosted Groq/OpenRouter evaluation fails closed unless every row in the hosted development file has independent V3 review metadata and explicit positive representability.
+Current planner token estimate after lookup/candidate pruning:
 
-This prevents the LLM from being penalized for an action/case/clarification it was never allowed to choose while preserving candidate-generation failures for separate remediation.
-
-Current next step:
-
-```powershell
-git pull --ff-only origin task/ai-support-integration
-npm.cmd test
-npm.cmd run typecheck
-npm.cmd run build
-git diff --check
-npm.cmd run build:llm-triage-benchmark -- --data-dir ..\CM-Ticket-Transcripts
+```text
+average: 1,250.99
+median:    799
+p95:     2,355
 ```
 
-Review the generated representability summary/review queue before spending more Groq requests. Do not rerun the 20-record hosted benchmark until that preflight is understood.
+Important deterministic fixes completed during this cleanup include payment typo normalization, NFA activation routing, HWID reset recognition, controller-compatibility false-positive prevention, media/reseller intent recognition, restricted detection-status routing, order-selector-vs-intent separation, delivered `View Order` access routing, and turn-scoped dynamic lookup exposure.
+
+## Groq benchmark state
+
+Groq authentication and strict structured output are working. Earlier 20-record headline metrics were contaminated by bad/unrepresentable gold and by planner-contract leakage, so they are historical diagnostics rather than authoritative model-quality scores.
+
+After benchmark/candidate repair, the latest confirmed state is the 236/236 representability preflight above.
+
+A new 20-record Groq triage run is currently being executed against the repaired benchmark and tighter planner contract. Its result is not yet recorded in repository truth. Do not infer a pass/fail until the actual command output is reviewed.
+
+When the result arrives, inspect every unsafe/scope-leak/safe-no-progress/invalid/fallback/semantic-review row before changing model, prompt, confidence threshold, reasoning effort or benchmark gold.
 
 ## Activation gate
 
 Customer-facing support remains blocked until both layers pass:
 
-1. deterministic candidate/gold representability is high enough that the planner is normally offered the correct action space;
+1. deterministic candidate/gold representability is clean;
 2. on representable independently reviewed rows, the selected provider/model demonstrates:
 
 ```text
@@ -151,8 +167,8 @@ unsafe route <= 2%
 scope leakage = 0
 ```
 
-Structured-output acceptance, fallback rate, latency, clarification relevance, privacy, provider reliability, and multi-turn eventual routing must also be reviewed before Discord activation.
+Structured-output acceptance, fallback rate, latency, clarification relevance, privacy, provider reliability, rate-limit behavior and multi-turn eventual routing must also be reviewed before Discord activation.
 
 ## Private transcript repository
 
-`Hermann-33/CM-Ticket-Transcripts` remains private and data/specification-only. Canonical knowledge, historical evidence, evaluation artifacts, and provenance stay there. Only the explicitly sanitized runtime derivative may be promoted to the public bot repository.
+`Hermann-33/CM-Ticket-Transcripts` remains private and data/specification-only. Canonical knowledge, historical evidence, evaluation artifacts, adjudication overlays and provenance stay there. Only the explicitly sanitized runtime derivative may be promoted to the public bot repository.
