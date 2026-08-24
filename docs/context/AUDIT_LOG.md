@@ -185,6 +185,70 @@ ADR-0012 establishes a sanitized bundled support-runtime boundary and constraine
 
 The generated public pack excludes private manifests, routing exemplars, provenance, transcript/fact IDs, historical case-context snippets, procedure outcome evidence and customer PII. Production source contains no private repository path and no customer-facing Discord AI wiring.
 
-Hosted OpenRouter execution remains deliberately unperformed. The next operational gate is a 20-record consumed-development smoke benchmark after the operator supplies the key outside Git.
+Hosted OpenRouter execution remained non-authoritative. Provider selection later moved to Groq under ADR-0013 while keeping ADR-0012 boundaries.
 
-Local Node `v24.11.1` verification passed: `npm.cmd ci` (0 vulnerabilities), `npm.cmd test` (261/261), typecheck, production build, diff check, runtime-pack privacy scan, secret/environment scan, legacy isolation, and confirmation that Discord startup/registration wiring was unchanged.
+Local Node `v24.11.1` verification passed at that implementation point: `npm.cmd ci` (0 vulnerabilities), `npm.cmd test` (261/261), typecheck, production build, diff check, runtime-pack privacy scan, secret/environment scan, legacy isolation, and confirmation that Discord startup/registration wiring was unchanged.
+
+---
+
+## 2026-08-24 — Groq GPT-OSS planner / benchmark remediation
+
+ADR-0013 established Groq `openai/gpt-oss-120b` as the primary hosted development planner. Strict structured output, privacy sanitization, deterministic validation, rate-safe benchmark pacing and stop-on-429 behavior were implemented while OpenRouter remained secondary.
+
+The project then discovered that early hosted headline scores mixed three different failure classes:
+
+1. genuine model choices;
+2. deterministic candidate/contract failures that made correct gold impossible or exposed unrelated actions;
+3. stale, ambiguous or safety-conflicting V3 labels.
+
+The older V1/V2 625-row set was confirmed unsuitable as independent semantic gold. V3 remained the consumed development benchmark, with original labels immutable and unreliable rows moved to a separate adjudication overlay.
+
+Targeted deterministic repairs included payment typo normalization (`payed` -> `paid`), PayPal/payment-state routing, explicit NFA activation, HWID reset, media/reseller/partnership recognition, current detection-status restriction, controller compatibility false-positive prevention, product-comparison clarification and broader first-turn inferability handling.
+
+The benchmark builder gained gold representability checks and an adjudication-aware review queue. Lookup definitions from action routing and runtime dynamic lookups were merged. The planner contract was hardened so static cases no longer receive the global live-lookup catalog and deterministic lookup routes can constrain allowed lookups for the turn.
+
+A cleaned 20-row Groq run before the final lookup hardening produced:
+
+```text
+structured output acceptance: 100%
+optimal:                        9
+safe_progress:                 10
+safe_no_progress:               0
+unsafe_wrong_route:             1
+scope leakage:                  0
+invalid:                        0
+safe-progress-or-better:       95%
+unsafe rate:                     5% (1/20)
+fallback:                        0
+avg latency:                  ~823 ms
+avg planner tokens:           1684.5
+```
+
+The single unsafe row was `first-turn-action-v3.0016` (`hwid reset plssss`). The planner had been offered the correct static HWID case but also unrelated global lookup tools, and chose `users.overview.read`. After lookup pruning, the same planner input was verified offline with only `case.spoofer.hwid_state`, zero dynamic lookups, zero clarifications and a 693-token estimate. No hosted rerun was performed after that fix.
+
+### Current pause-point benchmark
+
+The latest user-confirmed rebuild after authoritative deterministic-lookup handling is:
+
+```text
+sourceRecords:             300
+reviewedRecords:           262
+adjudicatedRecords:        237
+excludedByAdjudication:     25
+records:                   230
+reviewQueueRecords:          7
+representabilityRate:      0.9704641350210971
+representabilityReasons:
+  gold_clarification_unavailable: 7
+planner token average:     1212.286956521739
+median:                     797
+p95:                       2355
+```
+
+Six review-queue rows are bare order selectors (`0026`, `0108`, `0173`, `0197`, `0249`, `0279`) that the deterministic router over-interprets as a direct order lookup. The intended correction is `selector only -> clarify requested order action`; selector plus explicit status/payment/delivery intent may use live lookup.
+
+The seventh row, `0217`, says the order is delivered but `View Order` cannot be clicked/opened. Existing V3 gold asks the fulfillment-state clarification even though delivery state is already supplied. Current handoff judgment is that this row is stale/ambiguous single-path gold and should be re-adjudicated toward order/dashboard-access support if confirmed on resume.
+
+The private adjudication overlay still excludes **25** rows. The proposed `0217` exclusion has not been committed; therefore a future 236/236 benchmark is only a projection.
+
+Verdict: `PARTIAL / PAUSED`. Do not spend additional Groq quota until the six selector-only router rows and `0217` adjudication decision are resolved, the benchmark is rebuilt to review queue 0 / representability 1, and repository validation passes. Customer-facing AI remains disabled and unwired.
