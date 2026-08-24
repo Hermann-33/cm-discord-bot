@@ -1,6 +1,6 @@
 # Active Context
 
-Updated: 2026-08-24 10:49 +08:00
+Updated: 2026-08-25 06:40 +08:00
 
 ## Production baseline
 
@@ -24,67 +24,57 @@ The bot website operation set remains explicitly allowlisted and does not includ
 task/ai-support-integration
 ```
 
-The workstream is intentionally paused at a documented benchmark-cleanup checkpoint. Customer-facing AI support is **not enabled** and Discord message entrypoints remain unwired.
+Customer-facing AI support remains **disabled and unwired**. No deployment, bot startup, command registration, website mutation, or production AI activation is authorized by this workstream.
 
-For the full checkpoint and exact resume sequence, read:
+Read the latest dated checkpoint first:
+
+```text
+docs/context/AI_SUPPORT_TRIAGE_PROGRESS_2026-08-25.md
+```
+
+Then read:
 
 ```text
 docs/context/HANDOFF.md
 docs/context/AI_SUPPORT_HANDOVER_PROMPT.md
 ```
 
-ADR-0012 remains authoritative for the production data/state boundary:
+The dated checkpoint supersedes older benchmark/pause text where they conflict.
+
+## Architecture boundary
+
+ADR-0012 and ADR-0013 remain authoritative:
 
 ```text
-private transcript corpus
-  -> operator-controlled sanitized allowlist importer
-  -> public support-runtime/ bundle
-  -> deterministic resolver/state/action layer
-  -> hosted semantic next-action planner
+private canonical corpus
+  -> sanitized public support-runtime derivative
+  -> deterministic entity/scope/restricted resolver
+  -> stateful context
+  -> compact planner candidates/actions
+  -> Groq openai/gpt-oss-120b
   -> deterministic validator
-  -> clarification / lookup / policy / case / escalation
+  -> case / clarification / approved live lookup / policy / escalation
 ```
+
+The LLM is not the truth authority. It has no browser, model tools, code execution, MCP, database access, direct website access, Discord action authority, or permission to invent canonical IDs.
 
 Production startup never reads the private `CM-Ticket-Transcripts` repository.
 
-## Primary hosted planner candidate
-
-ADR-0013 selects Groq as the preferred hosted development provider while preserving ADR-0012 safety boundaries.
+## Primary hosted planner configuration
 
 ```text
-Provider: Groq
-Model: openai/gpt-oss-120b
-Endpoint: https://api.groq.com/openai/v1/chat/completions
+provider:                Groq
+model:                   openai/gpt-oss-120b
+temperature:             0
+reasoning_effort:        low
+max_completion_tokens:   400
+stream:                  false
+response_format:         strict JSON schema
+benchmark TPM budget:    6500
+direct-case confidence:  0.8
 ```
 
-Defaults:
-
-```text
-temperature: 0
-reasoning_effort: low
-max_completion_tokens: 400
-stream: false
-response_format: strict JSON schema
-benchmark TPM budget: 6500
-```
-
-The model has no model-side tools, browser search, code execution, MCP, database access, direct website access, Discord action authority, or executable support-operation authority.
-
-OpenRouter remains only a secondary development adapter.
-
-## Hosted-planner safety boundary
-
-Before any hosted request, customer/session input is sanitized. Every model output is validated deterministically for canonical IDs, scope, restricted-topic behavior, confidence-sensitive direct cases, repeated/already-known clarifications, allowed live lookups, and schema validity.
-
-Provider failures fail closed. No automatic provider retry/failover is used.
-
-Planner inputs no longer expose the entire global lookup catalog. Static cases receive only relevant tools, and a deterministic lookup route can be authoritative for that turn.
-
-## Stateful support behavior
-
-Conversation state preserves resolved entities, candidate cases/families, known/unknown context, pending clarification, received answers, diagnostics/procedures/outcomes, dynamic lookup results, policy state, and multiple intents.
-
-Under-specified messages are allowed to produce follow-up questions. The system must not guess a final case merely to shorten the conversation.
+Hosted input is sanitized before transmission. Provider failures and validator failures fail closed through deterministic fallback.
 
 ## Corpus / KB state
 
@@ -97,94 +87,154 @@ historical fact nodes:     3,949
 fact dispositions:         3,949 / 3,949
 canonical runtime cases:      55
 broken links:                  0
+facts without evidence:        0
 ```
 
-Historical evidence is not automatically current policy. Dynamic state uses live authority; restricted technical material remains outside autonomous support.
+Historical evidence is not automatically current policy. Dynamic state uses approved live authority. Restricted bypass/evasion/injection/detection-avoidance material remains outside autonomous support.
 
-## V3 development benchmark state
+## V3 benchmark — current measured truth
 
-The source V3 review file remains immutable. A separate adjudication overlay currently excludes **25** rows:
+The source V3 review file remains immutable. The private adjudication overlay now excludes **26** rows:
 
 ```text
 bad_gold:                  14
-ambiguous_gold:             7
+ambiguous_gold:             8
 safety_boundary_conflict:   3
 safety_boundary_review:     1
 ```
 
-The latest confirmed benchmark rebuild at the pause point is:
+`first-turn-action-v3.0217` is already excluded as `ambiguous_gold` because delivered-email + blocked `View Order` identifies an order/dashboard-access problem and the old fulfillment-state clarification would repeat known context.
+
+Latest confirmed clean benchmark rebuild before the current deterministic-clarification hardening:
 
 ```text
 sourceRecords:             300
 reviewedRecords:           262
-adjudicatedRecords:        237
-excludedByAdjudication:     25
-records:                   230
-reviewQueueRecords:          7
-representabilityRate:      0.9704641350210971
-representabilityReasons:
-  gold_clarification_unavailable: 7
+adjudicatedRecords:        236
+excludedByAdjudication:     26
+records:                   236
+reviewQueueRecords:          0
+representabilityRate:        1
+representabilityReasons:    {}
 plannerTokens:
-  average: 1212.286956521739
-  median:   797
+  average: 1250.9915254237287
+  median:   799
   p95:     2355
 ```
 
-This 230/237 state is the **current measured truth**. A future 236/236 state is only a projection until the pending router/adjudication changes are actually implemented and rebuilt.
+A later prompt-only experiment raised the 20-row hosted sample planner-token average to **1418.2** without eliminating fallback. That experiment is treated as evidence against adding more prompt prose as the primary repair mechanism.
 
-## Seven unresolved review-queue rows
+## Hosted Groq development results
 
-Six rows contain an order selector but no explicit requested action:
+### Earlier lookup-scope failure
 
-```text
-0026, 0108, 0173, 0197, 0249, 0279
-```
+A 20-row run had one unsafe route on `0016` (`hwid reset plssss`) because unrelated global lookup tools were exposed to a correct static case. Lookup scoping was hardened; the row then had only `case.spoofer.hwid_state` and no unrelated lookup tools.
 
-Current router overreach treats `explicitOrderReference` alone as a direct live-lookup trigger. Correct semantics should distinguish:
+### Post-fallback run
 
-```text
-selector only -> ask what the user needs about the order
-selector + explicit status/payment/delivery intent -> approved live lookup
-```
-
-The seventh row, `0217`, says the order is delivered but the customer cannot click/open `View Order`. Its existing gold clarification asks for fulfillment state even though that state is already supplied. Current handoff judgment is that this row is stale/ambiguous single-path gold and should be re-adjudicated toward order/dashboard access support.
-
-No `0217` exclusion has been committed yet.
-
-## Latest Groq diagnostic result
-
-A prior cleaned 20-row run produced:
+After deterministic lookup fallback was added:
 
 ```text
-structured output acceptance: 100%
-safe-progress-or-better:       95%
-unsafe_wrong_route:              1 / 20
+structured output acceptance: 95%
+safe-progress-or-better:      100%
+unsafe:                          0
 scope leakage:                   0
-fallback:                        0
-avg latency:                  ~823 ms
+safe-no-progress:                0
+semantic review queue:           0
+fallback:                        5%
 ```
 
-The one unsafe row was `0016` (`hwid reset plssss`). Investigation showed unrelated global lookups were exposed to a correct static case. The planner contract was tightened afterward, and `0016` was then verified offline with only `case.spoofer.hwid_state`, no dynamic lookups, no clarifications, and a 693-token planner estimate.
+The single rejected row was `0031`. GPT-OSS asked for a clarification with `clarificationId: null`; deterministic fallback correctly preserved the payment lookup and the evaluator classified the effective action as optimal.
 
-No hosted rerun has been performed after that fix.
+### Latest measured 20-row run
 
-## Immediate resume task
+After the redaction/prompt-only change:
 
-Before spending more Groq quota:
+```text
+structured output acceptance: 95%
+exact optimal action:          70%
+optimal:                       13
+safe_progress:                  6
+safe_no_progress:               1
+unsafe_wrong_route:             0
+unsafe_scope_leakage:           0
+invalid:                        0
+safe-progress-or-better:       95%
+unsafe rate:                     0
+semantic review queue:           1
+fallback:                        5%
+latency average:              935.03 ms
+planner token average:       1418.2
+planner token median:          974
+planner token p95:            2539
+```
 
-1. fix bare order-selector routing;
-2. update/add router regression tests;
-3. re-adjudicate `0217` without rewriting original V3;
-4. rebuild the benchmark;
-5. require review queue `0` and representability `1`;
-6. run tests/typecheck/build/diff check;
-7. only then resume hosted evaluation.
+Two rows explain the remaining failure signal:
 
-See `HANDOFF.md` for the exact rows, expected behavior, known unresolved engineering items, and activation gate.
+- `0004` — entity-only `vendor.memesense`; gold is `clarify.support_surface`, but the widened planner candidate set exposed `clarify.account_type`, which GPT-OSS chose. This was safe but did not make reviewed progress.
+- `0026` — selector-only order reference; gold is `clarify.order.fulfillment_state`, but the widened planner contract exposed order live lookups and `clarify.account.delivery_state`. GPT-OSS attempted an order lookup and also emitted the non-canonical observation entity `order identifier`; validator rejected it, then the generic fallback chose the wrong relevant clarification.
+
+## Current code hardening — validation pending
+
+The public branch now contains a deterministic-clarification contract change that has **not yet been locally validated/rebuilt by the operator**.
+
+Intent:
+
+- preserve `baseline.clarificationId` as deterministic clarification provenance in generated planner inputs;
+- if a deterministic clarification route exists, expose only that canonical clarification;
+- suppress case/clarification-derived live lookup expansion on that turn;
+- for `clarify.support_surface`, discard speculative case/family expansion caused only by an observed entity;
+- validator rejects outputs that override a deterministic clarification route;
+- fallback preserves the deterministic clarification instead of choosing the first merely-relevant clarification;
+- keep deterministic lookup behavior unchanged;
+- shorten the hosted prompt and explicitly state that privacy placeholders are redactions, not entity IDs or proof of missing data.
+
+Focused regression coverage includes the actual `0004` and `0026` failure patterns.
+
+This is a **candidate fix**, not a claimed pass, until local tests and benchmark rebuild complete.
+
+## Engineering lessons that must persist
+
+1. **Deterministic routing defines the action envelope.** The LLM may choose inside it; it must not broaden it back to unrelated cases, clarifications, or live lookups.
+2. **Order selector != requested order action.** Selector-only turns clarify intent. Selector + explicit status/payment/delivery intent may use approved live lookup.
+3. **Privacy placeholder != missing value.** `[order identifier omitted]` means a sensitive selector existed and was redacted. The placeholder label is not a canonical entity ID.
+4. **Entity-only != case family.** Observing a vendor/game/product alone must not manufacture arbitrary case families before the support surface is known.
+5. **Fallback must preserve deterministic provenance.** Provider/validator failure must not turn a known lookup/clarification route into generic escalation or an unrelated clarification.
+6. **Prompt-only repair is weak evidence.** If candidate/action construction is wrong, fix the deterministic contract first. Extra prose can increase tokens while leaving the structural ambiguity intact.
+7. **Never repair hosted metrics by changing clean gold.** Change V3 only through explicit adjudication when the reviewed label itself is genuinely stale/ambiguous.
+
+## Immediate next sequence
+
+Do not spend more Groq quota until the current branch is pulled and validated:
+
+```cmd
+cd /d "C:\code\CM DC Bot"
+git pull --ff-only origin task/ai-support-integration
+node --test tests/tools/llmTriageDeterministicLookupRoute.test.mjs
+npm.cmd test
+npm.cmd run typecheck
+npm.cmd run build
+git diff --check
+npm.cmd run build:llm-triage-benchmark -- --data-dir ..\CM-Ticket-Transcripts
+```
+
+The rebuild must still produce:
+
+```text
+adjudicatedRecords:       236
+records:                   236
+reviewQueueRecords:          0
+representabilityRate:        1
+representabilityReasons:    {}
+```
+
+Planner token statistics may change. Record the measured values; do not copy old token metrics forward.
+
+Only after those checks pass should the same 20-row Groq sample be rerun. Do not increase the sample until structured acceptance/fallback/safe-no-progress are clean enough to justify it.
 
 ## Activation gate
 
-Customer-facing support remains blocked until clean reviewed data and a frozen final holdout demonstrate:
+Customer-facing support remains blocked until clean reviewed development data and a frozen untouched holdout demonstrate at minimum:
 
 ```text
 safe-progress-or-better >= 95%
@@ -194,8 +244,8 @@ repeated known questions = 0
 context-answerable questions = 0
 ```
 
-Structured-output acceptance, fallback rate, latency, clarification relevance, privacy, provider reliability, rate-limit behavior, product/variant/account-model isolation, restricted-topic precision, and multi-turn eventual routing must also pass review.
+Also require acceptable structured-output acceptance, fallback rate, latency/rate-limit behavior, privacy, clarification relevance, provider reliability, scope isolation, restricted-topic precision, live-lookup correctness, and multi-turn eventual routing.
 
-## Private transcript repository
+## Documentation rule for this workstream
 
-`Hermann-33/CM-Ticket-Transcripts` remains private and data/specification-only. Raw transcripts, evidence, gold datasets, adjudication overlays, provenance, and audit material stay there. Only the explicitly sanitized runtime derivative may be promoted to the public bot repository.
+Every material routing, planner-contract, provider, validator, benchmark, adjudication, or hosted-evaluation change must update the dated progress checkpoint or create a newer dated successor **in the same work session**. Measured results must be labeled measured; projections/pending fixes must be labeled pending. Do not leave `ACTIVE_CONTEXT.md` or `HANDOFF.md` pointing at superseded benchmark numbers.
