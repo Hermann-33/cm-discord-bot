@@ -1,6 +1,6 @@
 # Project History
 
-Updated: 2026-08-19
+Updated: 2026-08-24 10:49 +08:00
 
 This file preserves important chronology without making historical architecture authoritative over current source/ADRs.
 
@@ -49,62 +49,154 @@ TASK-CM-ADMIN-006 compacted User Operations, recent orders, Order Operations, De
 
 ## 2026-08-19 — Ticket transcript corpus side project established
 
-ADR-0010 established `Hermann-33/CM-Ticket-Transcripts` as a private data-only repository. Exporter code lives outside the corpus repo under `tools/ticket-transcript-exporter/` in the bot repository and remains a non-production utility. The production bot has no runtime dependency on transcript data.
-
-Phase T1 tooling enumerates the real Discord ticket-log history, accepts only exact `View Transcript` link buttons, restricts Tickety URLs, writes raw/text/normalized records plus manifests and requires a real five-ticket validation sample before bulk export.
+ADR-0010 established `Hermann-33/CM-Ticket-Transcripts` as a private data/specification-only repository. Exporter/tooling code lives under `tools/ticket-transcript-exporter/` in the bot repository and remains outside production runtime. The production bot has no runtime dependency on transcript data.
 
 ## 2026-08-19 — Pending purchase lookup and fulfillment support implemented
 
-Website-side order support evolved in two relevant ways:
+Website-side order support exposed the read boundaries required for canonical order-first pending purchase lookup and optional masked fulfillment support. TASK-CM-ADMIN-007 / ADR-0011 implemented the bot side while retaining `purchase-intents.process`, manual fulfillment and direct DB as forbidden.
 
-1. `orders.fulfillment.read` gained an optional privileged support object with human-readable type/duration, bounded masked fulfillment material and manual-required state;
-2. existing `purchase-intents.lookup.read` provides the correct read boundary for checkout references that have not yet produced a canonical order.
+## 2026-08-19/20 — Tickety structured corpus completed
 
-TASK-CM-ADMIN-007 / ADR-0011 completed the bot side on PR #5.
-
-### Pending-order fix
-
-Previous behavior:
+Initial transcript-page HTML/Chrome extraction proved to be a JavaScript shell rather than the actual ticket content. HAR inspection identified Tickety's Msgpack API:
 
 ```text
-/cm order -> orders.details.read -> NOT_FOUND
+GET https://tickety.top/api/ticketTranscript?id=<transcriptId>
+Content-Type: application/vnd.msgpack
 ```
 
-for a legitimate pending checkout.
+The public tooling decoded this path and converted the complete strict `View Transcript` discovery set into structured data.
 
-New behavior:
+Final corpus:
 
 ```text
-/cm order
- -> orders.details.read
- -> only on stable NOT_FOUND: purchase-intents.lookup.read
- -> exact owner overview equality
- -> Pending Purchase panel
- -> Refresh Purchase
- -> canonical Order panel once order exists
+strict transcript records: 1,578
+structured tickets:        1,578 / 1,578
+messages:                  39,090
+extraction failures:       0
 ```
 
-Other backend errors never trigger fallback. Pending state remains read-only and has no Refund/Delivery Details/purchase-processing/manual-fulfillment controls.
+## 2026-08-20/22 — Exhaustive deep review and canonical KB
 
-### Fulfillment support
+The corpus was processed through exhaustive deep-review/evidence/Obsidian graph layers, followed by canonicalization and runtime-KB compilation.
 
-Private canonical order/delivery views can display optional human-readable type, finite duration, useful provider context, masked license/account material and canonical manual-required state. Raw/decrypted material is outside the bot schema. Optional support failure does not block a valid canonical order and absence of support is not interpreted as manual fulfillment.
-
-Share to Chat gained a customer-safe pending-purchase renderer but explicitly excludes purchase-intent/internal option IDs, provider/provider status and masked fulfillment support material.
-
-### Verification
-
-Feature implementation head `8e1c1ff839fdf171403219f0b881c82395d17007` passed GitHub Actions run `32254272306` as a PR merge-ref against concurrent mainline `087e2d431ff3ddb74e034b9d736c64f1b914abc9`:
+Confirmed state:
 
 ```text
-Node 22.23.2
-npm ci: PASS — 0 vulnerabilities
-npm test: PASS — 153/153
-npm run typecheck: PASS
-npm run build: PASS
-git diff --check: PASS
+historical fact nodes:     3,949
+fact dispositions:         3,949 / 3,949
+canonical runtime cases:   55
+broken links:              0
+fact nodes without evidence: 0
 ```
 
-The operation allowlist adds only `purchase-intents.lookup.read`. `purchase-intents.process`, manual fulfillment and direct DB remain forbidden. Slash-command JSON is unchanged, so command registration does not need to be rerun for this feature.
+The architecture deliberately separated historical evidence from current/runtime truth, preserving dynamic facts, restrictions, contradictions and unresolved items. Historical tickets were not treated as a flat answer database.
 
-At documentation time PR #5 remains unmerged/undeployed; website runtime client permission for `purchase-intents.lookup.read` is a separate rollout requirement.
+## 2026-08-22/23 — First-turn inferability pivot
+
+Initial retrieval/case-ranking work showed that many customer first turns do not contain enough information to infer the exact eventual historical case. The project changed evaluation/runtime semantics from “always classify a final case immediately” to “choose the safest next support action”.
+
+Normative classes became:
+
+```text
+exact_case
+family_only
+entity_only
+control_plane_only
+insufficient_context
+multi_intent
+```
+
+Targeted clarification and stateful context carry-forward became first-class behavior. The assistant must ask follow-up questions rather than guess when necessary.
+
+## 2026-08-23 — Hosted LLM planner scaffold
+
+ADR-0012 added a sanitized public `support-runtime/` derivative, explicit conversation state, hosted-planner input/output contracts, privacy sanitization, canonical-ID/scope/restriction/repetition validation and fail-closed provider behavior. Customer-facing Discord AI remained unwired.
+
+OpenRouter was initially evaluated as a development adapter, but free-account/provider limits made it unsuitable as the preferred path.
+
+## 2026-08-23/24 — Groq GPT-OSS selected as primary development provider
+
+ADR-0013 selected Groq `openai/gpt-oss-120b` as the primary hosted triage candidate while preserving ADR-0012's deterministic and privacy boundaries.
+
+Default planner configuration:
+
+```text
+temperature: 0
+reasoning_effort: low
+max_completion_tokens: 400
+strict JSON schema
+```
+
+Groq authentication and strict structured outputs were successfully exercised. The provider remained a constrained semantic next-action planner, not a knowledge or execution authority.
+
+## 2026-08-24 — V3 benchmark/gold representability remediation
+
+Hosted smoke runs revealed that apparent model failures mixed genuine model choices with candidate construction defects and stale/ambiguous/safety-conflicting gold.
+
+The older V1/V2 combined reviewed set was rejected as independent hosted-model semantic gold. The independently reviewed V3 set became consumed development gold, with original labels kept immutable and a separate adjudication overlay introduced.
+
+The builder gained explicit gold representability checks so the LLM is not scored against actions it was never allowed to choose.
+
+Targeted router/contract fixes included:
+
+- payment typo normalization (`payed` -> `paid`);
+- PayPal/payment-state routing;
+- HWID reset recognition;
+- explicit NFA activation;
+- setup/config recognition;
+- media/reseller/partnership recognition;
+- current detection-status restricted routing;
+- security-report escalation;
+- controller compatibility false-positive prevention;
+- product-comparison clarification;
+- spoofer launch-failure clarification;
+- turn-scoped lookup exposure instead of the global lookup catalog.
+
+## 2026-08-24 — 20-row Groq diagnostic and lookup leak
+
+A cleaned 20-row run produced:
+
+```text
+structured output acceptance: 100%
+safe-progress-or-better:       95%
+unsafe_wrong_route:              1 / 20
+scope leakage:                   0
+fallback:                        0
+average latency:             ~823 ms
+```
+
+The one unsafe row was `hwid reset plssss`. The planner received the correct static HWID case but also unrelated global lookup options and selected `users.overview.read`.
+
+This was treated as planner-contract leakage, not a clear model-semantic failure. Lookup exposure was tightened. The corrected `0016` planner input was verified offline with the HWID case only, zero live lookups, zero clarifications and a 693-token estimate. No hosted rerun occurred after that correction.
+
+## 2026-08-24 — Current paused benchmark-cleanup checkpoint
+
+The latest user-confirmed V3 rebuild after authoritative deterministic-lookup handling is:
+
+```text
+sourceRecords:             300
+reviewedRecords:           262
+adjudicatedRecords:        237
+excludedByAdjudication:     25
+representable records:     230
+reviewQueueRecords:          7
+representabilityRate:      0.9704641350210971
+```
+
+Six queue rows are bare/continuation order selectors that the deterministic router over-interprets as direct current-order lookup intent. One row (`0217`) says the order is delivered but `View Order` cannot be opened; its existing fulfillment-state clarification gold is likely stale/ambiguous because that state is already supplied.
+
+The committed adjudication overlay still excludes 25 rows. The proposed `0217` exclusion has not been written. A future 236/236, queue-0 benchmark is only a projection until those changes are implemented and rebuilt.
+
+The workstream was intentionally paused here so current state, architecture, benchmark history, unresolved rows and resume steps could be documented comprehensively.
+
+Authoritative resume guides:
+
+```text
+docs/context/AI_SUPPORT_HANDOVER_PROMPT.md
+docs/context/ACTIVE_CONTEXT.md
+docs/context/AI_SUPPORT_SIDE_PROJECT.md
+docs/context/HANDOFF.md
+docs/GROQ_SUPPORT_TRIAGE.md
+```
+
+Customer-facing AI support remains disabled and unwired. No bot startup, command registration, deployment, website mutation or AI activation is part of this checkpoint.
