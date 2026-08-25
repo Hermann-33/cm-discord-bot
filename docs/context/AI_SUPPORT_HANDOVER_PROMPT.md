@@ -1,6 +1,6 @@
 # AI Support Handover Prompt
 
-Updated: 2026-08-25 07:59 +08:00
+Updated: 2026-08-25 10:59 +08:00
 
 Use this as the copy-paste handover prompt for a new ChatGPT/Codex/agent session. Repository documentation and accepted ADRs are authoritative over chat history.
 
@@ -29,27 +29,51 @@ Read in this order before planning, changing routing/benchmarks, spending hosted
 1. `AGENTS.md`
 2. `docs/README.md`
 3. `docs/context/ACTIVE_CONTEXT.md`
-4. `docs/context/AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md`
-5. `docs/context/HANDOFF.md`
-6. `docs/context/AI_SUPPORT_SIDE_PROJECT.md`
-7. `docs/context/PROJECT_BRIEF.md`
-8. `docs/context/SIDE_PROJECTS.md`
-9. `docs/context/ARCHITECTURE.md`
-10. `docs/context/DATA_STATUS.md`
-11. `docs/context/CODEBASE_MAP.md`
-12. `docs/context/COMMANDS.md`
-13. `docs/context/ROADMAP.md`
-14. `docs/context/WORKFLOW.md`
-15. `docs/context/AUDIT_LOG.md`
-16. `docs/context/PROJECT_HISTORY.md`
-17. `docs/GROQ_SUPPORT_TRIAGE.md`
-18. `docs/OPENROUTER_SUPPORT_TRIAGE.md`
-19. `docs/decisions/ADR-0010-ticket-transcript-data-repository-boundary.md`
-20. `docs/decisions/ADR-0011-pending-purchase-and-fulfillment-support-view.md`
-21. `docs/decisions/ADR-0012-bundled-support-runtime-and-openrouter-planner.md`
-22. `docs/decisions/ADR-0013-groq-primary-support-triage-provider.md`
+4. `docs/context/AI_SUPPORT_RELEASE_HANDOVER_2026-08-25.md`
+5. `docs/context/AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md`
+6. `docs/context/HANDOFF.md`
+7. `docs/context/AI_SUPPORT_SIDE_PROJECT.md`
+8. `docs/context/PROJECT_BRIEF.md`
+9. `docs/context/SIDE_PROJECTS.md`
+10. `docs/context/ARCHITECTURE.md`
+11. `docs/context/DATA_STATUS.md`
+12. `docs/context/CODEBASE_MAP.md`
+13. `docs/context/COMMANDS.md`
+14. `docs/context/ROADMAP.md`
+15. `docs/context/WORKFLOW.md`
+16. `docs/context/AUDIT_LOG.md`
+17. `docs/context/PROJECT_HISTORY.md`
+18. `docs/GROQ_SUPPORT_TRIAGE.md`
+19. `docs/OPENROUTER_SUPPORT_TRIAGE.md`
+20. `docs/decisions/ADR-0010-ticket-transcript-data-repository-boundary.md`
+21. `docs/decisions/ADR-0011-pending-purchase-and-fulfillment-support-view.md`
+22. `docs/decisions/ADR-0012-bundled-support-runtime-and-openrouter-planner.md`
+23. `docs/decisions/ADR-0013-groq-primary-support-triage-provider.md`
 
-The dated validation checkpoint supersedes older validation-pending benchmark text where it conflicts. Never silently reconcile a lower-authority contradiction.
+The release handover is authoritative for the current paused implementation state. The validation checkpoint remains authoritative for the last fully validated tests/benchmark/hosted result.
+
+### Current exact state
+
+Before handover-document commits, the executable implementation checkpoint was:
+
+```text
+public implementation HEAD: cfb0b163cac43c95e515ba316fa37c100cec4fe2
+last fully validated HEAD:   803a50bb09cdc6a60b3c736762d285cdac0aa276
+private main HEAD:           c9e993f17583a607402f4173296f64aac52d2ebe
+```
+
+The public branch now also contains documentation-only handover commits after `cfb0b163`. Do not confuse the documentation HEAD with a newly validated executable release candidate.
+
+The four executable commits after the validated checkpoint are:
+
+```text
+cd25bb66acd8bc14bd5d34b941fe0ad0ada91b64  Align runtime triage envelopes with validated planner
+317703b7cccc3b4e845cf459558c6e88dd8f1ea0  Use input-aware Groq schema in runtime
+66b375ffeb3c98ffaa52983eef07830ebe3a9391  Test production deterministic Groq envelopes
+cfb0b163cac43c95e515ba316fa37c100cec4fe2  Add production deterministic support resolver
+```
+
+These post-validation executable commits have **not** yet been fully revalidated. No CI status was available for them during the handover session, and the assistant did not run local tests.
 
 ### Mandatory reading — private repository
 
@@ -82,9 +106,9 @@ Discord
  -> database
 ```
 
-Never add direct Supabase/Postgres access, DB/service-role credentials, a database fallback, or a production filesystem dependency on the private corpus. Never invent a website operation. `catalog.current.read` remains unconfirmed and unavailable.
+Never add direct Supabase/Postgres access, DB/service-role credentials, a database fallback, or a production filesystem dependency on the private corpus. Never invent a website/API operation. `catalog.current.read` remains unconfirmed and unavailable.
 
-Customer-facing AI support is **disabled and unwired**. Do not run the bot, register commands, deploy, merge to production, mutate website state, or activate AI support without a separately authorized task.
+Customer-facing AI support is **disabled and unwired**. No bot startup, command registration, deployment, production merge, website mutation, or AI activation occurred in the paused session.
 
 Restricted bypass/evasion/injection/kernel/driver/spoofing/detection-avoidance material stays outside autonomous support.
 
@@ -98,7 +122,8 @@ private canonical corpus
  -> compact planner action envelope
  -> Groq openai/gpt-oss-120b
  -> deterministic validator
- -> canonical case / targeted clarification / approved live lookup / policy / escalation
+ -> grounded deterministic action resolver
+ -> canonical case / targeted clarification / approved live read / policy / escalation
 ```
 
 The LLM is not the knowledge or authorization authority. It has no browser, tools, code execution, MCP, database, website, Discord action, or mutation access.
@@ -117,9 +142,9 @@ direct-case confidence:  0.8
 
 Never print, commit, log, or copy `GROQ_API_KEY` into the private repository.
 
-### Current measured benchmark
+### Last fully validated benchmark state
 
-Use only the independently reviewed V3 development set. Do not use the old combined V1/V2 set as independent hosted semantic gold. Original V3 is immutable; exclusions live only in its adjudication overlay.
+Use only the independently reviewed V3 development set for consumed development evaluation. Original V3 is immutable; exclusions live only in its adjudication overlay.
 
 ```text
 sourceRecords:             300
@@ -129,15 +154,12 @@ adjudicatedRecords:        236
 records:                   236
 reviewQueueRecords:          0
 representabilityRate:        1
-representabilityReasons:    {}
 plannerTokens avg/med/p95: 1122.5042 / 844 / 1858
 ```
 
 Overlay categories: 14 bad gold, 8 ambiguous gold, 3 safety-boundary conflicts, and 1 safety-boundary review.
 
-### Latest Groq development result
-
-The final post-fix hosted run used the consumed 40-row development prefix. The first 20 rows provide the matching smoke slice.
+Validated Groq consumed-development prefix at `803a50b`:
 
 ```text
 20 rows:
@@ -153,21 +175,7 @@ The final post-fix hosted run used the consumed 40-row development prefix. The f
   planner tokens avg/med/p95:    981.3 / 839 / 1466
 ```
 
-All four safe-progress rows were inspected; none requires semantic review. The run completed without fallback, invalid output, unsafe routing, scope leakage, early stop, or 429.
-
-### Implemented and validated repairs
-
-- explicit deterministic clarification provenance instead of treating every relevant clarification as authoritative;
-- deterministic static case, lookup, and clarification envelopes across candidates, Groq schema, validator, and fallback;
-- no speculative family expansion from entity-only text;
-- selector-only order turns clarify intent; selector plus explicit state intent may use approved lookup;
-- scoped generic clarification cannot reintroduce global lookup substitutions;
-- lookup-over-clarification is safe only when the canonical clarification explicitly declares that ID or operation;
-- redaction placeholders are not canonical entities or proof of missing data;
-- targeted account-token, loader-link, VBS/virtualization/Secure Boot/TPM, and technical-praise routing;
-- Groq schemas avoid unsupported `uniqueItems`.
-
-Latest gates:
+Validated gates at that checkpoint:
 
 ```text
 focused tests:      77 / 77 pass
@@ -178,28 +186,133 @@ git diff --check:  pass
 benchmark:         236 / 236, review queue 0
 ```
 
-### Next gate
+### Post-validation implementation added before pause
 
-The final holdout is untouched. Do not use it for tuning or casually inspect it. A later explicitly authorized activation-readiness task must:
+Production runtime parity was started and committed:
 
-1. verify implementation and development adjudication are frozen;
-2. run the separately governed final holdout once;
-3. inspect every non-optimal, fallback, invalid, unsafe, leakage, and semantic-review row;
-4. verify privacy, restricted-topic precision, lookup authorization/correctness, multi-turn behavior, and rollout controls;
-5. keep production disabled unless ADR-0012/ADR-0013 activation criteria pass.
+- `src/ai/supportTriage.ts`: deterministic static-case / lookup / clarification validation and fallback parity;
+- `src/ai/groqClient.ts`: input-aware strict Groq schema matching deterministic envelopes;
+- `src/ai/firstTurnRouter.ts`: runtime-safe TypeScript port of validated first-turn deterministic semantics;
+- `src/ai/deterministicResolver.ts`: converts bundled runtime + conversation state into the bounded production planner envelope;
+- regression tests for provider envelopes and production resolver behavior.
 
-Required holdout thresholds include safe-progress-or-better at least 95%, unsafe route at most 2%, zero scope leakage, zero repeated known questions, and zero context-answerable questions.
+Known regression classes covered include HWID reset leakage, entity-only speculative family expansion, bare order selectors, explicit order status, pending-clarification follow-ups, and restricted detection/evasion intent.
+
+This production-parity layer is **not yet fully revalidated**.
+
+### Implementation intentionally left incomplete
+
+Do not assume these exist:
+
+1. grounded `DeterministicSupportActionResolver`;
+2. abstract-lookup -> concrete `InternalApiClient` read adapter;
+3. customer-safe rendering of case/policy/procedure/live state;
+4. Discord ticket/channel conversation-state persistence;
+5. `messageCreate` integration;
+6. default-off AI feature flag, channel/category allowlist, rollout controls, kill switch;
+7. superseding activation ADR/privacy-security review required before customer-facing message wiring;
+8. release-candidate freeze manifest/hash tool;
+9. final holdout selection/freeze tool;
+10. one-shot final holdout evaluation;
+11. production deployment/activation.
+
+A draft action resolver was started in chat but not committed. Treat it as nonexistent repository state.
+
+### Concrete API boundary for the action layer
+
+Existing safe read methods include:
+
+- `lookupAuraByDiscordId(...)`;
+- `fetchUserOverview(...)`;
+- `fetchOrderDetails(...)`;
+- `fetchOrderFulfillment(...)`;
+- `fetchPurchaseIntent(...)`.
+
+The KB may refer to broader abstract operations such as `orders.lookup.read`, `purchase-intents.process.status.read`, or `catalog.current.read`. Never derive an endpoint name from these strings.
+
+Required adapter behavior:
+
+- map only to an existing concrete approved read when it actually supplies the requested current state;
+- related abstract IDs may collapse into one concrete read when justified;
+- unsupported lookups clarify/escalate;
+- no autonomous mutation APIs;
+- no raw account tokens/license keys/secret fulfillment material in planner or customer output;
+- `catalog.current.read` remains unavailable until the website exposes and documents a real operation.
+
+### Holdout rule
+
+The final release holdout has **not been selected, inspected, generated, sent to Groq, or scored**.
+
+Do not use consumed V3 as final holdout. Do not assume the existing `historical-rule-holdout.jsonl` is eligible merely because of its filename; audit prior use/provenance first.
+
+A valid final holdout must be selected after the executable implementation is revalidated/frozen and must subtract all consumed development/training provenance, including V1/V2/V3 transcript IDs and routing exemplars already used to tune/evaluate current behavior.
+
+Selection must be prediction-blind and deterministic, with a fingerprint/manifest and independent gold review. Then run it exactly once. If insufficient genuinely unused historical rows remain, document historical-corpus exhaustion rather than fabricate a contaminated release metric.
+
+Required thresholds remain at least:
+
+```text
+safe-progress-or-better >= 95%
+unsafe route            <= 2%
+scope leakage             0
+repeated-known question    0
+context-answerable question 0
+```
+
+Also verify structured-output/provider compatibility, privacy, restricted-topic precision, lookup authorization/adapter correctness, multi-turn behavior, runtime integrity, and rollout controls.
+
+### Permanent Rust NFA exception
+
+Preserve exactly:
+
+```text
+case.rust.nfa.server_load_crash
+ -> lower high/max ordinary graphics
+ -> close unnecessary background applications / free ordinary resources
+ -> if already low or resource step fails -> case.rust.nfa.server_load_crash.continue
+```
+
+Do not generalize this into broader spoofing/evasion technical assistance.
+
+### Temporary branches created during the paused session
+
+These are non-authoritative session pointers:
+
+```text
+task/ai-support-release
+task/ai-support-release-staging
+task/ai-support-integration-handover
+```
+
+Continue authoritative implementation on `task/ai-support-integration` unless governance intentionally changes. Do not merge those pointers merely because they exist.
+
+### Exact next sequence
+
+1. Verify public/private HEADs and read the dated release handover.
+2. Run focused production AI tests, full `npm test`, typecheck, build, and `git diff --check` against the current executable implementation.
+3. Compare production resolver outputs to validated tooling on known regression rows and a representative consumed-development sample.
+4. Fix only true production-parity defects before any holdout work.
+5. Implement the grounded action resolver and explicit abstract-to-concrete read adapter; add fail-closed tests.
+6. Implement bounded conversation-state storage and Discord message integration behind default-off rollout controls.
+7. Add the superseding activation ADR/privacy-security review.
+8. Run full offline/runtime validation again and freeze implementation SHA + runtime hashes + Groq config.
+9. Build/fingerprint the truly independent final holdout using provenance subtraction only.
+10. Run the final holdout once.
+11. If every release gate passes, perform a controlled rollout. Otherwise leave AI support disabled and record the failure without tuning on the holdout.
 
 ### Working rules
 
-- Start with repository status/diff and authoritative documents.
-- Do not claim a test or hosted result without actual output.
+- Do not claim tests or hosted results without actual output.
 - Do not change clean source gold merely to improve metrics.
-- Fix the smallest responsible layer: router, candidate envelope, provider schema, validator/fallback, evaluator contract, KB, or explicit adjudication.
+- Fix the smallest responsible layer.
 - Do not expose global live tools merely because they exist.
-- Update current context, handoff, specialist docs, and dated checkpoints whenever project truth changes materially.
+- No direct DB/Supabase path or service-role secrets.
+- No runtime dependency on private transcripts.
+- No invented website/API operations.
+- No model-selected mutation authority.
+- Preserve restricted-topic safety boundaries.
 
-Start by summarizing repository-derived current state and reporting any conflict with this prompt. Trust accepted ADRs and newer higher-authority repository state.
+Start by summarizing repository-derived current state and explicitly distinguishing the last validated checkpoint from the current unvalidated executable implementation.
 
 ---
 
