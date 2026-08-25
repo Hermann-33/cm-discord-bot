@@ -159,7 +159,7 @@ test("message controller persists bounded state per customer and uses safe menti
   assert.deepEqual((first.replies[0].allowedMentions as { parse: unknown[] }).parse, []);
 });
 
-test("message controller fails closed with a generic customer response and no exception body", async () => {
+test("message controller fails closed without leaking exception text to customer or logs", async () => {
   const controller = new SupportAiMessageController(
     config(),
     service(async () => {
@@ -167,9 +167,21 @@ test("message controller fails closed with a generic customer response and no ex
     })
   );
   const fake = fakeMessage();
+  const originalConsoleError = console.error;
+  const logs: string[] = [];
+  console.error = (...values: unknown[]) => {
+    logs.push(values.map(String).join(" "));
+  };
 
-  assert.equal(await controller.handle(fake.message), true);
+  try {
+    assert.equal(await controller.handle(fake.message), true);
+  } finally {
+    console.error = originalConsoleError;
+  }
+
   assert.equal(fake.replies.length, 1);
   assert.equal(fake.replies[0].content, AI_SUPPORT_UNAVAILABLE_MESSAGE);
   assert.equal(String(fake.replies[0].content).includes("provider secret"), false);
+  assert.equal(logs.some((line) => line.includes("provider secret internal failure detail")), false);
+  assert.equal(logs.some((line) => line.includes('"errorName":"Error"')), true);
 });

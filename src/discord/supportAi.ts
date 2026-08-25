@@ -7,7 +7,7 @@ import {
   SupportConversationStateStore,
   type SupportConversationKey
 } from "../ai/supportStateStore";
-import { logger, sanitizeError } from "../logger";
+import { logger } from "../logger";
 import { safeAllowedMentions } from "./safeMessages";
 
 export const AI_SUPPORT_UNAVAILABLE_MESSAGE =
@@ -37,6 +37,11 @@ function surfaceIds(message: Message): {
       ? typeof channel.parent?.parentId === "string" ? channel.parent.parentId : null
       : typeof channel.parentId === "string" ? channel.parentId : null
   };
+}
+
+function safeErrorName(error: unknown): string {
+  if (!(error instanceof Error)) return "UnknownError";
+  return error.name.replace(/[^A-Za-z0-9_.-]/gu, "").slice(0, 64) || "Error";
 }
 
 export function isSupportAiMessageEligible(message: Message, config: AppConfig): boolean {
@@ -92,11 +97,11 @@ export class SupportAiMessageController {
       await replySafely(message, result.action.customerMessage);
       return true;
     } catch (error) {
-      logger.error("sanitized AI support failure", sanitizeError(error));
+      logger.error("AI support failure", { errorName: safeErrorName(error) });
       try {
         await replySafely(message, AI_SUPPORT_UNAVAILABLE_MESSAGE);
       } catch (replyError) {
-        logger.error("sanitized AI support reply failure", sanitizeError(replyError));
+        logger.error("AI support reply failure", { errorName: safeErrorName(replyError) });
       }
       return true;
     }
