@@ -179,9 +179,14 @@ export class RuntimeDeterministicSupportResolver implements DeterministicSupport
     if (input.pendingAnswerConsumed && candidateClarificationIds.includes("clarify.support_surface")) {
       candidateClarificationIds = [];
     }
-    const candidateStaticCaseIds = baseline.primaryDecision === "direct_static_case"
-      ? unique(baseline.observableCaseIds)
-      : [];
+    const continuationCaseId = input.state.continuationCaseId && allCases.some((item) => item.id === input.state.continuationCaseId)
+      ? input.state.continuationCaseId
+      : null;
+    const candidateStaticCaseIds = continuationCaseId
+      ? [continuationCaseId]
+      : baseline.primaryDecision === "direct_static_case"
+        ? unique(baseline.observableCaseIds)
+        : [];
 
     const deterministicLookupIds = new Set(candidateDynamicLookupIds);
     const deterministicClarificationIdSet = new Set(candidateClarificationIds);
@@ -237,7 +242,7 @@ export class RuntimeDeterministicSupportResolver implements DeterministicSupport
 
     const plannerState = {
       resolvedEntities,
-      activeCaseId: input.state.candidateCaseIds.length === 1 ? input.state.candidateCaseIds[0] : null,
+      activeCaseId: continuationCaseId ?? (input.state.candidateCaseIds.length === 1 ? input.state.candidateCaseIds[0] : null),
       candidateCaseIds: nextState.candidateCaseIds,
       candidateFamilyIds: nextState.candidateFamilyIds,
       candidateClarificationIds,

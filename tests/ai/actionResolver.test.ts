@@ -70,7 +70,7 @@ test("canonical clarification renders exact question and records bounded pending
   assert.equal(answer.state.pendingClarification, null);
 });
 
-test("safe Rust NFA case renders only explicitly allowlisted ordinary resource procedure", async () => {
+test("safe Rust NFA case renders only explicitly allowlisted ordinary resource procedure and tracks it", async () => {
   const resolver = new RuntimeDeterministicSupportActionResolver();
   const resolved = await resolver.resolve({
     decision: decision({ nextAction: "answer_case", caseIds: ["case.rust.nfa.server_load_crash"] }),
@@ -80,6 +80,25 @@ test("safe Rust NFA case renders only explicitly allowlisted ordinary resource p
   assert.match(resolved.action.customerMessage, /lower ordinary in-game graphics settings/i);
   assert.match(resolved.action.customerMessage, /Close unnecessary background applications/i);
   assert.doesNotMatch(resolved.action.customerMessage, /bypass internals/i);
+  assert.equal(resolved.state.pendingProcedureId, "procedure.system.reduce_resource_pressure");
+});
+
+test("an already pending or failed procedure is not rendered again", async () => {
+  const resolver = new RuntimeDeterministicSupportActionResolver();
+  for (const state of [
+    createSupportConversationState({ pendingProcedureId: "procedure.system.reduce_resource_pressure" }),
+    createSupportConversationState({
+      proceduresAttempted: ["procedure.system.reduce_resource_pressure"],
+      procedureOutcomes: { "procedure.system.reduce_resource_pressure": "failure" }
+    })
+  ]) {
+    const resolved = await resolver.resolve({
+      decision: decision({ nextAction: "answer_case", caseIds: ["case.rust.nfa.server_load_crash"] }),
+      state, runtime, lookupContext: {}
+    });
+    assert.doesNotMatch(resolved.action.customerMessage, /lower ordinary in-game graphics settings/i);
+    assert.match(resolved.action.customerMessage, /staff member should continue/i);
+  }
 });
 
 test("restricted case and restricted escalation never render technical procedure details", async () => {
@@ -114,7 +133,7 @@ test("authoritative policy renders canonical rule but dynamic policy fails close
   assert.equal(blocked.action.kind, "escalation");
 });
 
-test("dynamic lookup stores only adapter safe data and uses customer-safe message", async () => {
+test("dynamic lookup stores only adapter safe data as resolved conversation context", async () => {
   const adapter: SupportLiveLookupAdapter = {
     async resolveMany() {
       return [{ lookupId: "dynamic.order.status", status: "resolved", safeData: { kind: "order_status", status: "processing" }, customerMessage: "Current order status: processing." }];
@@ -123,16 +142,20 @@ test("dynamic lookup stores only adapter safe data and uses customer-safe messag
   const resolver = new RuntimeDeterministicSupportActionResolver(adapter);
   const resolved = await resolver.resolve({
     decision: decision({ nextAction: "request_dynamic_lookup", dynamicLookupIds: ["dynamic.order.status"] }),
-    state: createSupportConversationState(), runtime, lookupContext: {}
+    state: createSupportConversationState({ pendingLookupIds: ["dynamic.order.status"] }), runtime, lookupContext: {}
   });
   assert.equal(resolved.action.kind, "dynamic_lookup");
   assert.equal(resolved.action.customerMessage, "Current order status: processing.");
   assert.deepEqual(resolved.state.dynamicLookupResults["dynamic.order.status"], {
     status: "resolved", data: { kind: "order_status", status: "processing" }
   });
+  assert.deepEqual(resolved.state.knownContext["lookup.dynamic.order.status"], {
+    kind: "order_status", status: "processing"
+  });
+  assert.deepEqual(resolved.state.pendingLookupIds, []);
 });
 
-test("lookup requiring selector turns into canonical clarification; unsupported lookup escalates", async () => {
+test("lookup requiring selector preserves pending lookup authority; unsupported lookup escalates", async () => {
   const clarificationAdapter: SupportLiveLookupAdapter = {
     async resolveMany() {
       return [{ lookupId: "dynamic.order.status", status: "needs_clarification", clarificationId: "clarify.order_selector" }];
@@ -144,14 +167,16 @@ test("lookup requiring selector turns into canonical clarification; unsupported 
   });
   assert.equal(clarified.action.kind, "clarification");
   assert.equal(clarified.state.pendingClarification?.id, "clarify.order_selector");
+  assert.deepEqual(clarified.state.pendingLookupIds, ["dynamic.order.status"]);
 
   const unsupportedAdapter: SupportLiveLookupAdapter = {
     async resolveMany() { return [{ lookupId: "dynamic.catalog.price", status: "unsupported" }]; }
   };
   const unsupported = await new RuntimeDeterministicSupportActionResolver(unsupportedAdapter).resolve({
     decision: decision({ nextAction: "request_dynamic_lookup", dynamicLookupIds: ["dynamic.catalog.price"] }),
-    state: createSupportConversationState(), runtime, lookupContext: {}
+    state: createSupportConversationState({ pendingLookupIds: ["dynamic.catalog.price"] }), runtime, lookupContext: {}
   });
   assert.equal(unsupported.action.kind, "escalation");
+  assert.deepEqual(unsupported.state.pendingLookupIds, []);
   assert.doesNotMatch(unsupported.action.customerMessage, /catalog\.current\.read|endpoint|provider/i);
 });

@@ -13,6 +13,10 @@ function sourceFiles(directory: string): string[] {
 const sourceText = sourceFiles(join(process.cwd(), "src"))
   .map((file) => readFileSync(file, "utf8"))
   .join("\n");
+const aiSupportSourceText = [
+  ...sourceFiles(join(process.cwd(), "src", "ai")),
+  join(process.cwd(), "src", "discord", "supportAi.ts")
+].map((file) => readFileSync(file, "utf8")).join("\n");
 const packageJson = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as {
   dependencies: Record<string, string>;
 };
@@ -58,12 +62,35 @@ test("API client exposes only explicitly approved bot operations", () => {
   }
 });
 
+test("AI support is planner-only and cannot reach mutation methods", () => {
+  for (const forbidden of [
+    "previewOrderRefund(",
+    "executeOrderRefund(",
+    "executeAuraAdjustment(",
+    "executeWalletAdjustment("
+  ]) {
+    assert.equal(aiSupportSourceText.includes(forbidden), false, `AI support references mutation method ${forbidden}`);
+  }
+  assert.equal(aiSupportSourceText.includes("catalog.current.read"), false);
+  assert.equal(aiSupportSourceText.includes("@supabase/supabase-js"), false);
+});
+
 test("hosted AI integrations use approved hosts and never import private transcript tooling", () => {
   assert.equal(sourceText.includes("https://api.groq.com"), true);
   assert.equal(sourceText.includes("https://openrouter.ai"), true);
   assert.equal(sourceText.includes("tools/ticket-transcript-exporter"), false);
   assert.equal(sourceText.includes("CM-Ticket-Transcripts"), false);
   assert.equal(sourceText.includes("runtime-kb"), false);
+});
+
+test("customer-facing AI is guarded by default-off flag plus exact guild and explicit surface allowlists", () => {
+  assert.equal(sourceText.includes("AI_SUPPORT_ENABLED"), true);
+  assert.equal(sourceText.includes("AI_SUPPORT_CHANNEL_IDS"), true);
+  assert.equal(sourceText.includes("AI_SUPPORT_CATEGORY_IDS"), true);
+  assert.equal(sourceText.includes("config.aiSupport.enabled"), true);
+  assert.equal(sourceText.includes("message.guildId !== config.discordGuildId"), true);
+  assert.equal(sourceText.includes("config.aiSupport.channelIds.includes"), true);
+  assert.equal(sourceText.includes("config.aiSupport.categoryIds.includes"), true);
 });
 
 test("admin authorization is guild-wide and cannot rely on Discord roles alone", () => {
@@ -93,6 +120,9 @@ test("environment example contains only the approved root variable surface", () 
     "CM_INTERNAL_INTEGRATIONS_API_KEY_ID",
     "CM_INTERNAL_INTEGRATIONS_API_HMAC_SECRET_BASE64",
     "CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS",
+    "AI_SUPPORT_ENABLED",
+    "AI_SUPPORT_CHANNEL_IDS",
+    "AI_SUPPORT_CATEGORY_IDS",
     "GROQ_API_KEY",
     "GROQ_MODEL",
     "GROQ_REASONING_EFFORT",

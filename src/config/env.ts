@@ -25,6 +25,12 @@ const optionalSnowflakeList = z.preprocess((value) => {
   .refine((ids) => new Set(ids).size === ids.length, "Duplicate IDs are not allowed")
   .optional());
 
+const booleanFlag = z.preprocess((value) => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim().toLowerCase();
+  return trimmed.length === 0 ? undefined : trimmed;
+}, z.enum(["true", "false"]).default("false")).transform((value) => value === "true");
+
 const optionalOpenRouterApiKey = z.preprocess((value) => {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
@@ -103,12 +109,32 @@ const envSchema = z.object({
   CM_INTERNAL_INTEGRATIONS_API_KEY_ID: integrationId,
   CM_INTERNAL_INTEGRATIONS_API_HMAC_SECRET_BASE64: z.string().refine(isCanonicalSecret),
   CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS: timeoutSchema,
+  AI_SUPPORT_ENABLED: booleanFlag,
+  AI_SUPPORT_CHANNEL_IDS: optionalSnowflakeList,
+  AI_SUPPORT_CATEGORY_IDS: optionalSnowflakeList,
   GROQ_API_KEY: optionalGroqApiKey,
   GROQ_MODEL: groqModel,
   GROQ_REASONING_EFFORT: groqReasoningEffort,
   OPENROUTER_API_KEY: optionalOpenRouterApiKey,
   OPENROUTER_MODEL: openRouterModel,
   OPENROUTER_DATA_COLLECTION: openRouterDataCollection
+}).superRefine((data, context) => {
+  if (!data.AI_SUPPORT_ENABLED) return;
+  if (!data.GROQ_API_KEY) {
+    context.addIssue({
+      code: "custom",
+      path: ["GROQ_API_KEY"],
+      message: "Groq is required when AI support is enabled"
+    });
+  }
+  const allowedSurfaces = (data.AI_SUPPORT_CHANNEL_IDS?.length ?? 0) + (data.AI_SUPPORT_CATEGORY_IDS?.length ?? 0);
+  if (allowedSurfaces === 0) {
+    context.addIssue({
+      code: "custom",
+      path: ["AI_SUPPORT_CHANNEL_IDS"],
+      message: "At least one AI support channel or category allowlist entry is required"
+    });
+  }
 });
 
 export type InternalApiConfig = {
@@ -137,6 +163,12 @@ export type OpenRouterConfig = {
   maxTokens: number;
 };
 
+export type AiSupportConfig = {
+  enabled: boolean;
+  channelIds: readonly string[];
+  categoryIds: readonly string[];
+};
+
 export type AppConfig = {
   discordBotToken: string;
   discordClientId: string;
@@ -148,6 +180,7 @@ export type AppConfig = {
   botAdminUserIds: readonly string[];
   botAuditLogChannelId?: string;
   internalApi: InternalApiConfig;
+  aiSupport: AiSupportConfig;
   groq?: GroqConfig;
   openRouter?: OpenRouterConfig;
 };
@@ -181,6 +214,11 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
         "base64"
       ),
       timeoutMs: parsed.data.CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS
+    },
+    aiSupport: {
+      enabled: parsed.data.AI_SUPPORT_ENABLED,
+      channelIds: parsed.data.AI_SUPPORT_CHANNEL_IDS ?? [],
+      categoryIds: parsed.data.AI_SUPPORT_CATEGORY_IDS ?? []
     },
     groq: parsed.data.GROQ_API_KEY
       ? {

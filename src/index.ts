@@ -1,11 +1,19 @@
 import "dotenv/config";
 import { Events } from "discord.js";
 import { InternalApiClient } from "./api/client";
+import { GroqTriageClient } from "./ai/groqClient";
+import { RuntimeDeterministicSupportActionResolver } from "./ai/actionResolver";
+import { RuntimeDeterministicSupportResolver } from "./ai/deterministicResolver";
+import { loadBundledSupportRuntimePack } from "./ai/runtimePack";
+import { SupportConversationService } from "./ai/supportConversation";
+import { InternalApiSupportLiveLookupAdapter } from "./ai/supportLookup";
+import { SupportConversationStateStore } from "./ai/supportStateStore";
 import { handleAuraCommand } from "./commands/aura";
 import { CmAdminController } from "./commands/cm";
 import { handleRefreshLeaderboardCommand } from "./commands/refreshLeaderboard";
 import { loadConfig, type AppConfig } from "./config/env";
 import { createDiscordClient } from "./discord/client";
+import { SupportAiMessageController } from "./discord/supportAi";
 import { LeaderboardService } from "./leaderboard/service";
 import { logger, sanitizeError } from "./logger";
 import { LeaderboardSchedule } from "./scheduler/leaderboardSchedule";
@@ -29,6 +37,29 @@ const leaderboardSchedule = new LeaderboardSchedule(
   leaderboardService,
   Boolean(config.discordLeaderboardMessageId)
 );
+
+let supportAiController: SupportAiMessageController | null = null;
+if (config.aiSupport.enabled) {
+  try {
+    if (!config.groq) throw new Error("AI support enabled without Groq configuration");
+    const runtime = loadBundledSupportRuntimePack();
+    const service = new SupportConversationService(
+      runtime,
+      new RuntimeDeterministicSupportResolver(),
+      new GroqTriageClient(config.groq),
+      new RuntimeDeterministicSupportActionResolver(new InternalApiSupportLiveLookupAdapter(internalApiClient))
+    );
+    supportAiController = new SupportAiMessageController(
+      config,
+      service,
+      new SupportConversationStateStore()
+    );
+    logger.info("AI support initialized", { knowledgeVersion: runtime.knowledgeVersion });
+  } catch (error) {
+    logger.error("AI support initialization failed", sanitizeError(error));
+    supportAiController = null;
+  }
+}
 
 const shutdown = createShutdownHandler(
   leaderboardSchedule,
@@ -59,8 +90,11 @@ discordClient.once(Events.ClientReady, async () => {
 });
 
 discordClient.on(Events.MessageCreate, (message) => {
-  void handleAuraCommand(message, config, internalApiClient).catch((error: unknown) => {
-    logger.error("sanitized command failure", sanitizeError(error));
+  void (async () => {
+    await handleAuraCommand(message, config, internalApiClient);
+    if (supportAiController) await supportAiController.handle(message);
+  })().catch((error: unknown) => {
+    logger.error("sanitized message handler failure", sanitizeError(error));
   });
 });
 

@@ -16,6 +16,7 @@ const runtime: SupportRuntimePack = {
   ],
   cases: [
     record("case.spoofer.hwid_state", { displayName: "HWID state", family: "technical.spoofer", scope: {}, dynamic: [] }),
+    record("case.rust.nfa.server_load_crash.continue", { displayName: "Rust continuation", family: "technical.rust_nfa", scope: { games: ["game.rust"], accountModels: ["account_model.nfa"] }, dynamic: [] }),
     record("case.order.status", { displayName: "Order status", family: "commerce.order", scope: {}, dynamic: ["dynamic.order.status"] }),
     record("case.order.fulfillment_delayed", { displayName: "Fulfillment delayed", family: "commerce.fulfillment", scope: {}, dynamic: ["dynamic.fulfillment.status"] }),
     record("case.order.wrong_delivery", { displayName: "Wrong delivery", family: "commerce.fulfillment", scope: {}, dynamic: [] }),
@@ -100,6 +101,22 @@ test("pending clarification answer keeps prior candidate family instead of forci
   assert.ok(result.input.allowed.caseIds.includes("case.nfa.invalid_first_use"));
   assert.ok(result.input.allowed.familyIds.includes("accounts.nfa"));
   assert.equal(result.input.allowed.deterministicClarificationIds?.includes("clarify.support_surface"), false);
+});
+
+test("procedure failure continuation is a deterministic case envelope and cannot reopen lookup or clarification routes", () => {
+  const state = createSupportConversationState({
+    resolvedEntities: ["game.rust", "account_model.nfa"],
+    candidateCaseIds: ["case.rust.nfa.server_load_crash.continue"],
+    candidateFamilyIds: ["technical.rust_nfa"],
+    continuationCaseId: "case.rust.nfa.server_load_crash.continue",
+    proceduresAttempted: ["procedure.system.reduce_resource_pressure"],
+    procedureOutcomes: { "procedure.system.reduce_resource_pressure": "failure" }
+  });
+  const result = resolver.resolve({ customerText: "still crashes", state, runtime, pendingAnswerConsumed: false });
+  assert.deepEqual(result.input.allowed.deterministicCaseIds, ["case.rust.nfa.server_load_crash.continue"]);
+  assert.deepEqual(result.input.allowed.caseIds, ["case.rust.nfa.server_load_crash.continue"]);
+  assert.deepEqual(result.input.allowed.clarificationIds, []);
+  assert.deepEqual(result.input.allowed.dynamicLookupIds, []);
 });
 
 test("restricted detection/evasion intent is marked restricted and never receives a deterministic answer-case route", () => {

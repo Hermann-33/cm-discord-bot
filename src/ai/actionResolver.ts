@@ -44,6 +44,7 @@ function cloneState(state: SupportConversationState): SupportConversationState {
     knownContext: { ...state.knownContext },
     unknownContext: [...state.unknownContext],
     pendingClarification: state.pendingClarification ? { ...state.pendingClarification } : null,
+    pendingLookupIds: [...state.pendingLookupIds],
     questionsAsked: [...state.questionsAsked],
     answersReceived: { ...state.answersReceived },
     diagnosticsAsked: [...state.diagnosticsAsked],
@@ -82,12 +83,14 @@ function clarificationPending(record: SupportRuntimeRecord): PendingSupportClari
 
 function applyClarification(
   state: SupportConversationState,
-  record: SupportRuntimeRecord
+  record: SupportRuntimeRecord,
+  pendingLookupIds: readonly string[] = []
 ): { state: SupportConversationState; action: GroundedSupportAction } {
   const next = cloneState(state);
   const question = safeText(asObject(record).question, "Please clarify what you need help with.", 1000);
   const pending = clarificationPending(record);
   next.pendingClarification = pending;
+  next.pendingLookupIds = unique([...next.pendingLookupIds, ...pendingLookupIds]);
   if (!next.questionsAsked.includes(record.id)) next.questionsAsked.push(record.id);
   for (const key of pending.contextKeys ?? [pending.contextKey]) {
     if (next.knownContext[key] === undefined && !next.unknownContext.includes(key)) next.unknownContext.push(key);
@@ -98,7 +101,11 @@ function applyClarification(
   };
 }
 
-function relevantProcedures(caseRecord: SupportRuntimeRecord, runtime: SupportRuntimePack): SupportRuntimeRecord[] {
+function relevantProcedures(
+  state: SupportConversationState,
+  caseRecord: SupportRuntimeRecord,
+  runtime: SupportRuntimePack
+): SupportRuntimeRecord[] {
   const raw = asObject(caseRecord);
   const flow = Array.isArray(raw.flow) ? raw.flow : [];
   const ids = flow.flatMap((item) => {
@@ -108,6 +115,9 @@ function relevantProcedures(caseRecord: SupportRuntimeRecord, runtime: SupportRu
   });
   return unique(ids)
     .filter((id) => SAFE_AUTONOMOUS_PROCEDURES.has(id))
+    .filter((id) => id !== state.pendingProcedureId)
+    .filter((id) => !state.proceduresAttempted.includes(id))
+    .filter((id) => state.procedureOutcomes[id] !== "failure")
     .map((id) => findRecord(runtime.procedures, id))
     .filter((item): item is SupportRuntimeRecord => Boolean(item))
     .filter((item) => asObject(item).restricted !== true);
@@ -156,21 +166,24 @@ function renderCase(
   const next = cloneState(state);
   next.candidateCaseIds = unique(cases.map((item) => item.id));
   next.candidateFamilyIds = unique(cases.map((item) => safeText(asObject(item).family)).filter(Boolean));
+  next.continuationCaseId = null;
 
   const names = cases.map((item) => safeText(asObject(item).displayName, item.id, 200));
   const policyRules = unique(cases.flatMap((item) => authoritativeCasePolicies(item, runtime)));
-  const procedures = unique(cases.flatMap((item) => relevantProcedures(item, runtime).map((record) => record.id)))
-    .map((id) => findRecord(runtime.procedures, id))
-    .filter((item): item is SupportRuntimeRecord => Boolean(item));
-  const steps = unique(procedures.flatMap(procedureSteps));
+  const procedure = cases
+    .flatMap((item) => relevantProcedures(next, item, runtime))
+    .find((item, index, all) => all.findIndex((candidate) => candidate.id === item.id) === index);
+  const steps = procedure ? unique(procedureSteps(procedure)) : [];
 
   const lines = [`Support path: ${names.join(" / ")}.`];
   if (policyRules.length > 0) lines.push(...policyRules);
-  if (steps.length > 0) {
+  if (procedure && steps.length > 0) {
+    next.pendingProcedureId = procedure.id;
     lines.push("Safe next steps:");
     steps.forEach((step, index) => lines.push(`${index + 1}. ${step}`));
   }
   if (steps.length === 0 && policyRules.length === 0) {
+    next.pendingProcedureId = null;
     lines.push("If this still needs intervention, a staff member should continue from this support path.");
   }
 
@@ -261,19 +274,24 @@ export class RuntimeDeterministicSupportActionResolver implements DeterministicS
         context: input.lookupContext
       });
       const clarification = firstClarificationForLookup(results, input.runtime);
-      if (clarification) return applyClarification(input.state, clarification);
+      if (clarification) return applyClarification(input.state, clarification, input.decision.dynamicLookupIds);
 
       const unresolved = results.filter((result) => result.status !== "resolved");
       if (unresolved.length > 0 || results.length === 0) {
+        const next = cloneState(input.state);
+        next.pendingLookupIds = [];
         return {
-          state: cloneState(input.state),
+          state: next,
           action: escalation("Current account or order state could not be verified automatically. A staff member needs to continue.", unresolved.map((item) => item.lookupId))
         };
       }
 
       const next = cloneState(input.state);
+      next.pendingLookupIds = [];
       for (const result of results) {
-        next.dynamicLookupResults[result.lookupId] = { status: "resolved", data: result.safeData ?? {} };
+        const safeData = result.safeData ?? {};
+        next.dynamicLookupResults[result.lookupId] = { status: "resolved", data: safeData };
+        next.knownContext[`lookup.${result.lookupId}`] = safeData;
       }
       const messages = unique(results.map((item) => safeText(item.customerMessage, "", 1000)).filter(Boolean));
       return {

@@ -21,12 +21,13 @@ function validEnvironment(): NodeJS.ProcessEnv {
   };
 }
 
-test("loads a complete strict configuration", () => {
+test("loads a complete strict configuration with AI support default-off", () => {
   const config = loadConfig(validEnvironment());
   assert.equal(config.internalApi.origin, "https://cheaters.market");
   assert.equal(config.internalApi.clientId, "cm-discord-bot");
   assert.equal(config.internalApi.timeoutMs, 5_000);
   assert.equal(config.internalApi.hmacSecret.byteLength, 32);
+  assert.deepEqual(config.aiSupport, { enabled: false, channelIds: [], categoryIds: [] });
   assert.equal(config.groq, undefined);
   assert.equal(config.openRouter, undefined);
 });
@@ -97,6 +98,43 @@ test("defaults timeout to 5000 and enforces 1000 through 15000 milliseconds", ()
     environment.CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS = value;
     assert.throws(() => loadConfig(environment), /CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS/);
   }
+});
+
+test("AI support cannot be enabled without Groq and an explicit channel/category allowlist", () => {
+  const environment = validEnvironment();
+  environment.AI_SUPPORT_ENABLED = "true";
+  assert.throws(
+    () => loadConfig(environment),
+    (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      return message.includes("GROQ_API_KEY") && message.includes("AI_SUPPORT_CHANNEL_IDS");
+    }
+  );
+});
+
+test("AI support parses explicit channel/category allowlists and remains exact-guild scoped", () => {
+  const environment = validEnvironment();
+  environment.AI_SUPPORT_ENABLED = "TRUE";
+  environment.AI_SUPPORT_CHANNEL_IDS = "123456789012345680,123456789012345681";
+  environment.AI_SUPPORT_CATEGORY_IDS = "123456789012345682";
+  environment.GROQ_API_KEY = "gsk_test_key_12345678901234567890";
+  const config = loadConfig(environment);
+  assert.deepEqual(config.aiSupport, {
+    enabled: true,
+    channelIds: ["123456789012345680", "123456789012345681"],
+    categoryIds: ["123456789012345682"]
+  });
+  assert.equal(config.discordGuildId, "123456789012345672");
+});
+
+test("AI support rejects malformed flags and duplicate allowlist IDs", () => {
+  const invalidFlag = validEnvironment();
+  invalidFlag.AI_SUPPORT_ENABLED = "yes";
+  assert.throws(() => loadConfig(invalidFlag), /AI_SUPPORT_ENABLED/);
+
+  const duplicates = validEnvironment();
+  duplicates.AI_SUPPORT_CHANNEL_IDS = "123456789012345680,123456789012345680";
+  assert.throws(() => loadConfig(duplicates), /AI_SUPPORT_CHANNEL_IDS/);
 });
 
 test("Groq remains disabled until an API key is configured", () => {
