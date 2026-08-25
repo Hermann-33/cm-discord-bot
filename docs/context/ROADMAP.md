@@ -151,46 +151,32 @@ Implemented safeguards include:
 - turn-scoped live-lookup exposure rather than a global tool catalog;
 - rate-safe Groq benchmark pacing and stop-on-429 behavior.
 
-The latest user-confirmed benchmark rebuild is the current pause point:
+The consumed development cleanup and hosted validation are complete:
 
 ```text
 sourceRecords:             300
 reviewedRecords:           262
-adjudicatedRecords:        237
-excludedByAdjudication:     25
-records:                   230
-reviewQueueRecords:          7
-representabilityRate:      0.9704641350210971
+adjudicatedRecords:        236
+excludedByAdjudication:     26
+records:                   236
+reviewQueueRecords:          0
+representabilityRate:        1
 ```
 
 Current committed adjudication categories:
 
 ```text
 bad_gold:                  14
-ambiguous_gold:             7
+ambiguous_gold:             8
 safety_boundary_conflict:   3
 safety_boundary_review:     1
 ```
 
-Six queue rows are bare order selectors that the deterministic router over-interprets as direct live-lookup intent. One row (`0217`) is likely stale/ambiguous gold because the user already supplied delivery state and described an inaccessible `View Order` link. The proposed `0217` exclusion is not committed.
-
-Do not spend more Groq quota from this 230/237 state.
-
-Immediate cleanup gate:
-
-1. fix selector-only order routing;
-2. add/update selector-only vs selector+intent tests;
-3. re-review `0217` and, if confirmed, exclude it only through the adjudication overlay;
-4. rebuild the benchmark;
-5. require review queue `0` and representability `1`;
-6. pass tests/typecheck/build/diff check;
-7. only then resume hosted development evaluation.
-
-Projected clean denominator after those changes, if `0217` is excluded, is 236/236. This is a target, not current measured truth.
+The final post-fix Groq development prefix reached 40/40 safe-progress-or-better: 36 optimal, 4 safe-progress, and zero unsafe, fallback, invalid, leakage, or semantic-review rows. Full local validation passed 308/308 tests plus typecheck/build/diff hygiene. See `AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md`.
 
 ### Transcript Phase T6 — Hosted model selection / frozen final holdout — NOT COMPLETE
 
-After consumed-development cleanup:
+After the completed consumed-development cleanup:
 
 - inspect every unsafe/safe-no-progress/scope-leak/invalid/fallback/semantic-review row;
 - fix the smallest responsible layer rather than tuning against bad gold;

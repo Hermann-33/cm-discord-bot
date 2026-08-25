@@ -142,17 +142,17 @@ Production-side Groq coverage also includes `tests/ai/groqClient.test.ts` and re
 
 ## Current benchmark checkpoint
 
-Current source V3 remains immutable. The committed adjudication overlay excludes 25 rows. Latest user-confirmed generated planner benchmark:
+Current source V3 remains immutable. The committed adjudication overlay excludes 26 rows. Latest generated planner benchmark:
 
 ```text
 reviewed:                 262
-adjudicated:              237
-representable records:    230
-review queue:               7
-representability:        ~97.046%
+adjudicated:              236
+representable records:    236
+review queue:               0
+representability:        100%
 ```
 
-Six queue rows are bare order selectors; one is `0217` (delivered email + inaccessible `View Order`) with likely stale/ambiguous fulfillment clarification gold.
+The post-fix 40-row Groq development prefix produced 36 optimal and 4 safe-progress rows, with zero unsafe/fallback/invalid/leakage/review rows. The final holdout remains untouched.
 
 See:
 

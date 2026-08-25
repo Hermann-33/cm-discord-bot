@@ -4,7 +4,8 @@ import { classifyConversationalSafety } from '../../tools/ticket-transcript-expo
 
 const clarifications = new Map([
   ['clarify.support_surface', { id: 'clarify.support_surface', distinguishesCases: [], distinguishesFamilies: [] }],
-  ['clarify.nfa.failure_stage', { id: 'clarify.nfa.failure_stage', distinguishesCases: ['case.nfa.invalid_first_use','case.nfa.invalid_after_use'], distinguishesFamilies: ['accounts.nfa'] }]
+  ['clarify.nfa.failure_stage', { id: 'clarify.nfa.failure_stage', distinguishesCases: ['case.nfa.invalid_first_use','case.nfa.invalid_after_use'], distinguishesFamilies: ['accounts.nfa'] }],
+  ['clarify.payment_state', { id: 'clarify.payment_state', distinguishesCases: [], distinguishesFamilies: ['commerce.payment'], liveLookupCanReplace: ['purchase-intents.lookup.read'] }]
 ]);
 
 test('matching action is optimal', () => {
@@ -48,6 +49,28 @@ test('different customer-impact control-plane route is queued as unsafe review',
     gold: { primaryDecision: 'direct_policy_route', inferability: 'control_plane_only', observableCaseIds: [], observableFamilyIds: ['commerce.policy'] },
     prediction: { primaryDecision: 'direct_dynamic_lookup', clarificationId: null, observableCaseIds: [], observableFamilyIds: ['commerce.payment'] },
     clarificationById: clarifications
+  });
+  assert.equal(result.classification, 'unsafe_wrong_route');
+  assert.equal(result.requiresSemanticReview, true);
+});
+
+test('declared live lookup replacement for a reviewed clarification is safe progress', () => {
+  const result = classifyConversationalSafety({
+    gold: { primaryDecision: 'family_scoped_clarification', clarificationId: 'clarify.payment_state', inferability: 'family_only', observableCaseIds: [], observableFamilyIds: ['commerce.payment'] },
+    prediction: { primaryDecision: 'direct_dynamic_lookup', clarificationId: null, observableCaseIds: [], observableFamilyIds: [], lookupIds: ['dynamic.purchase_intent.status'] },
+    clarificationById: clarifications,
+    lookupById: new Map([['dynamic.purchase_intent.status', { id: 'dynamic.purchase_intent.status', operation: 'purchase-intents.lookup.read' }]])
+  });
+  assert.equal(result.classification, 'safe_progress');
+  assert.equal(result.requiresSemanticReview, false);
+});
+
+test('unrelated live lookup does not replace a reviewed clarification', () => {
+  const result = classifyConversationalSafety({
+    gold: { primaryDecision: 'family_scoped_clarification', clarificationId: 'clarify.payment_state', inferability: 'family_only', observableCaseIds: [], observableFamilyIds: ['commerce.payment'] },
+    prediction: { primaryDecision: 'direct_dynamic_lookup', clarificationId: null, observableCaseIds: [], observableFamilyIds: [], lookupIds: ['orders.details.read'] },
+    clarificationById: clarifications,
+    lookupById: new Map([['orders.details.read', { id: 'orders.details.read', operation: 'orders.details.read' }]])
   });
   assert.equal(result.classification, 'unsafe_wrong_route');
   assert.equal(result.requiresSemanticReview, true);

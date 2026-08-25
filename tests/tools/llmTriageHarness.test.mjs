@@ -168,6 +168,32 @@ test('generic support-surface clarification is omitted when it cannot distinguis
   assert.deepEqual(triageInput.allowed.clarificationIds, []);
 });
 
+test('scoped support-surface clarification cannot reintroduce global live lookups', () => {
+  const input = buildLlmTriageInput({
+    customerText: 'payment issue',
+    state: { candidateFamilyIds: ['commerce.payment'], questionsAsked: [] },
+    candidateCases: cases,
+    candidateFamilies: ['commerce.payment'],
+    clarifications: [{
+      id: 'clarify.support_surface',
+      question: 'What is not working?',
+      distinguishesCases: [],
+      distinguishesFamilies: ['commerce.payment'],
+      liveLookupCanReplace: ['users.overview.read', 'orders.lookup.read']
+    }],
+    dynamicLookups: [
+      { id: 'users.overview.read', purpose: 'user overview' },
+      { id: 'orders.lookup.read', purpose: 'order lookup' }
+    ],
+    policies: []
+  });
+
+  assert.ok(input.allowed.clarificationIds.includes('clarify.support_surface'));
+  assert.deepEqual(input.allowed.clarifications.find((item) => item.id === 'clarify.support_surface').liveLookupCanReplace, []);
+  assert.equal(input.allowed.dynamicLookupIds.includes('users.overview.read'), false);
+  assert.equal(input.allowed.dynamicLookupIds.includes('orders.lookup.read'), false);
+});
+
 test('generic support-surface clarification remains available when no scoped candidate exists', () => {
   const triageInput = buildLlmTriageInput({
     customerText: 'would u be interested in a video like this?',

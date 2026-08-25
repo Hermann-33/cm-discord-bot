@@ -200,3 +200,11 @@ docs/GROQ_SUPPORT_TRIAGE.md
 ```
 
 Customer-facing AI support remains disabled and unwired. No bot startup, command registration, deployment, website mutation or AI activation is part of this checkpoint.
+
+## 2026-08-25 — Deterministic triage repair and clean development prefixes
+
+The seven-row pause was resolved through selector-aware routing and the committed 26-row adjudication overlay, preserving original V3. Subsequent hosted failures drove explicit deterministic clarification/static-case provenance, input-aware strict schema constraints, scoped clarification lookup isolation, declared operation-backed clarification replacement scoring, and narrow router recognition improvements.
+
+The final benchmark retained 236/236 adjudicated development rows with review queue 0 and representability 1. A post-fix Groq 40-row prefix measured 36 optimal and 4 safe-progress rows with zero unsafe, fallback, invalid, scope-leakage, or semantic-review rows. Full validation passed 308 tests, typecheck, build, and diff hygiene.
+
+The final holdout remains untouched and production AI remains disabled/unwired. The authoritative checkpoint is `AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md`.

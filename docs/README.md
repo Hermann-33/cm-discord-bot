@@ -6,8 +6,9 @@ This documentation system is the durable memory and governance layer for the Che
 
 - `../AGENTS.md` — mandatory operating rules
 - `context/ACTIVE_CONTEXT.md` — concise present state
+- `context/AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md` — completed local repair, 236-row benchmark rebuild, clean 20/40-row Groq development results, and remaining final-holdout gate
 - `context/AI_SUPPORT_TRIAGE_PROGRESS_2026-08-25.md` — measured hosted-triage progress, failure analysis and deterministic-clarification hardening
-- `context/AI_SUPPORT_TRIAGE_SCHEMA_HARDENING_2026-08-25.md` — latest addendum: input-aware Groq strict-schema action envelope; validation pending
+- `context/AI_SUPPORT_TRIAGE_SCHEMA_HARDENING_2026-08-25.md` — historical addendum describing the input-aware Groq strict-schema action envelope before completed validation
 - `context/AI_SUPPORT_SIDE_PROJECT.md` — authoritative compact context for the ticket-knowledge/AI-support workstream, Groq planner, benchmark history and current checkpoint
 - `context/HANDOFF.md` — exact latest pause point and resume sequence
 - `context/AI_SUPPORT_HANDOVER_PROMPT.md` — copy-paste handover prompt plus ordered guide to all public/private AI-support documents
@@ -22,7 +23,7 @@ This documentation system is the durable memory and governance layer for the Che
 - `context/AUDIT_LOG.md` — chronological material findings and verdicts
 - `context/PROJECT_HISTORY.md` — durable project chronology
 
-For AI-support work, read `context/AI_SUPPORT_TRIAGE_PROGRESS_2026-08-25.md`, then `context/AI_SUPPORT_TRIAGE_SCHEMA_HARDENING_2026-08-25.md`, then `context/AI_SUPPORT_HANDOVER_PROMPT.md` and its ordered reading list before modifying routing, planner contracts, Groq/OpenRouter integration, benchmark/evaluation logic, `support-runtime/`, or private `CM-Ticket-Transcripts` artifacts.
+For AI-support work, read `context/AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md`, then `context/HANDOFF.md`, then `context/AI_SUPPORT_HANDOVER_PROMPT.md` and its ordered reading list before modifying routing, planner contracts, Groq/OpenRouter integration, benchmark/evaluation logic, `support-runtime/`, or private `CM-Ticket-Transcripts` artifacts.
 
 ## Full audit reports
 

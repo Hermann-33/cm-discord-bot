@@ -72,6 +72,7 @@ function familiesIntersect(values, allowed) {
 function compactRuntimeDynamicLookups(rows) {
   return (rows ?? []).map((item) => ({
     id: item.id,
+    operation: item.operation ?? null,
     purpose: [
       ...(item.questionTypes ?? []),
       item.operation ? `operation:${item.operation}` : null,
@@ -170,7 +171,7 @@ export async function buildLlmTriageBenchmark(dataDir, {
   const aliases = aliasesFile.aliases ?? aliasesFile;
   const actionRouting = await readJson(path.join(runtimeDir, 'action-routing.json'));
   const runtimeDynamicLookups = await readJson(path.join(runtimeDir, 'dynamic-lookups.json'));
-  const actionLookups = (actionRouting.approvedLookups ?? []).map((item) => ({ id: item.id, purpose: (item.useWhen ?? []).join('; ') }));
+  const actionLookups = (actionRouting.approvedLookups ?? []).map((item) => ({ id: item.id, operation: item.id, purpose: (item.useWhen ?? []).join('; ') }));
   const dynamicLookups = mergeLookups(actionLookups, compactRuntimeDynamicLookups(runtimeDynamicLookups));
   const policiesFile = await readJson(path.join(runtimeDir, 'policies.json'));
   const policies = policiesFile.policies ?? policiesFile;
@@ -182,7 +183,10 @@ export async function buildLlmTriageBenchmark(dataDir, {
       ...(baseline.lookupIds ?? []),
       ...(baseline.dynamicLookupIds ?? [])
     ]);
-    const candidateClarificationIds = baseline.clarificationId ? [baseline.clarificationId] : [];
+    const candidateClarificationIds = unique(baseline.deterministicClarificationIds ?? []);
+    const candidateStaticCaseIds = baseline.primaryDecision === 'direct_static_case'
+      ? unique(baseline.observableCaseIds ?? [])
+      : [];
     const input = buildLlmTriageInput({
       customerText: record.query,
       state: {
@@ -190,6 +194,7 @@ export async function buildLlmTriageBenchmark(dataDir, {
         candidateCaseIds: baseline.observableCaseIds ?? [],
         candidateFamilyIds: baseline.observableFamilyIds ?? [],
         candidateClarificationIds,
+        candidateStaticCaseIds,
         knownContext: {},
         questionsAsked: []
       },
@@ -197,6 +202,7 @@ export async function buildLlmTriageBenchmark(dataDir, {
       candidateFamilies: baseline.observableFamilyIds ?? [],
       candidateDynamicLookupIds,
       candidateClarificationIds,
+      candidateStaticCaseIds,
       clarifications,
       dynamicLookups,
       policies,

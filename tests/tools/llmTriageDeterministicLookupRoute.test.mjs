@@ -39,6 +39,29 @@ const orderCases = [
   }
 ];
 
+const staticCases = [
+  {
+    id: 'case.loader.update',
+    displayName: 'Loader update or download failure',
+    family: 'technical.loader',
+    scope: { global: true, games: [], vendors: [], products: [], variants: [], accountModels: [], accountListings: [] },
+    ask: [],
+    policies: [],
+    dynamic: [],
+    escalationIds: []
+  },
+  {
+    id: 'case.loader.connection',
+    displayName: 'Loader connection failure',
+    family: 'technical.loader',
+    scope: { global: true, games: [], vendors: [], products: [], variants: [], accountModels: [], accountListings: [] },
+    ask: [],
+    policies: [],
+    dynamic: [],
+    escalationIds: []
+  }
+];
+
 const clarifications = [
   {
     id: 'clarify.support_surface',
@@ -126,6 +149,19 @@ function deterministicOrderClarificationInput() {
   });
 }
 
+function deterministicStaticCaseInput() {
+  return buildLlmTriageInput({
+    customerText: 'loader link',
+    state: { candidateFamilyIds: ['technical.loader'], questionsAsked: [] },
+    candidateCases: staticCases,
+    candidateFamilies: ['technical.loader'],
+    candidateStaticCaseIds: ['case.loader.update'],
+    clarifications,
+    dynamicLookups: lookups,
+    policies: []
+  });
+}
+
 test('deterministic live-lookup route suppresses unrelated lookup expansion and clarification detours', () => {
   const input = deterministicPaymentInput();
 
@@ -181,6 +217,15 @@ test('entity-only support-surface route does not manufacture speculative case fa
   assert.deepEqual(input.allowed.dynamicLookupIds, []);
 });
 
+test('deterministic static case suppresses sibling cases, clarifications, and live lookups', () => {
+  const input = deterministicStaticCaseInput();
+
+  assert.deepEqual(input.allowed.caseIds, ['case.loader.update']);
+  assert.deepEqual(input.allowed.deterministicCaseIds, ['case.loader.update']);
+  assert.deepEqual(input.allowed.clarificationIds, []);
+  assert.deepEqual(input.allowed.dynamicLookupIds, []);
+});
+
 test('provider failure preserves deterministic live-lookup route instead of escalating', async () => {
   const input = deterministicPaymentInput();
   const result = await runLlmTriage({
@@ -218,6 +263,29 @@ test('invalid model action falls back to the deterministic selector-only clarifi
   assert.equal(result.output.nextAction, 'ask_clarification');
   assert.equal(result.output.clarificationId, 'clarify.order.fulfillment_state');
   assert.equal(result.output.reasonCode, 'deterministic_clarification_route');
+});
+
+test('invalid model action falls back to the deterministic static case', async () => {
+  const input = deterministicStaticCaseInput();
+  const result = await runLlmTriage({
+    provider: async () => JSON.stringify({
+      observations: { explicitEntities: [], supportSurface: null, knownFacts: [], missingFacts: [] },
+      nextAction: 'human_escalation',
+      caseIds: [],
+      clarificationId: null,
+      dynamicLookupIds: [],
+      policyIds: [],
+      confidence: 0.9,
+      reasonCode: 'wrong_route'
+    }),
+    input
+  });
+
+  assert.equal(result.accepted, false);
+  assert.ok(result.errors.includes('deterministic_case_route_mismatch'));
+  assert.equal(result.output.nextAction, 'answer_case');
+  assert.deepEqual(result.output.caseIds, ['case.loader.update']);
+  assert.equal(result.output.reasonCode, 'deterministic_case_route');
 });
 
 test('fallback does not promote case-derived lookup dependencies to deterministic routes', () => {

@@ -241,16 +241,16 @@ Data repo:                    private, data/specification-only
 Public runtime derivative:    sanitized support-runtime/ only
 Hosted planner candidate:     Groq openai/gpt-oss-120b
 Customer-facing AI:           disabled / unwired
-Workstream state:             paused at benchmark cleanup checkpoint
+Workstream state:             development validation complete; final holdout untouched
 ```
 
 ### Current V3 benchmark checkpoint
 
-The original independently reviewed V3 source remains immutable. The separate committed adjudication overlay currently excludes **25** rows:
+The original independently reviewed V3 source remains immutable. The separate committed adjudication overlay excludes **26** rows:
 
 ```text
 bad_gold:                  14
-ambiguous_gold:             7
+ambiguous_gold:             8
 safety_boundary_conflict:   3
 safety_boundary_review:     1
 ```
@@ -259,14 +259,10 @@ The latest user-confirmed generated planner benchmark is:
 
 ```text
 reviewedRecords:           262
-adjudicatedRecords:        237
-records:                   230
-reviewQueueRecords:          7
-representabilityRate:      0.9704641350210971
+adjudicatedRecords:        236
+records:                   236
+reviewQueueRecords:          0
+representabilityRate:        1
 ```
 
-Six queue rows are bare order selectors that the deterministic router currently over-interprets as a direct live lookup. One row (`0217`) is a likely stale/ambiguous fulfillment-state gold label because the user already states the order is delivered and describes an inaccessible `View Order` link.
-
-The proposed future `0217` exclusion is not committed. A 236/236, queue-0 benchmark is therefore a projection, not current truth.
-
-Do not spend more Groq quota until those seven rows are resolved and the benchmark is rebuilt to review queue 0 / representability 1. See `AI_SUPPORT_HANDOVER_PROMPT.md`, `AI_SUPPORT_SIDE_PROJECT.md`, `HANDOFF.md`, and `GROQ_SUPPORT_TRIAGE.md` for the exact resume sequence.
+The post-fix Groq 40-row consumed-development prefix produced 36 optimal and 4 safe-progress rows with zero unsafe, fallback, invalid, scope-leakage, or semantic-review rows. The final holdout remains untouched and customer-facing AI remains disabled/unwired. See `AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md` for the exact repair and validation evidence.

@@ -26,6 +26,7 @@ test('vague NFA issue preserves sibling cases and asks the discriminating failur
   const result = reviewFirstTurnObservability('my rust nfa account doesnt work', aliases);
   assert.equal(result.primaryDecision, 'family_scoped_clarification');
   assert.equal(result.clarificationId, 'clarify.nfa.failure_stage');
+  assert.deepEqual(result.deterministicClarificationIds, ['clarify.nfa.failure_stage']);
   assert.ok(result.observableCaseIds.includes('case.nfa.invalid_first_use'));
   assert.ok(result.observableCaseIds.includes('case.nfa.invalid_after_use'));
 });
@@ -56,6 +57,19 @@ test('payment-not-detected and typoed PayPal purchases preserve payment routing'
   assert.ok(missingKey.observableFamilyIds.includes('commerce.payment'));
 });
 
+test('account-token generation requests current order and fulfillment context', () => {
+  const result = reviewFirstTurnObservability('pls generate account token', aliases);
+  assert.equal(result.primaryDecision, 'direct_dynamic_lookup');
+  assert.ok(result.lookupIds.includes('orders.details.read'));
+  assert.ok(result.lookupIds.includes('orders.fulfillment.read'));
+});
+
+test('explicit loader-link requests resolve to the loader update case', () => {
+  const result = reviewFirstTurnObservability('loader link', aliases);
+  assert.equal(result.primaryDecision, 'direct_static_case');
+  assert.deepEqual(result.observableCaseIds, ['case.loader.update']);
+});
+
 test('explicit NFA activation beats broad account-delivery heuristics', () => {
   const result = reviewFirstTurnObservability('hello, i need help to activate my nfa account', aliases);
   assert.equal(result.primaryDecision, 'direct_static_case');
@@ -66,12 +80,18 @@ test('order selector without requested action asks what the customer needs', () 
   const result = reviewFirstTurnObservability('Hello. CS2 NFA - Order ID: [order identifier omitted]', aliases);
   assert.equal(result.primaryDecision, 'family_scoped_clarification');
   assert.equal(result.clarificationId, 'clarify.order.fulfillment_state');
+  assert.deepEqual(result.deterministicClarificationIds, []);
   assert.ok(result.observableFamilyIds.includes('commerce.order'));
   assert.ok(result.observableFamilyIds.includes('commerce.fulfillment'));
 
   const continuation = reviewFirstTurnObservability('this order too sorry [order identifier omitted]', aliases);
   assert.equal(continuation.primaryDecision, 'family_scoped_clarification');
   assert.equal(continuation.clarificationId, 'clarify.order.fulfillment_state');
+  assert.deepEqual(continuation.deterministicClarificationIds, ['clarify.order.fulfillment_state']);
+
+  const withTechnicalContext = reviewFirstTurnObservability('order id [order identifier omitted] cant turn vbs off wont let me', aliases);
+  assert.equal(withTechnicalContext.primaryDecision, 'family_scoped_clarification');
+  assert.deepEqual(withTechnicalContext.deterministicClarificationIds, []);
 });
 
 test('order selector with explicit status intent routes to current order lookup', () => {
@@ -103,6 +123,17 @@ test('mere feature/controller statements do not become compatibility answers', (
   const result = reviewFirstTurnObservability('i only use esp i dont use aimbot since i play on controller', aliases);
   assert.equal(result.primaryDecision, 'generic_clarification');
   assert.equal(result.clarificationId, 'clarify.support_surface');
+
+  const praise = reviewFirstTurnObservability('one of the best esp ever', aliases);
+  assert.equal(praise.primaryDecision, 'generic_clarification');
+  assert.equal(praise.clarificationId, 'clarify.support_surface');
+});
+
+test('order-family context without requested state preserves the deterministic clarification', () => {
+  const result = reviewFirstTurnObservability('I also have 2 eft acc order', aliases);
+  assert.equal(result.primaryDecision, 'family_scoped_clarification');
+  assert.equal(result.clarificationId, 'clarify.order.fulfillment_state');
+  assert.deepEqual(result.deterministicClarificationIds, ['clarify.order.fulfillment_state']);
 });
 
 test('media and partnership proposals are not swallowed by generic payment routing', () => {

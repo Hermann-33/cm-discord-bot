@@ -43,7 +43,7 @@ export function reviewFirstTurnObservability(query, aliases) {
   const nfaSignal = has(/\bnfa\b/u) || entities.includes('account_model.nfa');
   const spooferSignal = has(/\b(?:spoofer|spoof(?:er|ing)?|hwid)\b/u);
   const loaderSignal = has(/\b(?:loader|loadder|loder|nfa\.exe)\b/u);
-  const technicalSignal = loaderSignal || has(/\b(?:inject|launch(?:ing|ed|es)?|open(?:ing)?|crash(?:es|ing)?|bsod|closes?|error|driver|overlay|menu|aimbot|esp|game)\b/u);
+  const technicalSignal = loaderSignal || has(/\b(?:inject|launch(?:ing|ed|es)?|open(?:ing)?|crash(?:es|ing)?|bsod|closes?|error|driver|vbs|virtualization|secure boot|tpm|overlay|menu|aimbot|esp|game)\b/u);
   const commerceAndTechnical = (paymentSignal || deliverySignal) && (nfaSignal || loaderSignal || has(/\b(?:invalid|logged out|banned|crash|inject)\b/u));
 
   if (has(/\b(?:phishing|security report|malware|bot token|discords? team|cloudflare|vercel)\b/u) && has(/\b(?:report(?:ed|ing)?|reverse(?:d| engineered)?|token|proof|banned|phishing|rat|malware)\b/u)) {
@@ -107,6 +107,9 @@ export function reviewFirstTurnObservability(query, aliases) {
   if (has(/\b(?:key|license)\b.{0,35}\b(?:isnt working|not working|doesnt work|wont work|invalid|error)\b|\b(?:invalid|bad)\s+(?:key|license)\b/u) && !loaderSignal) {
     return { ...result, ...exactCase('case.license.activation', 'The opening message explicitly reports a product key or license activation problem.') };
   }
+  if (has(/\b(?:generate|create|issue|need|get)\b.{0,24}\baccount token\b/u)) {
+    return { ...result, ...control('direct_dynamic_lookup', [], 'Generating or retrieving an account token requires current order and fulfillment context.', { lookupIds: ['orders.lookup.read','orders.details.read','orders.fulfillment.read'], observableFamilyIds: ['commerce.order','commerce.fulfillment'] }) };
+  }
 
   if (has(/\b(?:aura)\b/u)) return { ...result, ...control('direct_dynamic_lookup', ['case.aura.balance_or_adjustment'], 'Aura state is current user data and requires an approved lookup.', { lookupIds: ['aura.lookup.read'], observableFamilyIds: ['commerce.aura'] }) };
   if (has(/\b(?:wallet balance|site balance|balance (?:didnt|doesnt|not|missing)|convert .* balance)\b/u)) return { ...result, ...control('direct_dynamic_lookup', ['case.wallet.balance'], 'Current wallet/user state is required before answering.', { lookupIds: ['users.overview.read'], observableFamilyIds: ['commerce.wallet'] }) };
@@ -125,7 +128,19 @@ export function reviewFirstTurnObservability(query, aliases) {
     return { ...result, ...exactCase('case.dashboard.verification', 'The customer says the order is delivered but the View Order access path itself cannot be opened.') };
   }
   if (explicitOrderReference && !explicitOrderStateIntent) {
-    return { ...result, ...clarification('family_only','family_scoped_clarification','clarify.order.fulfillment_state',['case.order.status','case.order.fulfillment_delayed','case.order.wrong_delivery','case.order.refund_cancel'],['commerce.order','commerce.fulfillment'],'An order selector is observable, but the customer has not said what they need about that order.') };
+    const hasAdditionalOrderContext = entities.length > 0 || technicalSignal || paymentSignal || has(/\b(?:manual delivery|make a ticket|open(?:ed)? (?:a )?ticket)\b/u);
+    return {
+      ...result,
+      ...clarification(
+        'family_only',
+        'family_scoped_clarification',
+        'clarify.order.fulfillment_state',
+        ['case.order.status','case.order.fulfillment_delayed','case.order.wrong_delivery','case.order.refund_cancel'],
+        ['commerce.order','commerce.fulfillment'],
+        'An order selector is observable, but the customer has not said what they need about that order.',
+        { deterministicClarificationIds: hasAdditionalOrderContext ? [] : ['clarify.order.fulfillment_state'] }
+      )
+    };
   }
   if (explicitOrderStateIntent) {
     const cases = has(/\b(?:where|status|check)\b/u) ? ['case.order.status'] : ['case.order.fulfillment_delayed'];
@@ -147,11 +162,11 @@ export function reviewFirstTurnObservability(query, aliases) {
   if (nfaSignal && has(/\b(?:what (?:is|does).*nfa|nfa meaning|temporary|permanent|how long.*(?:account|nfa)|(?:account|nfa).*(?:lasts?|duration)|activated once|owner (?:can|could|may)|access model)\b/u)) return { ...result, ...exactCase('case.nfa.access_model_question', 'The first turn explicitly asks how the NFA access or ownership model works.') };
   if (nfaSignal && has(/\b(?:buy|purchase|order)\b/u) && has(/\b(?:\d+\s*x|multiple|bulk|several|many)\b/u)) return { ...result, ...exactCase('case.account.bulk_purchase', 'The opening message explicitly asks about a bulk NFA purchase.') };
   if (nfaSignal && has(/\b(?:how|where|can)\b.{0,24}\b(?:buy|purchase|order|get)\b|\b(?:trying|want|need) to (?:buy|purchase)\b/u) && !has(/\b(?:error|failed|wont|cant|cannot|disabled|unavailable|not working|doesnt work|payment|card|paypal|\bpp\b|crypto|btc|processor|owner|logged|kicked)\b/u)) return { ...result, ...exactCase('case.account.purchase_question', 'The opening message is an explicit NFA purchase or listing question without an unresolved payment or account-state issue.') };
-  if (nfaSignal) return { ...result, ...clarification('family_only','family_scoped_clarification','clarify.nfa.failure_stage',['case.nfa.invalid_first_use','case.nfa.invalid_after_use','case.nfa.owner_session_conflict','case.nfa.redemption_activation'],['accounts.nfa'],'NFA is observable, but the failure stage needed to distinguish sibling cases is not.') };
+  if (nfaSignal) return { ...result, ...clarification('family_only','family_scoped_clarification','clarify.nfa.failure_stage',['case.nfa.invalid_first_use','case.nfa.invalid_after_use','case.nfa.owner_session_conflict','case.nfa.redemption_activation'],['accounts.nfa'],'NFA is observable, but the failure stage needed to distinguish sibling cases is not.', { deterministicClarificationIds: ['clarify.nfa.failure_stage'] }) };
 
   if (loaderSignal && has(/\b(?:closes?|shuts?|exits?|disappear).*(?:immediately|instantly|after|when|open)|(?:immediately|instantly).*(?:close|exit)\b/u)) return { ...result, ...exactCase('case.loader.closes_runtime', 'The loader and immediate-close runtime symptom are explicit.') };
   if (loaderSignal && has(/\b(?:connection|connect|bad connection|failed to fetch|network)\b/u)) return { ...result, ...exactCase('case.loader.connection', 'The loader connection failure is explicit.') };
-  if (loaderSignal && has(/\b(?:download|update|link).*(?:not work|doesnt|wont|cant|fail|invalid)|(?:cant|cannot|wont).*(?:download|update)\b/u)) return { ...result, ...exactCase('case.loader.update', 'The loader download/update stage is explicit.') };
+  if (loaderSignal && has(/\b(?:loader link|download link|link for (?:the )?loader)\b|\b(?:download|update|link).*(?:not work|doesnt|wont|cant|fail|invalid)|(?:cant|cannot|wont).*(?:download|update)\b/u)) return { ...result, ...exactCase('case.loader.update', 'The loader download/update stage is explicit.') };
   if (loaderSignal && has(/\b(?:key|license).*(?:error|invalid|bad|not work)\b/u)) return { ...result, ...exactCase('case.loader.key_error', 'The loader key/license error stage is explicit.') };
   if (loaderSignal) return { ...result, ...clarification('family_only','family_scoped_clarification','clarify.loader.failure_stage',['case.loader.closes_runtime','case.loader.connection','case.loader.update','case.loader.key_error'],['technical.loader'],'The loader surface is observable but its failure stage is not.') };
 
@@ -169,16 +184,16 @@ export function reviewFirstTurnObservability(query, aliases) {
   if (has(/\b(?:banned|game banned|vac banned|cooldown|limited matchmaking)\b/u)) return { ...result, ...control('direct_policy_route', ['case.account.banned'], 'The opening message explicitly reports an account enforcement state requiring current policy handling.', { observableFamilyIds: ['commerce.policy'] }) };
   if (has(/\b(?:account|acc)\b/u) && has(/\b(?:login|log in|access|password)\b/u)) return { ...result, ...clarification('family_only','family_scoped_clarification','clarify.account.delivery_state',['case.account.login_access','case.account.wrong_specification','case.order.fulfillment_delayed'],['accounts.access','accounts.delivery'],'An account access/delivery family is observable, but delivery versus access failure remains ambiguous.') };
   if (paymentSignal) return { ...result, ...clarification('family_only','family_scoped_clarification','clarify.payment_state',['case.payment.card_declined','case.payment.failed_or_pending','case.payment.completed_missing_order','case.payment.crypto_pending'],['commerce.payment'],'A payment issue is observable, but the current payment state is not.') };
-  if (has(/\b(?:order|delivery|key)\b/u)) return { ...result, ...clarification('family_only','family_scoped_clarification','clarify.order.fulfillment_state',['case.order.status','case.order.fulfillment_delayed','case.order.wrong_delivery','case.order.refund_cancel'],['commerce.order','commerce.fulfillment'],'The commerce/order family is observable, but the requested state or remedy is unclear.') };
+  if (has(/\b(?:order|delivery|key)\b/u)) return { ...result, ...clarification('family_only','family_scoped_clarification','clarify.order.fulfillment_state',['case.order.status','case.order.fulfillment_delayed','case.order.wrong_delivery','case.order.refund_cancel'],['commerce.order','commerce.fulfillment'],'The commerce/order family is observable, but the requested state or remedy is unclear.', { deterministicClarificationIds: ['clarify.order.fulfillment_state'] }) };
 
-  if (technicalSignal && has(/\b(?:i only use|i dont use|i do not use)\b/u) && !has(/\b(?:not working|doesnt work|dont work|wont work|help|issue|problem|error|why|how|can|does|will)\b/u)) {
-    return { ...result, ...clarification('insufficient_context','generic_clarification','clarify.support_surface',[],[],'The message names technical features but does not contain an observable support request.') };
+  if (technicalSignal && has(/\b(?:i only use|i dont use|i do not use|best|great|good|love|amazing)\b/u) && !has(/\b(?:not working|doesnt work|dont work|wont work|help|issue|problem|error|why|how|can|does|will)\b/u)) {
+    return { ...result, ...clarification('insufficient_context','generic_clarification','clarify.support_surface',[],[],'The message names technical features but does not contain an observable support request.', { deterministicClarificationIds: ['clarify.support_surface'] }) };
   }
   if (technicalSignal) return { ...result, ...clarification('family_only','family_scoped_clarification','clarify.technical.failure_stage',['case.product.requirements','case.product.launch_failure','case.game.crash_loading','case.game.crash_general','case.game.feature_behavior'],['technical.product','technical.game'],'A technical/product issue is observable, but the failure stage is not sufficiently specified.') };
 
-  if (entities.length > 0) return { ...result, ...clarification('entity_only','entity_scoped_clarification','clarify.support_surface',[],[],'An entity is explicit, but the support surface and requested action are not.') };
-  if (has(/\b(?:problem|issue|not working|doesnt work|dont work|wont work|help|support|this shit)\b/u)) return { ...result, ...clarification('insufficient_context','generic_clarification','clarify.support_surface',[],[],'The first turn does not establish a support surface, entity, family, or safe control route.') };
-  return { ...result, ...clarification('insufficient_context','generic_clarification','clarify.support_surface',[],[],'The opening message lacks enough observable support information for a safe case or control-plane action.') };
+  if (entities.length > 0) return { ...result, ...clarification('entity_only','entity_scoped_clarification','clarify.support_surface',[],[],'An entity is explicit, but the support surface and requested action are not.', { deterministicClarificationIds: ['clarify.support_surface'] }) };
+  if (has(/\b(?:problem|issue|not working|doesnt work|dont work|wont work|help|support|this shit)\b/u)) return { ...result, ...clarification('insufficient_context','generic_clarification','clarify.support_surface',[],[],'The first turn does not establish a support surface, entity, family, or safe control route.', { deterministicClarificationIds: ['clarify.support_surface'] }) };
+  return { ...result, ...clarification('insufficient_context','generic_clarification','clarify.support_surface',[],[],'The opening message lacks enough observable support information for a safe case or control-plane action.', { deterministicClarificationIds: ['clarify.support_surface'] }) };
 }
 
 export function attachObservableFamilies(result, caseById) {

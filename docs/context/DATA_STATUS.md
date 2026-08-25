@@ -209,6 +209,6 @@ The public `support-runtime/` pack is an ADR-0012 sanitized derivative, not a co
 
 ## Current AI benchmark/data checkpoint
 
-The committed V3 adjudication overlay currently excludes 25 rows. The latest user-confirmed generated benchmark contains 230 representable rows and 7 representability-review rows. Six are bare order selectors and one (`0217`) is a likely stale/ambiguous order/dashboard-access gold label.
+The committed V3 adjudication overlay excludes 26 rows. The rebuilt consumed development benchmark retains 236/236 adjudicated rows with review queue 0 and representability 1. The post-fix 40-row Groq prefix had zero unsafe, fallback, invalid, leakage, or semantic-review rows.
 
-Do not broaden API permissions or hosted lookup options to make those rows pass. Fix the deterministic intent/selector distinction and adjudicate stale gold separately, then rebuild before any further Groq run.
+The final holdout remains untouched. Do not broaden API permissions or hosted lookup options for benchmark performance, and do not invent the unresolved `catalog.current.read` operation.

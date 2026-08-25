@@ -8,6 +8,7 @@ const input = {
   allowed: {
     entityIds: ['account_model.nfa'],
     caseIds: [],
+    deterministicCaseIds: [],
     cases: [],
     familyIds: ['accounts.nfa'],
     clarificationIds: ['clarify.nfa.failure_stage'],
@@ -104,6 +105,31 @@ test('Groq strict schema constrains deterministic clarification routes', async (
   const schema = body.response_format.json_schema.schema;
   assert.deepEqual(schema.properties.nextAction.enum, ['ask_clarification']);
   assert.deepEqual(schema.properties.clarificationId.enum, ['clarify.order.fulfillment_state']);
+});
+
+test('Groq strict schema constrains deterministic static-case routes', async () => {
+  const body = await captureBody({
+    ...input,
+    customerText: 'loader link',
+    allowed: {
+      ...input.allowed,
+      caseIds: ['case.loader.update'],
+      deterministicCaseIds: ['case.loader.update'],
+      cases: [{ id: 'case.loader.update', displayName: 'Loader update or download failure' }],
+      clarificationIds: [],
+      deterministicClarificationIds: [],
+      clarifications: [],
+      dynamicLookupIds: [],
+      deterministicDynamicLookupIds: [],
+      dynamicLookups: []
+    }
+  });
+  const schema = body.response_format.json_schema.schema;
+  assert.deepEqual(schema.properties.nextAction.enum, ['answer_case']);
+  assert.deepEqual(schema.properties.caseIds.items.enum, ['case.loader.update']);
+  assert.equal(schema.properties.caseIds.minItems, 1);
+  assert.equal(schema.properties.dynamicLookupIds.maxItems, 0);
+  assert.equal(schema.properties.policyIds.maxItems, 0);
 });
 
 test('Groq provider rejects non-Groq remote endpoints', () => {

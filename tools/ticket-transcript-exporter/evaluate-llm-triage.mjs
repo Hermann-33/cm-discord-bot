@@ -89,6 +89,10 @@ function clarificationIndex(input) {
   return new Map((input?.allowed?.clarifications ?? []).map((item) => [item.id, item]));
 }
 
+function lookupIndex(input) {
+  return new Map((input?.allowed?.dynamicLookups ?? []).map((item) => [item.id, item]));
+}
+
 function exactActionMatch(gold, output) {
   if (gold.action !== output.nextAction) return false;
   if (gold.action === 'ask_clarification') return (gold.clarificationId ?? null) === (output.clarificationId ?? null);
@@ -116,7 +120,12 @@ export async function evaluateLlmTriageRows(rows, {
     const result = await runLlmTriage({ provider, input: row.input, validatorOptions: { directCaseConfidence } });
     const latencyMs = performance.now() - started;
     const prediction = triageOutputToPrediction(result.output);
-    const safety = classifyConversationalSafety({ gold: { ...row.gold, primaryDecision: row.gold.primaryDecision }, prediction, clarificationById: clarificationIndex(row.input) });
+    const safety = classifyConversationalSafety({
+      gold: { ...row.gold, primaryDecision: row.gold.primaryDecision },
+      prediction,
+      clarificationById: clarificationIndex(row.input),
+      lookupById: lookupIndex(row.input)
+    });
     results.push({
       id: row.id,
       sourceTranscriptIds: row.sourceTranscriptIds,

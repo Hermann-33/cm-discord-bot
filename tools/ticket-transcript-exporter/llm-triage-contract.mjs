@@ -71,6 +71,7 @@ export function buildLlmTriageInput({
   candidateFamilies = state.candidateFamilyIds ?? [],
   candidateDynamicLookupIds = state.candidateDynamicLookupIds ?? [],
   candidateClarificationIds = state.candidateClarificationIds ?? [],
+  candidateStaticCaseIds = state.candidateStaticCaseIds ?? [],
   clarifications = [],
   dynamicLookups = [],
   policies = [],
@@ -80,31 +81,41 @@ export function buildLlmTriageInput({
 }) {
   const deterministicLookupIds = new Set(unique(candidateDynamicLookupIds));
   const deterministicClarificationIdSet = new Set(unique(candidateClarificationIds));
+  const deterministicCaseIdSet = new Set(unique(candidateStaticCaseIds));
   const hasDeterministicLookupRoute = deterministicLookupIds.size > 0;
   const hasDeterministicClarificationRoute = !hasDeterministicLookupRoute && deterministicClarificationIdSet.size > 0;
+  const hasDeterministicCaseRoute = !hasDeterministicLookupRoute && !hasDeterministicClarificationRoute && deterministicCaseIdSet.size > 0;
   const supportSurfaceOnly = hasDeterministicClarificationRoute && deterministicClarificationIdSet.has('clarify.support_surface');
-  const cases = (supportSurfaceOnly ? [] : candidateCases.slice(0, maxCases)).map(compactCase);
+  const cases = (supportSurfaceOnly
+    ? []
+    : candidateCases.filter((item) => !hasDeterministicCaseRoute || deterministicCaseIdSet.has(item.id)).slice(0, maxCases)
+  ).map(compactCase);
   const familyIds = unique([...(supportSurfaceOnly ? [] : candidateFamilies), ...cases.map((item) => item.family)]);
   const candidateCaseIds = new Set(cases.map((item) => item.id));
   const hasScopedCandidates = candidateCaseIds.size > 0 || familyIds.length > 0;
 
-  const clarificationRows = (hasDeterministicLookupRoute ? [] : clarifications)
+  const clarificationRows = (hasDeterministicLookupRoute || hasDeterministicCaseRoute ? [] : clarifications)
     .filter((item) => {
       if (hasDeterministicClarificationRoute) return deterministicClarificationIdSet.has(item.id);
       const caseHit = (item.distinguishesCases ?? []).some((id) => candidateCaseIds.has(id));
       const familyHit = (item.distinguishesFamilies ?? []).some((id) => familyIds.includes(id));
       const genericFallback = item.id === 'clarify.support_surface' && !hasScopedCandidates;
+      if (item.id === 'clarify.order_selector' && !familyIds.some((id) => id === 'commerce.order' || id === 'commerce.fulfillment')) return false;
       return caseHit || familyHit || genericFallback;
     })
     .filter((item) => !(state.questionsAsked ?? []).includes(item.id))
     .filter((item) => !clarificationAlreadyKnown(state, item))
     .sort((a, b) => Number(a.id === 'clarify.support_surface') - Number(b.id === 'clarify.support_surface'))
     .slice(0, maxClarifications)
-    .map(compactClarification);
+    .map((item) => compactClarification(
+      item.id === 'clarify.support_surface' && hasScopedCandidates
+        ? { ...item, liveLookupCanReplace: [] }
+        : item
+    ));
 
   const relevantLookupIds = hasDeterministicLookupRoute
     ? deterministicLookupIds
-    : hasDeterministicClarificationRoute
+    : hasDeterministicClarificationRoute || hasDeterministicCaseRoute
       ? new Set()
       : new Set(unique([
         ...cases.flatMap((item) => item.dynamic ?? []),
@@ -112,7 +123,7 @@ export function buildLlmTriageInput({
       ]));
   const dynamicLookupRows = (dynamicLookups ?? [])
     .filter((item) => relevantLookupIds.has(item.id))
-    .map((item) => ({ id: item.id, purpose: item.purpose ?? item.description ?? null }));
+    .map((item) => ({ id: item.id, operation: item.operation ?? null, purpose: item.purpose ?? item.description ?? null }));
   const deterministicDynamicLookupIds = dynamicLookupRows
     .filter((item) => deterministicLookupIds.has(item.id))
     .map((item) => item.id);
@@ -130,6 +141,7 @@ export function buildLlmTriageInput({
       candidateCaseIds: unique(state.candidateCaseIds ?? []),
       candidateFamilyIds: unique(state.candidateFamilyIds ?? []),
       candidateClarificationIds: unique(candidateClarificationIds),
+      candidateStaticCaseIds: unique(candidateStaticCaseIds),
       knownContext: state.knownContext ?? {},
       unknownContext: unique(state.unknownContext ?? []),
       pendingClarificationId: state.pendingClarificationId ?? null,
@@ -143,6 +155,7 @@ export function buildLlmTriageInput({
     allowed: {
       entityIds: unique(resolvedEntities),
       caseIds: cases.map((item) => item.id),
+      deterministicCaseIds: cases.filter((item) => deterministicCaseIdSet.has(item.id)).map((item) => item.id),
       cases,
       familyIds,
       clarifications: clarificationRows,
@@ -198,6 +211,7 @@ export function validateLlmTriageOutput(output, input, options = {}) {
   if (typeof output.reasonCode !== 'string' || !output.reasonCode.trim()) errors.push('reason_code_invalid');
 
   const allowedCases = new Set(input?.allowed?.caseIds ?? []);
+  const deterministicCases = new Set(input?.allowed?.deterministicCaseIds ?? []);
   const allowedClarifications = new Set(input?.allowed?.clarificationIds ?? []);
   const deterministicClarifications = new Set(input?.allowed?.deterministicClarificationIds ?? []);
   const allowedLookups = new Set(input?.allowed?.dynamicLookupIds ?? []);
@@ -209,6 +223,7 @@ export function validateLlmTriageOutput(output, input, options = {}) {
   if (output.clarificationId && !allowedClarifications.has(output.clarificationId)) errors.push(`unknown_clarification:${output.clarificationId}`);
 
   if (deterministicClarifications.size > 0 && (output.nextAction !== 'ask_clarification' || !deterministicClarifications.has(output.clarificationId))) errors.push('deterministic_clarification_route_mismatch');
+  if (deterministicCases.size > 0 && (output.nextAction !== 'answer_case' || !(output.caseIds ?? []).some((id) => deterministicCases.has(id)))) errors.push('deterministic_case_route_mismatch');
   if (input?.restricted && output.nextAction === 'answer_case') errors.push('restricted_autonomous_answer');
   if (output.nextAction === 'answer_case' && (output.caseIds ?? []).length === 0) errors.push('answer_without_case');
   if (output.nextAction === 'ask_clarification' && !output.clarificationId) errors.push('clarification_without_id');
@@ -244,6 +259,12 @@ export function chooseSafeTriageFallback(input) {
     .find((id) => allowedClarificationIds.has(id));
   if (deterministicClarificationId) {
     return { observations: fallbackObservations(), nextAction: 'ask_clarification', caseIds: [], clarificationId: deterministicClarificationId, dynamicLookupIds: [], policyIds: [], confidence: 1, reasonCode: 'deterministic_clarification_route' };
+  }
+  const allowedCaseIds = new Set(input?.allowed?.caseIds ?? []);
+  const deterministicCaseIds = unique(input?.allowed?.deterministicCaseIds ?? [])
+    .filter((id) => allowedCaseIds.has(id));
+  if (deterministicCaseIds.length > 0) {
+    return { observations: fallbackObservations(), nextAction: 'answer_case', caseIds: deterministicCaseIds, clarificationId: null, dynamicLookupIds: [], policyIds: [], confidence: 1, reasonCode: 'deterministic_case_route' };
   }
   const activeCaseId = input?.state?.activeCaseId;
   if (!input?.restricted && activeCaseId && (input?.allowed?.caseIds ?? []).includes(activeCaseId)) {

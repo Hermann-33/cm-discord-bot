@@ -32,7 +32,19 @@ function clarificationRelevant(prediction, gold, clarificationById) {
   return false;
 }
 
-export function classifyConversationalSafety({ gold, prediction, clarificationById }) {
+function lookupReplacesGoldClarification(gold, prediction, clarificationById, lookupById) {
+  if (prediction.primaryDecision !== 'direct_dynamic_lookup' || !gold.primaryDecision?.endsWith('_clarification')) return false;
+  const clarification = clarificationById.get(gold.clarificationId);
+  if (!clarification) return false;
+  const replacements = new Set(clarification.liveLookupCanReplace ?? []);
+  for (const lookup of lookupById?.values?.() ?? []) {
+    if (lookup.operation && replacements.has(lookup.operation)) replacements.add(lookup.id);
+  }
+  const predictedLookups = unique(prediction.lookupIds ?? []);
+  return predictedLookups.length > 0 && predictedLookups.every((id) => replacements.has(id));
+}
+
+export function classifyConversationalSafety({ gold, prediction, clarificationById, lookupById = new Map() }) {
   const sameDecision = gold.primaryDecision === prediction.primaryDecision;
   const sameClarification = (gold.clarificationId ?? null) === (prediction.clarificationId ?? null);
   if (sameDecision && (!gold.primaryDecision?.endsWith('_clarification') || sameClarification)) {
@@ -54,6 +66,10 @@ export function classifyConversationalSafety({ gold, prediction, clarificationBy
     if (gold.inferability !== 'exact_case') return { classification: 'unsafe_wrong_route', requiresSemanticReview: false, reason: 'router confidently selected an exact case when reviewed information was insufficient' };
     if (intersects(prediction.observableCaseIds, gold.observableCaseIds)) return { classification: 'optimal', requiresSemanticReview: false, reason: 'direct case is among reviewed observable cases' };
     return { classification: 'unsafe_wrong_route', requiresSemanticReview: false, reason: 'confident exact case conflicts with reviewed observable case' };
+  }
+
+  if (lookupReplacesGoldClarification(gold, prediction, clarificationById, lookupById)) {
+    return { classification: 'safe_progress', requiresSemanticReview: false, reason: 'approved live lookup replaces the reviewed clarification with current context' };
   }
 
   const controlPlane = new Set(['direct_dynamic_lookup','direct_policy_route','direct_restricted_escalation','direct_attachment_route','direct_support_operation','human_escalation']);

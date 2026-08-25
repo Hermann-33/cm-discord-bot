@@ -252,3 +252,11 @@ The seventh row, `0217`, says the order is delivered but `View Order` cannot be 
 The private adjudication overlay still excludes **25** rows. The proposed `0217` exclusion has not been committed; therefore a future 236/236 benchmark is only a projection.
 
 Verdict: `PARTIAL / PAUSED`. Do not spend additional Groq quota until the six selector-only router rows and `0217` adjudication decision are resolved, the benchmark is rebuilt to review queue 0 / representability 1, and repository validation passes. Customer-facing AI remains disabled and unwired.
+
+## 2026-08-25 — AI support triage development validation complete
+
+The earlier pause condition was resolved. Explicit deterministic static-case/lookup/clarification provenance now constrains candidate construction, Groq schema, validator, and fallback. Selector-only routing, entity-only expansion, scoped generic lookup leakage, operation-backed clarification replacement scoring, loader-link/account-token/technical-signal cases, and Groq strict-schema compatibility were repaired at their narrowest layers.
+
+Final consumed-development benchmark: 236/236 adjudicated rows, review queue 0, representability 1. Final post-fix Groq 40-row prefix: structured acceptance 1, exact action 0.975, 36 optimal, 4 safe-progress, and zero unsafe, fallback, invalid, scope-leakage, or semantic-review rows. Local validation passed 308/308 tests, typecheck, build, and diff hygiene.
+
+Verdict: `PARTIAL / DEVELOPMENT VALIDATION COMPLETE`. The untouched final holdout was not run, customer-facing AI remains disabled/unwired, and no bot/deploy/production/website/database action occurred. See `AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md`.

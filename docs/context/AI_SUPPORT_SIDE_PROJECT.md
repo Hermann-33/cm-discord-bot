@@ -352,78 +352,36 @@ No hosted `0016` rerun has been performed after that correction.
 
 ## Current measured benchmark state
 
-After the latest authoritative deterministic-lookup contract, the latest user-confirmed rebuild is:
+The selector/adjudication cleanup and deterministic action-envelope hardening are complete on the consumed development set:
 
 ```text
-schemaVersion:               3
 sourceRecords:             300
 reviewedRecords:           262
-adjudicatedRecords:        237
-excludedByAdjudication:     25
-records:                   230
-reviewQueueRecords:          7
-rawRepresentabilityRate:   0.8969465648854962
-representabilityRate:      0.9704641350210971
-representabilityReasons:
-  gold_clarification_unavailable: 7
-plannerTokens:
-  average: 1212.286956521739
-  median:   797
-  p95:     2355
-candidateCases:
-  average: 2.4391304347826086
-  max: 8
+adjudicatedRecords:        236
+excludedByAdjudication:     26
+records:                   236
+reviewQueueRecords:          0
+representabilityRate:        1
+representabilityReasons:    {}
+planner tokens avg/med/p95: 1122.5042 / 844 / 1858
 ```
 
-This is the authoritative checkpoint at pause. No Groq run should be started from this state.
+The overlay categories are 14 bad gold, 8 ambiguous gold, 3 safety-boundary conflicts and 1 safety-boundary review. Original V3 remains immutable.
 
-## Current seven-row review queue
-
-Six rows are bare/continuation order selectors:
+The final post-fix Groq consumed-development prefixes measured:
 
 ```text
-0026, 0108, 0173, 0197, 0249, 0279
+20 rows: structured 1, exact 0.95, optimal 17, safe progress 3, unsafe/fallback/review 0
+40 rows: structured 1, exact 0.975, optimal 36, safe progress 4, unsafe/fallback/review 0
 ```
 
-They are currently over-routed by deterministic `explicitOrderReference` handling to direct live order lookup.
+See `AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md` for exact latency/token metrics, failure history and validated repairs.
 
-Correct semantic principle:
+## Remaining engineering and activation items
 
-```text
-order selector != requested order action
-```
-
-Expected fix:
-
-```text
-selector only + no explicit status/payment/delivery intent
- -> retain order/fulfillment family context
- -> ask clarify.order.fulfillment_state
-
-selector + explicit current-state intent
- -> approved live lookup
-```
-
-The seventh row is `0217`:
-
-```text
-it says delivered on my gmail but when i go to click view order it dont let me click it
-```
-
-Existing V3 gold asks `clarify.order.fulfillment_state`. That is likely stale/ambiguous because the customer already says it is delivered and gives the actual failure: inaccessible `View Order`.
-
-Current judgment is to route this as order/dashboard access support and, if confirmed on resume, add `0217` to the V3 adjudication overlay.
-
-That exclusion is **not committed yet**.
-
-If the six router rows are fixed and `0217` is excluded, the projected clean denominator is 236/236 with review queue 0. This is a future target, not current truth.
-
-## Unresolved engineering items after the seven-row cleanup
-
-- Hosted evaluator should reject stale development inputs that lack the current adjudication metadata/disposition.
-- Custom datasets should not implicitly inherit the default V3 adjudication file.
-- Direct-case validation still needs an explicit design for case-specific required observable conditions; do not use a crude multi-family blocker.
+- Direct-case validation may still benefit from an explicit future design for case-specific required observable conditions; do not use a crude multi-family blocker.
 - `dynamic.catalog.*` uses `catalog.current.read`, but that operation is not confirmed in the documented website Internal Integrations API list. Never replace missing live authority with historical catalog/detection/stock claims.
+- The final holdout remains untouched and is the next model-selection gate, not a development-tuning set.
 
 ## Activation gate
 
@@ -441,6 +399,6 @@ Also require high structured-output acceptance, low/zero fallback, acceptable la
 
 ## Resume rule
 
-Do not spend Groq quota immediately on resume. First follow `HANDOFF.md` and `AI_SUPPORT_HANDOVER_PROMPT.md`, fix the seven-row deterministic/gold issue, rebuild to review queue 0, validate the repository, and only then resume hosted evaluation.
+Follow `HANDOFF.md` and `AI_SUPPORT_HANDOVER_PROMPT.md`. Do not spend further Groq quota or inspect the final holdout unless a later task explicitly authorizes the frozen activation-readiness evaluation.
 
 Do not run the bot, register commands, deploy, mutate website state, or enable customer-facing AI without a later explicit task.
