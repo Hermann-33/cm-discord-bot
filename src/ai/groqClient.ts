@@ -1,7 +1,7 @@
 import type { GroqConfig } from "../config/env";
 import { sanitizeTriagePlannerPayload } from "./privacy";
 import {
-  TRIAGE_DECISION_JSON_SCHEMA,
+  buildSupportTriageJsonSchema,
   chooseSupportTriageFallback,
   triageDecisionSchema,
   validateSupportTriageDecision,
@@ -10,28 +10,27 @@ import {
 } from "./supportTriage";
 
 const SYSTEM_PROMPT = [
-  "You are the Cheater's Market support triage planner.",
-  "Choose only the safest next support action from the canonical options supplied in the user payload.",
-  "Never invent product, account, order, payment, policy, or technical state.",
-  "If the customer has not provided enough information, ask one supplied canonical clarification instead of guessing.",
-  "Use only case, clarification, lookup, policy, family, and entity IDs present in the payload.",
-  "Prefer current-data lookup when the answer depends on live order, payment, fulfillment, wallet, Aura, stock, or status state.",
-  "Do not autonomously answer restricted support topics.",
-  "Return only the JSON object required by the response schema."
+  "You are a constrained support triage planner choosing only the safest next action.",
+  "Never infer facts that are not in customer text or session state.",
+  "Privacy placeholders such as [order identifier omitted] mean a sensitive value was present and redacted; they are not entity IDs and do not prove the value is missing.",
+  "If allowed.deterministicDynamicLookupIds is non-empty, choose request_dynamic_lookup using only those IDs.",
+  "If allowed.deterministicClarificationIds is non-empty, choose ask_clarification using only those IDs.",
+  "If allowed.deterministicCaseIds is non-empty, choose answer_case using only those IDs.",
+  "Otherwise use only IDs supplied in allowed; never choose an action that requires an ID when that allowed ID list is empty.",
+  "Do not invent business policy, live state, product scope, technical instructions, or canonical IDs.",
+  "If restricted=true, do not choose answer_case.",
+  "Return only one JSON object matching the required schema."
 ].join(" ");
 
 function toGroqStrictSchema(value: unknown): unknown {
   if (Array.isArray(value)) return value.map((item) => toGroqStrictSchema(item));
   if (!value || typeof value !== "object") return value;
-
   return Object.fromEntries(
     Object.entries(value as Record<string, unknown>)
       .filter(([key]) => key !== "uniqueItems" && key !== "minLength")
       .map(([key, child]) => [key, toGroqStrictSchema(child)])
   );
 }
-
-export const GROQ_TRIAGE_DECISION_JSON_SCHEMA = toGroqStrictSchema(TRIAGE_DECISION_JSON_SCHEMA);
 
 export type GroqTriageResult = {
   accepted: boolean;
@@ -44,11 +43,7 @@ export type GroqTriageResult = {
 
 type GroqChatResponse = {
   id?: string;
-  choices?: Array<{
-    message?: {
-      content?: string | null;
-    };
-  }>;
+  choices?: Array<{ message?: { content?: string | null } }>;
 };
 
 function safeErrorCode(error: unknown): string {
@@ -69,6 +64,7 @@ export class GroqTriageClient {
   ): Promise<GroqTriageResult> {
     const fallback = () => chooseSupportTriageFallback(input);
     const sanitizedInput = sanitizeTriagePlannerPayload(input);
+    const responseSchema = toGroqStrictSchema(buildSupportTriageJsonSchema(sanitizedInput));
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
 
@@ -94,7 +90,7 @@ export class GroqTriageClient {
             json_schema: {
               name: "cm_support_triage",
               strict: true,
-              schema: GROQ_TRIAGE_DECISION_JSON_SCHEMA
+              schema: responseSchema
             }
           }
         }),
