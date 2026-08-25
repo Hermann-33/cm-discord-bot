@@ -68,6 +68,19 @@ function decision(overrides: Record<string, unknown> = {}) {
   };
 }
 
+async function captureRequest(input: SupportTriageInput, output: unknown) {
+  let capturedInit: RequestInit | undefined;
+  const fetchImpl: typeof fetch = async (_url, init) => {
+    capturedInit = init;
+    return new Response(JSON.stringify({
+      id: "req-test",
+      choices: [{ message: { content: JSON.stringify(output) } }]
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  const result = await new GroqTriageClient(config, fetchImpl).triage(input);
+  return { result, body: JSON.parse(String(capturedInit?.body)) };
+}
+
 test("sends GPT-OSS 120B request with strict Groq structured output and sanitized text", async () => {
   let capturedUrl = "";
   let capturedInit: RequestInit | undefined;
@@ -98,6 +111,108 @@ test("sends GPT-OSS 120B request with strict Groq structured output and sanitize
   assert.equal(body.response_format.json_schema.strict, true);
   assert.equal(JSON.stringify(body).includes("user@example.com"), false);
   assert.equal(JSON.stringify(body).includes(config.apiKey), false);
+});
+
+test("deterministic lookup route is encoded in the production Groq schema", async () => {
+  const input: SupportTriageInput = {
+    ...triageInput(),
+    customerText: "paid already [order identifier omitted]",
+    allowed: {
+      ...triageInput().allowed,
+      caseIds: [],
+      cases: [],
+      familyIds: ["commerce.payment"],
+      clarificationIds: [],
+      clarifications: [],
+      dynamicLookupIds: ["purchase-intents.lookup.read", "purchase-intents.process.status.read"],
+      deterministicDynamicLookupIds: ["purchase-intents.lookup.read", "purchase-intents.process.status.read"],
+      dynamicLookups: [
+        { id: "purchase-intents.lookup.read" },
+        { id: "purchase-intents.process.status.read" }
+      ]
+    }
+  };
+  const output = {
+    ...decision(),
+    observations: { explicitEntities: [], supportSurface: null, knownFacts: [], missingFacts: [] },
+    nextAction: "request_dynamic_lookup",
+    caseIds: [],
+    clarificationId: null,
+    dynamicLookupIds: ["purchase-intents.lookup.read", "purchase-intents.process.status.read"],
+    reasonCode: "deterministic_lookup"
+  };
+  const { result, body } = await captureRequest(input, output);
+  assert.equal(result.accepted, true);
+  const schema = body.response_format.json_schema.schema;
+  assert.deepEqual(schema.properties.nextAction.enum, ["request_dynamic_lookup"]);
+  assert.deepEqual(schema.properties.dynamicLookupIds.items.enum, [
+    "purchase-intents.lookup.read",
+    "purchase-intents.process.status.read"
+  ]);
+});
+
+test("deterministic clarification route is encoded in the production Groq schema", async () => {
+  const input: SupportTriageInput = {
+    ...triageInput(),
+    customerText: "and [order identifier omitted]",
+    state: { candidateClarificationIds: ["clarify.order.fulfillment_state"], questionsAsked: [] },
+    allowed: {
+      ...triageInput().allowed,
+      entityIds: [],
+      caseIds: [],
+      cases: [],
+      familyIds: ["commerce.order", "commerce.fulfillment"],
+      clarificationIds: ["clarify.order.fulfillment_state"],
+      deterministicClarificationIds: ["clarify.order.fulfillment_state"],
+      clarifications: [{
+        id: "clarify.order.fulfillment_state",
+        question: "Are you checking status, waiting for delivery, or reporting the wrong delivery?"
+      }],
+      dynamicLookupIds: [],
+      dynamicLookups: []
+    }
+  };
+  const output = {
+    ...decision(),
+    observations: { explicitEntities: [], supportSurface: null, knownFacts: [], missingFacts: [] },
+    clarificationId: "clarify.order.fulfillment_state",
+    reasonCode: "deterministic_clarification"
+  };
+  const { result, body } = await captureRequest(input, output);
+  assert.equal(result.accepted, true);
+  const schema = body.response_format.json_schema.schema;
+  assert.deepEqual(schema.properties.nextAction.enum, ["ask_clarification"]);
+  assert.deepEqual(schema.properties.clarificationId.enum, ["clarify.order.fulfillment_state"]);
+});
+
+test("deterministic static case is encoded in schema and preserved by fallback", async () => {
+  const input: SupportTriageInput = {
+    ...triageInput(),
+    customerText: "hwid reset plssss",
+    state: { candidateStaticCaseIds: ["case.spoofer.hwid_state"], questionsAsked: [] },
+    allowed: {
+      ...triageInput().allowed,
+      entityIds: [],
+      caseIds: ["case.spoofer.hwid_state"],
+      deterministicCaseIds: ["case.spoofer.hwid_state"],
+      cases: [{ id: "case.spoofer.hwid_state", displayName: "HWID state", family: "technical.spoofer" }],
+      familyIds: ["technical.spoofer"],
+      clarificationIds: [],
+      clarifications: [],
+      dynamicLookupIds: [],
+      dynamicLookups: []
+    }
+  };
+  let body: Record<string, any> | undefined;
+  const fetchImpl: typeof fetch = async (_url, init) => {
+    body = JSON.parse(String(init?.body));
+    return new Response("provider down", { status: 503 });
+  };
+  const result = await new GroqTriageClient(config, fetchImpl).triage(input);
+  assert.equal(result.accepted, false);
+  assert.equal(result.decision.nextAction, "answer_case");
+  assert.deepEqual(result.decision.caseIds, ["case.spoofer.hwid_state"]);
+  assert.deepEqual(body?.response_format.json_schema.schema.properties.nextAction.enum, ["answer_case"]);
 });
 
 test("Groq invalid canonical output is rejected by the deterministic validator", async () => {
