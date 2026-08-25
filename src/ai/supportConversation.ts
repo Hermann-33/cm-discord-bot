@@ -1,10 +1,13 @@
 import type { SupportRuntimePack } from "./runtimePack";
+import type { SupportLookupContext } from "./supportLookup";
 import type { SupportTriageDecision, SupportTriageInput } from "./supportTriage";
 
 export type PendingSupportClarification = {
   id: string;
   contextKey: string;
-  answerType: "boolean" | "text";
+  contextKeys?: readonly string[];
+  answerType: "boolean" | "text" | "enum" | "entity" | "selector";
+  options?: readonly string[];
 };
 
 export type SupportConversationState = {
@@ -52,6 +55,26 @@ function parseBooleanAnswer(value: string): boolean | null {
   return null;
 }
 
+function normalizedWords(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/gu, " ")
+    .replace(/[^a-z0-9\s]+/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
+function parseEnumAnswer(value: string, options: readonly string[]): string | null {
+  const normalized = normalizedWords(value);
+  if (!normalized) return null;
+  for (const option of options) {
+    const optionWords = normalizedWords(option);
+    if (normalized === optionWords || normalized.includes(optionWords) || optionWords.includes(normalized)) return option;
+  }
+  return null;
+}
+
 export function applyPendingClarificationAnswer(
   inputState: SupportConversationState,
   customerText: string
@@ -60,12 +83,16 @@ export function applyPendingClarificationAnswer(
   const pending = state.pendingClarification;
   if (!pending) return { state, consumed: false };
 
-  const answer = pending.answerType === "boolean" ? parseBooleanAnswer(customerText) : customerText.trim() || null;
+  let answer: unknown = null;
+  if (pending.answerType === "boolean") answer = parseBooleanAnswer(customerText);
+  else if (pending.answerType === "enum") answer = parseEnumAnswer(customerText, pending.options ?? []);
+  else answer = customerText.trim() || null;
   if (answer === null) return { state, consumed: false };
 
   state.knownContext[pending.contextKey] = answer;
   state.answersReceived[pending.id] = answer;
-  state.unknownContext = state.unknownContext.filter((item) => item !== pending.contextKey);
+  const contextKeys = pending.contextKeys?.length ? pending.contextKeys : [pending.contextKey];
+  state.unknownContext = state.unknownContext.filter((item) => !contextKeys.includes(item));
   if (!state.questionsAsked.includes(pending.id)) state.questionsAsked.push(pending.id);
   state.pendingClarification = null;
   return { state, consumed: true };
@@ -109,6 +136,7 @@ export interface DeterministicSupportActionResolver {
     decision: SupportTriageDecision;
     state: SupportConversationState;
     runtime: SupportRuntimePack;
+    lookupContext: SupportLookupContext;
   }): Promise<{ state: SupportConversationState; action: GroundedSupportAction }> |
     { state: SupportConversationState; action: GroundedSupportAction };
 }
@@ -121,7 +149,11 @@ export class SupportConversationService {
     private readonly actionResolver: DeterministicSupportActionResolver
   ) {}
 
-  async prepareTurn(customerText: string, inputState: SupportConversationState): Promise<{
+  async prepareTurn(
+    customerText: string,
+    inputState: SupportConversationState,
+    lookupContext: SupportLookupContext = {}
+  ): Promise<{
     state: SupportConversationState;
     action: GroundedSupportAction;
     planner: SupportTriagePlannerResult;
@@ -137,7 +169,8 @@ export class SupportConversationService {
     const resolved = await this.actionResolver.resolve({
       decision: planner.decision,
       state: context.state,
-      runtime: this.runtime
+      runtime: this.runtime,
+      lookupContext
     });
     return { ...resolved, planner };
   }
