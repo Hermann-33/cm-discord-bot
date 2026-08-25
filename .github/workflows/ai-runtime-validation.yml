@@ -1,0 +1,18 @@
+name: AI Runtime Focused Validation
+
+on:
+  push:
+    branches:
+      - task/ai-support-runtime-revalidation-20260825
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node --import tsx --test tests/ai/deterministicResolver.test.ts tests/ai/groqClient.test.ts tests/ai/supportConversation.test.ts tests/tools/actionRoutingClarifications.test.mjs tests/tools/llmTriageHarness.test.mjs
