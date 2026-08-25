@@ -58,6 +58,8 @@ export type SupportTriageState = {
   activeCaseId?: string | null;
   candidateCaseIds?: readonly string[];
   candidateFamilyIds?: readonly string[];
+  candidateClarificationIds?: readonly string[];
+  candidateStaticCaseIds?: readonly string[];
   knownContext?: Record<string, unknown>;
   unknownContext?: readonly string[];
   pendingClarificationId?: string | null;
@@ -78,11 +80,14 @@ export type SupportTriageInput = {
   allowed: {
     entityIds: readonly string[];
     caseIds: readonly string[];
+    deterministicCaseIds?: readonly string[];
     cases: readonly SupportTriageCase[];
     familyIds: readonly string[];
     clarificationIds: readonly string[];
+    deterministicClarificationIds?: readonly string[];
     clarifications: readonly SupportTriageClarification[];
     dynamicLookupIds: readonly string[];
+    deterministicDynamicLookupIds?: readonly string[];
     dynamicLookups: readonly SupportTriageLookup[];
     policyIds: readonly string[];
     policies: readonly SupportTriagePolicy[];
@@ -145,6 +150,60 @@ export const TRIAGE_DECISION_JSON_SCHEMA = {
   }
 } as const;
 
+type JsonSchema = Record<string, unknown>;
+
+function deterministicSubset(values: readonly string[] | undefined, allowed: readonly string[]): string[] {
+  const allowedSet = new Set(allowed);
+  return [...new Set(values ?? [])].filter((id) => allowedSet.has(id));
+}
+
+export function buildSupportTriageJsonSchema(input: SupportTriageInput): JsonSchema {
+  const lookupIds = deterministicSubset(input.allowed.deterministicDynamicLookupIds, input.allowed.dynamicLookupIds);
+  if (lookupIds.length > 0) {
+    return {
+      ...TRIAGE_DECISION_JSON_SCHEMA,
+      properties: {
+        ...TRIAGE_DECISION_JSON_SCHEMA.properties,
+        nextAction: { type: "string", enum: ["request_dynamic_lookup"] },
+        clarificationId: { type: "null" },
+        dynamicLookupIds: { type: "array", items: { type: "string", enum: lookupIds } }
+      }
+    };
+  }
+
+  const clarificationIds = deterministicSubset(
+    input.allowed.deterministicClarificationIds,
+    input.allowed.clarificationIds
+  );
+  if (clarificationIds.length > 0) {
+    return {
+      ...TRIAGE_DECISION_JSON_SCHEMA,
+      properties: {
+        ...TRIAGE_DECISION_JSON_SCHEMA.properties,
+        nextAction: { type: "string", enum: ["ask_clarification"] },
+        clarificationId: { type: "string", enum: clarificationIds }
+      }
+    };
+  }
+
+  const caseIds = deterministicSubset(input.allowed.deterministicCaseIds, input.allowed.caseIds);
+  if (caseIds.length > 0) {
+    return {
+      ...TRIAGE_DECISION_JSON_SCHEMA,
+      properties: {
+        ...TRIAGE_DECISION_JSON_SCHEMA.properties,
+        nextAction: { type: "string", enum: ["answer_case"] },
+        caseIds: { type: "array", minItems: 1, items: { type: "string", enum: caseIds } },
+        clarificationId: { type: "null" },
+        dynamicLookupIds: { type: "array", maxItems: 0, items: { type: "string" } },
+        policyIds: { type: "array", maxItems: 0, items: { type: "string" } }
+      }
+    };
+  }
+
+  return TRIAGE_DECISION_JSON_SCHEMA as unknown as JsonSchema;
+}
+
 const SCOPE_PREFIXES: ReadonlyArray<[keyof SupportCaseScope, string]> = [
   ["games", "game."],
   ["vendors", "vendor."],
@@ -161,14 +220,12 @@ function unique(values: readonly string[] | undefined): string[] {
 function scopeConflicts(caseRecord: SupportTriageCase | undefined, resolvedEntities: readonly string[]): boolean {
   if (!caseRecord?.scope) return false;
   const resolved = new Set(resolvedEntities);
-
   for (const [field, prefix] of SCOPE_PREFIXES) {
     const scoped = caseRecord.scope[field] ?? [];
     if (scoped.length === 0) continue;
     const resolvedOfKind = [...resolved].filter((id) => id.startsWith(prefix));
     if (resolvedOfKind.length > 0 && !resolvedOfKind.some((id) => scoped.includes(id))) return true;
   }
-
   return false;
 }
 
@@ -187,10 +244,7 @@ function clarificationAlreadyKnown(state: SupportTriageState, item: SupportTriag
   return (item.liveLookupCanReplace ?? []).some((id) => lookupResolved(state, id));
 }
 
-export type TriageValidationResult = {
-  valid: boolean;
-  errors: readonly string[];
-};
+export type TriageValidationResult = { valid: boolean; errors: readonly string[] };
 
 export function validateSupportTriageDecision(
   decision: SupportTriageDecision,
@@ -199,8 +253,11 @@ export function validateSupportTriageDecision(
 ): TriageValidationResult {
   const errors: string[] = [];
   const allowedCases = new Set(input.allowed.caseIds);
+  const deterministicCases = new Set(input.allowed.deterministicCaseIds ?? []);
   const allowedClarifications = new Set(input.allowed.clarificationIds);
+  const deterministicClarifications = new Set(input.allowed.deterministicClarificationIds ?? []);
   const allowedLookups = new Set(input.allowed.dynamicLookupIds);
+  const deterministicLookups = new Set(input.allowed.deterministicDynamicLookupIds ?? []);
   const allowedPolicies = new Set(input.allowed.policyIds);
   const allowedEntities = new Set(input.allowed.entityIds);
   const cases = new Map(input.allowed.cases.map((item) => [item.id, item] as const));
@@ -209,93 +266,103 @@ export function validateSupportTriageDecision(
   for (const id of decision.caseIds) if (!allowedCases.has(id)) errors.push(`unknown_case:${id}`);
   for (const id of decision.dynamicLookupIds) if (!allowedLookups.has(id)) errors.push(`unknown_lookup:${id}`);
   for (const id of decision.policyIds) if (!allowedPolicies.has(id)) errors.push(`unknown_policy:${id}`);
-  if (decision.clarificationId && !allowedClarifications.has(decision.clarificationId)) {
-    errors.push(`unknown_clarification:${decision.clarificationId}`);
-  }
-  for (const id of decision.observations.explicitEntities) {
-    if (!allowedEntities.has(id)) errors.push(`ungrounded_observation_entity:${id}`);
-  }
+  if (decision.clarificationId && !allowedClarifications.has(decision.clarificationId)) errors.push(`unknown_clarification:${decision.clarificationId}`);
+  for (const id of decision.observations.explicitEntities) if (!allowedEntities.has(id)) errors.push(`ungrounded_observation_entity:${id}`);
+
+  if (deterministicLookups.size > 0 && (
+    decision.nextAction !== "request_dynamic_lookup" ||
+    decision.dynamicLookupIds.length === 0 ||
+    decision.dynamicLookupIds.some((id) => !deterministicLookups.has(id))
+  )) errors.push("deterministic_lookup_route_mismatch");
+
+  if (deterministicClarifications.size > 0 && (
+    decision.nextAction !== "ask_clarification" ||
+    !decision.clarificationId ||
+    !deterministicClarifications.has(decision.clarificationId)
+  )) errors.push("deterministic_clarification_route_mismatch");
+
+  if (deterministicCases.size > 0 && (
+    decision.nextAction !== "answer_case" ||
+    decision.caseIds.length === 0 ||
+    !decision.caseIds.some((id) => deterministicCases.has(id))
+  )) errors.push("deterministic_case_route_mismatch");
 
   if (input.restricted && decision.nextAction === "answer_case") errors.push("restricted_autonomous_answer");
   if (decision.nextAction === "answer_case" && decision.caseIds.length === 0) errors.push("answer_without_case");
-  if (decision.nextAction === "answer_case" && decision.confidence < directCaseConfidence) {
-    errors.push("low_confidence_direct_case");
-  }
-  if (decision.nextAction === "ask_clarification" && !decision.clarificationId) {
-    errors.push("clarification_without_id");
-  }
-  if (decision.nextAction === "request_dynamic_lookup" && decision.dynamicLookupIds.length === 0) {
-    errors.push("lookup_without_id");
-  }
-  if (decision.nextAction === "request_policy_route" && decision.policyIds.length === 0) {
-    errors.push("policy_route_without_id");
-  }
+  if (decision.nextAction === "answer_case" && decision.confidence < directCaseConfidence) errors.push("low_confidence_direct_case");
+  if (decision.nextAction === "ask_clarification" && !decision.clarificationId) errors.push("clarification_without_id");
+  if (decision.nextAction === "request_dynamic_lookup" && decision.dynamicLookupIds.length === 0) errors.push("lookup_without_id");
+  if (decision.nextAction === "request_policy_route" && decision.policyIds.length === 0) errors.push("policy_route_without_id");
 
   const asked = new Set(input.state.questionsAsked ?? []);
-  if (decision.clarificationId && asked.has(decision.clarificationId)) {
-    errors.push("repeated_clarification");
-  }
-  if (decision.clarificationId && clarificationAlreadyKnown(input.state, clarifications.get(decision.clarificationId))) {
-    errors.push("clarification_answer_already_known");
-  }
+  if (decision.clarificationId && asked.has(decision.clarificationId)) errors.push("repeated_clarification");
+  if (decision.clarificationId && clarificationAlreadyKnown(input.state, clarifications.get(decision.clarificationId))) errors.push("clarification_answer_already_known");
 
   const resolvedEntities = unique(input.state.resolvedEntities);
-  for (const id of decision.caseIds) {
-    if (scopeConflicts(cases.get(id), resolvedEntities)) errors.push(`scope_conflict:${id}`);
-  }
+  for (const id of decision.caseIds) if (scopeConflicts(cases.get(id), resolvedEntities)) errors.push(`scope_conflict:${id}`);
 
   return { valid: errors.length === 0, errors: unique(errors) };
 }
 
 function fallbackObservations(): SupportTriageDecision["observations"] {
-  return {
-    explicitEntities: [],
-    supportSurface: null,
-    knownFacts: [],
-    missingFacts: []
-  };
+  return { explicitEntities: [], supportSurface: null, knownFacts: [], missingFacts: [] };
 }
 
 export function chooseSupportTriageFallback(input: SupportTriageInput): SupportTriageDecision {
+  const deterministicLookups = deterministicSubset(
+    input.allowed.deterministicDynamicLookupIds,
+    input.allowed.dynamicLookupIds
+  );
+  if (deterministicLookups.length > 0) {
+    return {
+      observations: fallbackObservations(), nextAction: "request_dynamic_lookup", caseIds: [],
+      clarificationId: null, dynamicLookupIds: deterministicLookups, policyIds: [], confidence: 1,
+      reasonCode: "deterministic_lookup_route"
+    };
+  }
+
+  const deterministicClarification = deterministicSubset(
+    input.allowed.deterministicClarificationIds,
+    input.allowed.clarificationIds
+  )[0];
+  if (deterministicClarification) {
+    return {
+      observations: fallbackObservations(), nextAction: "ask_clarification", caseIds: [],
+      clarificationId: deterministicClarification, dynamicLookupIds: [], policyIds: [], confidence: 1,
+      reasonCode: "deterministic_clarification_route"
+    };
+  }
+
+  const deterministicCases = deterministicSubset(input.allowed.deterministicCaseIds, input.allowed.caseIds);
+  if (!input.restricted && deterministicCases.length > 0) {
+    return {
+      observations: fallbackObservations(), nextAction: "answer_case", caseIds: deterministicCases,
+      clarificationId: null, dynamicLookupIds: [], policyIds: [], confidence: 1,
+      reasonCode: "deterministic_case_route"
+    };
+  }
+
   const activeCaseId = input.state.activeCaseId;
   if (!input.restricted && activeCaseId && input.allowed.caseIds.includes(activeCaseId)) {
     return {
-      observations: fallbackObservations(),
-      nextAction: "answer_case",
-      caseIds: [activeCaseId],
-      clarificationId: null,
-      dynamicLookupIds: [],
-      policyIds: [],
-      confidence: 1,
+      observations: fallbackObservations(), nextAction: "answer_case", caseIds: [activeCaseId],
+      clarificationId: null, dynamicLookupIds: [], policyIds: [], confidence: 1,
       reasonCode: "existing_active_case"
     };
   }
 
   const asked = new Set(input.state.questionsAsked ?? []);
-  const clarification = input.allowed.clarifications.find((item) =>
-    !asked.has(item.id) && !clarificationAlreadyKnown(input.state, item)
-  );
+  const clarification = input.allowed.clarifications.find((item) => !asked.has(item.id) && !clarificationAlreadyKnown(input.state, item));
   if (clarification) {
     return {
-      observations: fallbackObservations(),
-      nextAction: "ask_clarification",
-      caseIds: [],
-      clarificationId: clarification.id,
-      dynamicLookupIds: [],
-      policyIds: [],
-      confidence: 1,
+      observations: fallbackObservations(), nextAction: "ask_clarification", caseIds: [],
+      clarificationId: clarification.id, dynamicLookupIds: [], policyIds: [], confidence: 1,
       reasonCode: "safe_canonical_clarification"
     };
   }
 
   return {
-    observations: fallbackObservations(),
-    nextAction: "human_escalation",
-    caseIds: [],
-    clarificationId: null,
-    dynamicLookupIds: [],
-    policyIds: [],
-    confidence: 1,
-    reasonCode: "no_safe_machine_action"
+    observations: fallbackObservations(), nextAction: "human_escalation", caseIds: [], clarificationId: null,
+    dynamicLookupIds: [], policyIds: [], confidence: 1, reasonCode: "no_safe_machine_action"
   };
 }
