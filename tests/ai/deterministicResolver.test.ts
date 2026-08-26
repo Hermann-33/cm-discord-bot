@@ -4,6 +4,7 @@ import { RuntimeDeterministicSupportResolver } from "../../src/ai/deterministicR
 import { reviewFirstTurnObservability } from "../../src/ai/firstTurnRouter";
 import { createSupportConversationState } from "../../src/ai/supportConversation";
 import type { SupportRuntimePack, SupportRuntimeRecord } from "../../src/ai/runtimePack";
+import { chooseSupportTriageFallback } from "../../src/ai/supportTriage";
 
 function record(id: string, extras: Record<string, unknown> = {}): SupportRuntimeRecord {
   return { id, ...extras } as SupportRuntimeRecord;
@@ -26,12 +27,19 @@ const runtime: SupportRuntimePack = {
     record("case.nfa.invalid_after_use", { displayName: "NFA invalid later", family: "accounts.nfa", scope: { accountModels: ["account_model.nfa"] }, dynamic: [] }),
     record("case.nfa.owner_session_conflict", { displayName: "NFA session conflict", family: "accounts.nfa", scope: { accountModels: ["account_model.nfa"] }, dynamic: [] }),
     record("case.nfa.redemption_activation", { displayName: "NFA activation", family: "accounts.nfa", scope: { accountModels: ["account_model.nfa"] }, dynamic: [] }),
+    record("case.account.bulk_purchase", { displayName: "Bulk purchase", family: "accounts.purchase", scope: { accountModels: ["account_model.nfa"] }, dynamic: [] }),
+    record("case.loader.closes_runtime", { displayName: "Loader closes", family: "technical.loader", scope: {}, dynamic: [] }),
+    record("case.loader.connection", { displayName: "Loader connection", family: "technical.loader", scope: {}, dynamic: [] }),
+    record("case.loader.update", { displayName: "Loader update", family: "technical.loader", scope: {}, dynamic: [] }),
+    record("case.loader.key_error", { displayName: "Loader key", family: "technical.loader", scope: {}, dynamic: [] }),
+    record("case.spoofer.reversal_reset", { displayName: "Spoofer reversal", family: "technical.spoofer", scope: {}, dynamic: [] }),
     record("case.restricted.technical", { displayName: "Restricted", family: "restricted", scope: {}, dynamic: [] })
   ],
   clarifications: [
     record("clarify.support_surface", { question: "What isn't working?", distinguishesCases: [], distinguishesFamilies: [], setsContext: ["supportSurface"], liveLookupCanReplace: ["users.overview.read"] }),
     record("clarify.order.fulfillment_state", { question: "Are you checking status, delivery, or wrong delivery?", distinguishesCases: ["case.order.status", "case.order.fulfillment_delayed", "case.order.wrong_delivery", "case.order.refund_cancel"], distinguishesFamilies: ["commerce.order", "commerce.fulfillment"], setsContext: ["orderQuestionType"], liveLookupCanReplace: ["orders.details.read", "orders.fulfillment.read"] }),
-    record("clarify.nfa.failure_stage", { question: "Did it ever work before?", distinguishesCases: ["case.nfa.invalid_first_use", "case.nfa.invalid_after_use", "case.nfa.owner_session_conflict", "case.nfa.redemption_activation"], distinguishesFamilies: ["accounts.nfa"], setsContext: ["nfaFailureStage"], liveLookupCanReplace: ["orders.details.read"] })
+    record("clarify.nfa.failure_stage", { question: "Did it ever work before?", distinguishesCases: ["case.nfa.invalid_first_use", "case.nfa.invalid_after_use", "case.nfa.owner_session_conflict", "case.nfa.redemption_activation"], distinguishesFamilies: ["accounts.nfa"], setsContext: ["nfaFailureStage"], liveLookupCanReplace: ["orders.details.read"] }),
+    record("clarify.loader.failure_stage", { question: "Which loader stage fails?", distinguishesCases: ["case.loader.closes_runtime", "case.loader.connection", "case.loader.update", "case.loader.key_error"], distinguishesFamilies: ["technical.loader"], setsContext: ["loaderFailureStage"], liveLookupCanReplace: [] })
   ],
   dynamicLookups: [
     record("dynamic.order.status", { operation: "orders.details.read", questionTypes: ["order_status"] }),
@@ -154,6 +162,33 @@ test("B0 v3 regression: attachment, security, and detection-status actions survi
     const result = resolver.resolve({ customerText, state: createSupportConversationState(), runtime, pendingAnswerConsumed: false });
     assert.equal(result.input.allowed.deterministicNextAction, action, customerText);
   }
+});
+
+test("B0 v4 regression: plural NFA, nfa.exe, unspoof, declined-card, and VAC-ban wording retain canonical routes", () => {
+  const rows: Array<[string, string, string | null]> = [
+    ["Can I order several NFAs together as a bulk purchase?", "answer_case", "case.account.bulk_purchase"],
+    ["nfa.exe shows a failed-to-fetch network connection message.", "answer_case", "case.loader.connection"],
+    ["Please unspoof the computer and restore it to normal.", "answer_case", "case.spoofer.reversal_reset"],
+    ["My card payment did not go through at checkout.", "request_dynamic_lookup", null],
+    ["A VAC ban appeared on the account after the game session.", "request_policy_route", null]
+  ];
+  for (const [customerText, action, caseId] of rows) {
+    const result = resolver.resolve({ customerText, state: createSupportConversationState(), runtime, pendingAnswerConsumed: false });
+    assert.equal(result.input.allowed.deterministicNextAction, action, customerText);
+    if (caseId) assert.ok(result.input.allowed.caseIds.includes(caseId), customerText);
+  }
+});
+
+test("B0 v4 regression: an explicit router clarification is deterministic in schema and fallback", () => {
+  const result = resolver.resolve({
+    customerText: "My loader is misbehaving and I do not know which stage is failing.",
+    state: createSupportConversationState(),
+    runtime,
+    pendingAnswerConsumed: false
+  });
+  assert.equal(result.input.allowed.deterministicNextAction, "ask_clarification");
+  assert.deepEqual(result.input.allowed.deterministicClarificationIds, ["clarify.loader.failure_stage"]);
+  assert.equal(chooseSupportTriageFallback(result.input).clarificationId, "clarify.loader.failure_stage");
 });
 
 test("B0 regression: invalid product license remains a single license activation case", () => {

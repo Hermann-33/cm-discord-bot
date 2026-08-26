@@ -197,7 +197,10 @@ export class RuntimeDeterministicSupportResolver implements DeterministicSupport
     const candidates = candidateCasesFor(baseline, input.state, allCases, this.maxCases);
 
     const candidateDynamicLookupIds = unique([...(baseline.lookupIds ?? []), ...(baseline.dynamicLookupIds ?? [])]);
-    let candidateClarificationIds = unique(baseline.deterministicClarificationIds ?? []);
+    let candidateClarificationIds = unique([
+      ...(baseline.deterministicClarificationIds ?? []),
+      ...(baseline.primaryDecision.endsWith("_clarification") && baseline.clarificationId ? [baseline.clarificationId] : [])
+    ]);
     if (input.pendingAnswerConsumed && candidateClarificationIds.includes("clarify.support_surface")) {
       candidateClarificationIds = [];
     }
