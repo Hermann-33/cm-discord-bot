@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "status": "preflight",
+  "productionCandidateSha": "4d8790fc90b351d261f8699c7b3cd989c3787fe9",
+  "privateCorpusSha": "c9e993f17583a607402f4173296f64aac52d2ebe",
+  "runtimeManifestGitBlobSha": "27473af570caec4f4066a3e2fb6ca38307c5232c",
+  "runtimeKnowledgeVersion": "1.0.0",
+  "fixture": "release-validation/ai-support-release-acceptance-b0-v3.json",
+  "fixtureGitBlobSha": "08561be5706de1fb61c9012fee0b00ad668ac7f1",
+  "fixtureSha256": null,
+  "rows": 30,
+  "classification": "fresh_synthetic_release_acceptance_not_historical_generalization"
+}
