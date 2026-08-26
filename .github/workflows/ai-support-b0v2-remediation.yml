@@ -1,0 +1,38 @@
+name: AI Support B0 V2 Remediation
+
+on:
+  push:
+    branches:
+      - task/ai-support-b0v2-remediation-20260826
+
+permissions:
+  contents: write
+
+jobs:
+  remediate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: python release-validation/apply-b0v2-remediation.py
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run build
+      - run: git diff --check
+      - name: Commit tested remediation
+        run: |
+          if git diff --quiet -- src/ai/firstTurnRouter.ts tests/ai/deterministicResolver.test.ts; then
+            echo "No remediation changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/ai/firstTurnRouter.ts tests/ai/deterministicResolver.test.ts
+          git commit -m "TASK-AI-SUPPORT-021: remediate B0 v2 routing failures"
+          git push origin HEAD:task/ai-support-b0v2-remediation-20260826
