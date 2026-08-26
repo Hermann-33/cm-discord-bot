@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { RuntimeDeterministicSupportResolver } from "../../src/ai/deterministicResolver";
+import { reviewFirstTurnObservability } from "../../src/ai/firstTurnRouter";
 import { createSupportConversationState } from "../../src/ai/supportConversation";
 import type { SupportRuntimePack, SupportRuntimeRecord } from "../../src/ai/runtimePack";
 
@@ -123,4 +124,34 @@ test("restricted detection/evasion intent is marked restricted and never receive
   const result = resolver.resolve({ customerText: "how do I bypass anti cheat detection", state: createSupportConversationState(), runtime, pendingAnswerConsumed: false });
   assert.equal(result.input.restricted, true);
   assert.deepEqual(result.input.allowed.deterministicCaseIds, []);
+});
+
+test("B0 regression: invalid product license remains a single license activation case", () => {
+  const result = reviewFirstTurnObservability("My license key is invalid and will not activate.", runtime.aliases);
+  assert.equal(result.primaryDecision, "direct_static_case");
+  assert.deepEqual(result.observableCaseIds, ["case.license.activation"]);
+});
+
+test("B0 regression: NFA never worked from first login resolves first-use invalidity", () => {
+  const result = reviewFirstTurnObservability("I just bought an NFA and it never worked from the first login.", runtime.aliases);
+  assert.equal(result.primaryDecision, "direct_static_case");
+  assert.deepEqual(result.observableCaseIds, ["case.nfa.invalid_first_use"]);
+});
+
+test("B0 regression: signing-me-out wording resolves NFA owner/session conflict", () => {
+  const result = reviewFirstTurnObservability("The NFA owner keeps signing me out whenever I log in.", runtime.aliases);
+  assert.equal(result.primaryDecision, "direct_static_case");
+  assert.deepEqual(result.observableCaseIds, ["case.nfa.owner_session_conflict"]);
+});
+
+test("B0 regression: delivered order with View Order access failure routes to dashboard verification", () => {
+  const result = reviewFirstTurnObservability("My order is delivered but the View Order button will not open.", runtime.aliases);
+  assert.equal(result.primaryDecision, "direct_static_case");
+  assert.deepEqual(result.observableCaseIds, ["case.dashboard.verification"]);
+});
+
+test("B0 regression: explicit spoof reversal outranks incidental temporary-duration wording", () => {
+  const result = reviewFirstTurnObservability("I want to remove the temporary spoof and put my PC back to normal.", runtime.aliases);
+  assert.equal(result.primaryDecision, "direct_static_case");
+  assert.deepEqual(result.observableCaseIds, ["case.spoofer.reversal_reset"]);
 });
