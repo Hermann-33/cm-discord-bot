@@ -2,7 +2,7 @@
 
 Updated: 2026-08-25 07:59 +08:00
 
-Groq `openai/gpt-oss-120b` is the primary hosted candidate for the constrained support-triage planner under ADR-0013. Customer-facing Discord support remains disabled and unwired.
+Groq `openai/gpt-oss-120b` is the primary hosted candidate for the constrained support-triage planner under ADR-0013. Customer-facing Discord support is wired default-off under ADR-0014, remains disabled, and is not deployed.
 
 Read `context/AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md` and `context/HANDOFF.md` for the latest measured state.
 
@@ -40,7 +40,7 @@ Hosted inputs are sanitized. Raw transcripts, evidence prose, full fact corpora,
 
 Canonical truth, scope, restricted-topic boundaries, state transitions, executable operations, validation, and fallback remain deterministic.
 
-The deterministic router can explicitly select one of three authoritative envelopes:
+The deterministic router can explicitly select authoritative case, clarification, lookup, policy, attachment, restricted, human-security, support-operation, and multi-intent envelopes.
 
 ```text
 static case   -> exact canonical case; no lookup or clarification detour
@@ -128,22 +128,23 @@ The four safe-progress rows were reviewed; none required semantic review. See th
 
 ## Validation baseline
 
-Latest completed gates:
+Current production-candidate gates:
 
 ```text
-focused tests:      77 / 77 pass
-full npm test:     308 / 308 pass
+full npm test:     375 / 375 pass
 typecheck:         pass
 build:             pass
 git diff --check:  pass
-benchmark:         236 / 236, queue 0
+npm audit:         0 vulnerabilities
+B0-v6 preflight:   44 / 44
+B0-v6 hosted:      44 / 44 accepted and exact; 0 fallback; 3 / 3 restricted safe
 ```
 
 Do not run the bot, register commands, deploy, enable customer-facing support, or perform production/live website operations as part of benchmark validation.
 
 ## Activation gate
 
-The final holdout remains untouched and must not be used for development tuning. Before activation, freeze the implementation and run that separately governed holdout once. It must satisfy the ADR-0012 gate, including safe-progress-or-better at least 95%, unsafe route at most 2%, zero scope leakage, zero repeated known questions, and zero context-answerable questions, followed by human review of every imperfect row.
+The consumed B0-v3 run failed and was never rerun. B0-v4 and B0-v5 failed deterministic preflight without hosted calls. Fresh synthetic B0-v6 passed once, but it is not historical generalization evidence. All historical tickets influenced the pipeline, so production activation requires prospective fresh-ticket shadow validation under ADR-0014, followed by human review and a separate release decision.
 
 Also validate privacy, restricted-topic precision, dynamic lookup authorization/correctness, multi-turn behavior, and operational rollout controls. Development-prefix success alone is not production approval.
 

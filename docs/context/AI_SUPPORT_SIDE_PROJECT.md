@@ -381,11 +381,12 @@ See `AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md` for exact latency/token metrics
 
 - Direct-case validation may still benefit from an explicit future design for case-specific required observable conditions; do not use a crude multi-family blocker.
 - `dynamic.catalog.*` uses `catalog.current.read`, but that operation is not confirmed in the documented website Internal Integrations API list. Never replace missing live authority with historical catalog/detection/stock claims.
-- The final holdout remains untouched and is the next model-selection gate, not a development-tuning set.
+- B0-v3 is consumed failed evidence and was never rerun. B0-v4/B0-v5 failed deterministic preflight without hosted calls. Fresh synthetic B0-v6 passed 44/44 deterministic and hosted acceptance, but is not historical generalization evidence.
+- All 1,578 historical tickets influenced the pipeline. Prospective newly arriving ticket shadow validation is the next evidence gate under ADR-0014.
 
 ## Activation gate
 
-Do not wire customer-facing AI until clean development evaluation and then a frozen untouched holdout demonstrate:
+Customer-facing wiring exists default-off under ADR-0014. Do not enable or deploy it until clean prospective shadow evidence demonstrates:
 
 ```text
 safe-progress-or-better >= 95%
@@ -399,6 +400,6 @@ Also require high structured-output acceptance, low/zero fallback, acceptable la
 
 ## Resume rule
 
-Follow `HANDOFF.md` and `AI_SUPPORT_HANDOVER_PROMPT.md`. Do not spend further Groq quota or inspect the final holdout unless a later task explicitly authorizes the frozen activation-readiness evaluation.
+Follow `AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md`, `HANDOFF.md`, and `AI_SUPPORT_HANDOVER_PROMPT.md`. Do not relabel synthetic B0-v6 as historical generalization evidence. A later task must explicitly authorize prospective shadow evaluation and any activation decision.
 
 Do not run the bot, register commands, deploy, mutate website state, or enable customer-facing AI without a later explicit task.

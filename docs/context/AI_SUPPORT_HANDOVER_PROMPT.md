@@ -1,6 +1,6 @@
 # AI Support Handover Prompt
 
-Updated: 2026-08-25 10:59 +08:00
+Updated: 2026-08-26 14:30 +08:00
 
 Use this as the copy-paste handover prompt for a new ChatGPT/Codex/agent session. Repository documentation and accepted ADRs are authoritative over chat history.
 
@@ -29,9 +29,9 @@ Read in this order before planning, changing routing/benchmarks, spending hosted
 1. `AGENTS.md`
 2. `docs/README.md`
 3. `docs/context/ACTIVE_CONTEXT.md`
-4. `docs/context/AI_SUPPORT_RELEASE_HANDOVER_2026-08-25.md`
-5. `docs/context/AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md`
-6. `docs/context/HANDOFF.md`
+4. `docs/context/AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md`
+5. `docs/context/HANDOFF.md`
+6. `docs/context/AI_SUPPORT_RELEASE_HANDOVER_2026-08-25.md` for historical context
 7. `docs/context/AI_SUPPORT_SIDE_PROJECT.md`
 8. `docs/context/PROJECT_BRIEF.md`
 9. `docs/context/SIDE_PROJECTS.md`
@@ -49,31 +49,19 @@ Read in this order before planning, changing routing/benchmarks, spending hosted
 21. `docs/decisions/ADR-0011-pending-purchase-and-fulfillment-support-view.md`
 22. `docs/decisions/ADR-0012-bundled-support-runtime-and-openrouter-planner.md`
 23. `docs/decisions/ADR-0013-groq-primary-support-triage-provider.md`
+24. `docs/decisions/ADR-0014-customer-facing-ai-support-activation-boundary.md`
 
-The release handover is authoritative for the current paused implementation state. The validation checkpoint remains authoritative for the last fully validated tests/benchmark/hosted result.
+The 2026-08-26 release validation is authoritative for the current implementation, synthetic acceptance, and remaining activation gate.
 
 ### Current exact state
 
-Before handover-document commits, the executable implementation checkpoint was:
-
 ```text
-public implementation HEAD: cfb0b163cac43c95e515ba316fa37c100cec4fe2
-last fully validated HEAD:   803a50bb09cdc6a60b3c736762d285cdac0aa276
-private main HEAD:           c9e993f17583a607402f4173296f64aac52d2ebe
+failed B0-v3 candidate: 4d8790fc90b351d261f8699c7b3cd989c3787fe9
+current candidate:      2e8b763f699b4c1aaa138320f4e0420c736e82dc
+private main HEAD:      c9e993f17583a607402f4173296f64aac52d2ebe
 ```
 
-The public branch now also contains documentation-only handover commits after `cfb0b163`. Do not confuse the documentation HEAD with a newly validated executable release candidate.
-
-The four executable commits after the validated checkpoint are:
-
-```text
-cd25bb66acd8bc14bd5d34b941fe0ad0ada91b64  Align runtime triage envelopes with validated planner
-317703b7cccc3b4e845cf459558c6e88dd8f1ea0  Use input-aware Groq schema in runtime
-66b375ffeb3c98ffaa52983eef07830ebe3a9391  Test production deterministic Groq envelopes
-cfb0b163cac43c95e515ba316fa37c100cec4fe2  Add production deterministic support resolver
-```
-
-These post-validation executable commits have **not** yet been fully revalidated. No CI status was available for them during the handover session, and the assistant did not run local tests.
+Candidate `2e8b763` passed 375/375 tests, typecheck, build, diff check, and npm audit with zero vulnerabilities. Fresh synthetic B0-v6 passed 44/44 deterministic preflight and 44/44 on its single hosted run, with zero fallback and 3/3 restricted safety.
 
 ### Mandatory reading — private repository
 
@@ -108,7 +96,7 @@ Discord
 
 Never add direct Supabase/Postgres access, DB/service-role credentials, a database fallback, or a production filesystem dependency on the private corpus. Never invent a website/API operation. `catalog.current.read` remains unconfirmed and unavailable.
 
-Customer-facing AI support is **disabled and unwired**. No bot startup, command registration, deployment, production merge, website mutation, or AI activation occurred in the paused session.
+Customer-facing AI support is **wired default-off, disabled, and not deployed** under ADR-0014. No bot startup, command registration, deployment, website mutation, or AI activation occurred.
 
 Restricted bypass/evasion/injection/kernel/driver/spoofing/detection-avoidance material stays outside autonomous support.
 
@@ -186,37 +174,13 @@ git diff --check:  pass
 benchmark:         236 / 236, review queue 0
 ```
 
-### Post-validation implementation added before pause
+### Current implementation
 
-Production runtime parity was started and committed:
+The production candidate includes the grounded deterministic action resolver, explicit read-only lookup adapter, customer-safe rendering, bounded in-memory conversation state, default-off Discord `messageCreate` integration, exact channel/category allowlists, kill switch, privacy controls, and ADR-0014 activation governance.
 
-- `src/ai/supportTriage.ts`: deterministic static-case / lookup / clarification validation and fallback parity;
-- `src/ai/groqClient.ts`: input-aware strict Groq schema matching deterministic envelopes;
-- `src/ai/firstTurnRouter.ts`: runtime-safe TypeScript port of validated first-turn deterministic semantics;
-- `src/ai/deterministicResolver.ts`: converts bundled runtime + conversation state into the bounded production planner envelope;
-- regression tests for provider envelopes and production resolver behavior.
+The B0-v3 remediation transports deterministic control-plane actions and policy IDs end-to-end. The input-aware schema constrains all canonical ID fields, the validator independently enforces the same invariants, and fallback preserves the deterministic route. Restricted turns can only produce canonical restricted escalation.
 
-Known regression classes covered include HWID reset leakage, entity-only speculative family expansion, bare order selectors, explicit order status, pending-clarification follow-ups, and restricted detection/evasion intent.
-
-This production-parity layer is **not yet fully revalidated**.
-
-### Implementation intentionally left incomplete
-
-Do not assume these exist:
-
-1. grounded `DeterministicSupportActionResolver`;
-2. abstract-lookup -> concrete `InternalApiClient` read adapter;
-3. customer-safe rendering of case/policy/procedure/live state;
-4. Discord ticket/channel conversation-state persistence;
-5. `messageCreate` integration;
-6. default-off AI feature flag, channel/category allowlist, rollout controls, kill switch;
-7. superseding activation ADR/privacy-security review required before customer-facing message wiring;
-8. release-candidate freeze manifest/hash tool;
-9. final holdout selection/freeze tool;
-10. one-shot final holdout evaluation;
-11. production deployment/activation.
-
-A draft action resolver was started in chat but not committed. Treat it as nonexistent repository state.
+Production deployment and activation remain intentionally incomplete and unauthorized.
 
 ### Concrete API boundary for the action layer
 
@@ -239,15 +203,11 @@ Required adapter behavior:
 - no raw account tokens/license keys/secret fulfillment material in planner or customer output;
 - `catalog.current.read` remains unavailable until the website exposes and documents a real operation.
 
-### Holdout rule
+### Release evidence and remaining gate
 
-The final release holdout has **not been selected, inspected, generated, sent to Groq, or scored**.
+B0-v3 is consumed failed evidence and was never rerun. B0-v4 and B0-v5 failed deterministic preflight and received no hosted call. B0-v6 is consumed passing fresh synthetic evidence: 44/44 deterministic preflight, 44/44 hosted structured acceptance, 44/44 exact action, zero fallback, and 3/3 restricted safe.
 
-Do not use consumed V3 as final holdout. Do not assume the existing `historical-rule-holdout.jsonl` is eligible merely because of its filename; audit prior use/provenance first.
-
-A valid final holdout must be selected after the executable implementation is revalidated/frozen and must subtract all consumed development/training provenance, including V1/V2/V3 transcript IDs and routing exemplars already used to tune/evaluate current behavior.
-
-Selection must be prediction-blind and deterministic, with a fingerprint/manifest and independent gold review. Then run it exactly once. If insufficient genuinely unused historical rows remain, document historical-corpus exhaustion rather than fabricate a contaminated release metric.
+All 1,578 historical tickets influenced the pipeline, so no legitimate untouched historical holdout remains. Do not claim synthetic B0-v6 as historical generalization evidence. The remaining ADR-0014 evidence gate is prospective shadow evaluation on newly arriving tickets, followed by a separate activation decision.
 
 Required thresholds remain at least:
 
@@ -288,17 +248,12 @@ Continue authoritative implementation on `task/ai-support-integration` unless go
 
 ### Exact next sequence
 
-1. Verify public/private HEADs and read the dated release handover.
-2. Run focused production AI tests, full `npm test`, typecheck, build, and `git diff --check` against the current executable implementation.
-3. Compare production resolver outputs to validated tooling on known regression rows and a representative consumed-development sample.
-4. Fix only true production-parity defects before any holdout work.
-5. Implement the grounded action resolver and explicit abstract-to-concrete read adapter; add fail-closed tests.
-6. Implement bounded conversation-state storage and Discord message integration behind default-off rollout controls.
-7. Add the superseding activation ADR/privacy-security review.
-8. Run full offline/runtime validation again and freeze implementation SHA + runtime hashes + Groq config.
-9. Build/fingerprint the truly independent final holdout using provenance subtraction only.
-10. Run the final holdout once.
-11. If every release gate passes, perform a controlled rollout. Otherwise leave AI support disabled and record the failure without tuning on the holdout.
+1. Verify candidate `2e8b763`, runtime `1.0.0`, and private corpus SHA `c9e993f` remain the documented pins.
+2. Keep `AI_SUPPORT_ENABLED=false` in production.
+3. Design and authorize prospective fresh-ticket shadow collection without customer-visible AI output.
+4. Score privacy, restricted safety, action correctness, fallback, lookup authority, and multi-turn behavior on newly arriving tickets.
+5. Review every imperfect row and operational kill-switch/rollback evidence.
+6. Require a separate explicit release decision before any production enablement or deployment.
 
 ### Working rules
 
@@ -312,7 +267,7 @@ Continue authoritative implementation on `task/ai-support-integration` unless go
 - No model-selected mutation authority.
 - Preserve restricted-topic safety boundaries.
 
-Start by summarizing repository-derived current state and explicitly distinguishing the last validated checkpoint from the current unvalidated executable implementation.
+Start by summarizing the frozen candidate, passing synthetic evidence, and pending prospective-shadow activation gate.
 
 ---
 

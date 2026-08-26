@@ -6,6 +6,7 @@ This documentation system is the durable memory and governance layer for the Che
 
 - `../AGENTS.md` — mandatory operating rules
 - `context/ACTIVE_CONTEXT.md` — concise present state
+- `context/AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md` — failed consumed B0-v3, structural remediation, consumed B0-v4/B0-v5 preflights, passing B0-v6 synthetic acceptance, and remaining prospective-shadow gate
 - `context/AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md` — completed local repair, 236-row benchmark rebuild, clean 20/40-row Groq development results, and remaining final-holdout gate
 - `context/AI_SUPPORT_TRIAGE_PROGRESS_2026-08-25.md` — measured hosted-triage progress, failure analysis and deterministic-clarification hardening
 - `context/AI_SUPPORT_TRIAGE_SCHEMA_HARDENING_2026-08-25.md` — historical addendum describing the input-aware Groq strict-schema action envelope before completed validation
@@ -23,7 +24,7 @@ This documentation system is the durable memory and governance layer for the Che
 - `context/AUDIT_LOG.md` — chronological material findings and verdicts
 - `context/PROJECT_HISTORY.md` — durable project chronology
 
-For AI-support work, read `context/AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md`, then `context/HANDOFF.md`, then `context/AI_SUPPORT_HANDOVER_PROMPT.md` and its ordered reading list before modifying routing, planner contracts, Groq/OpenRouter integration, benchmark/evaluation logic, `support-runtime/`, or private `CM-Ticket-Transcripts` artifacts.
+For AI-support work, read `context/AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md`, then `context/ACTIVE_CONTEXT.md`, `context/HANDOFF.md`, and `context/AI_SUPPORT_HANDOVER_PROMPT.md` before modifying routing, planner contracts, Groq/OpenRouter integration, benchmark/evaluation logic, `support-runtime/`, or private `CM-Ticket-Transcripts` artifacts.
 
 ## Full audit reports
 
@@ -49,6 +50,7 @@ For AI-support work, read `context/AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md`, 
 - `decisions/ADR-0011-pending-purchase-and-fulfillment-support-view.md` — order-first pending-purchase fallback, optional private masked fulfillment support, and public-share exclusions
 - `decisions/ADR-0012-bundled-support-runtime-and-openrouter-planner.md` — sanitized bundled support runtime, constrained optional hosted planner, stateful deterministic service boundary, and benchmark-before-activation gate; provider preference superseded by ADR-0013
 - `decisions/ADR-0013-groq-primary-support-triage-provider.md` — Groq `openai/gpt-oss-120b` is the primary hosted triage candidate; deterministic validation and the ADR-0012 runtime boundary remain authoritative
+- `decisions/ADR-0014-customer-facing-ai-support-activation-boundary.md` — permits only default-off allowlisted Discord wiring; production enablement still requires frozen evidence, prospective shadow validation, and a separate release decision
 
 ## Specialist references
 

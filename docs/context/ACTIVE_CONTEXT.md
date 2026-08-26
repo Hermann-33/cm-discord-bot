@@ -1,34 +1,35 @@
 # Active Context
 
-Updated: 2026-08-25 10:59 +08:00
+Updated: 2026-08-26 14:30 +08:00
 
 ## Read order for AI-support work
 
-1. `AI_SUPPORT_RELEASE_HANDOVER_2026-08-25.md`
-2. `AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md`
-3. `HANDOFF.md`
-4. `AI_SUPPORT_HANDOVER_PROMPT.md` and its remaining ordered references
+1. `AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md`
+2. `HANDOFF.md`
+3. `AI_SUPPORT_RELEASE_HANDOVER_2026-08-25.md` for pre-release history
+4. `AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md` for consumed development history
+5. `AI_SUPPORT_HANDOVER_PROMPT.md` and its remaining ordered references
 
-The dated release handover is authoritative for the current paused implementation state. The validation checkpoint remains authoritative for the last fully validated test/benchmark result.
+The 2026-08-26 release validation is authoritative for the current implementation and synthetic acceptance state.
 
 ## Current repository state
 
 ```text
 public repo:    Hermann-33/cm-discord-bot
 public branch:  task/ai-support-integration
-implementation checkpoint before handover docs: cfb0b163cac43c95e515ba316fa37c100cec4fe2
-last fully validated checkpoint:                 803a50bb09cdc6a60b3c736762d285cdac0aa276
+failed B0-v3 production candidate: 4d8790fc90b351d261f8699c7b3cd989c3787fe9
+current remediated candidate:       2e8b763f699b4c1aaa138320f4e0420c736e82dc
 
 private repo:   Hermann-33/CM-Ticket-Transcripts
 private branch: main
 private HEAD:   c9e993f17583a607402f4173296f64aac52d2ebe
 ```
 
-The post-`803a50b` production-parity commits must be revalidated before any final holdout is selected or run.
+Candidate `2e8b763` passed 375/375 tests, typecheck, build, diff check, and npm audit with zero vulnerabilities.
 
 ## Production boundary
 
-Customer-facing AI support remains **disabled and unwired**. No bot startup, command registration, deployment, production merge, website mutation, or customer-facing AI activation was performed.
+Customer-facing AI support remains **default-off and not deployed** under ADR-0014. No bot startup, command registration, deployment, website mutation, or customer-facing AI activation was performed.
 
 The private `CM-Ticket-Transcripts` repository remains data/specification-only under ADR-0010. Production may use only the sanitized public `support-runtime/` derivative under ADR-0012. Groq `openai/gpt-oss-120b` remains the primary hosted triage candidate under ADR-0013.
 
@@ -73,29 +74,17 @@ Validated Groq development prefix at `803a50b`:
 
 Validation at that checkpoint: focused suite 77/77, full suite 308/308, typecheck pass, build pass, benchmark 236/236, and `git diff --check` pass.
 
-## Post-validation implementation state
+## Current implementation state
 
-Four commits were added after `803a50b`:
+The grounded action resolver, explicit read-only Internal API lookup adapter, bounded in-memory conversation state, Discord message wiring, default-off configuration/allowlists, privacy controls, and ADR-0014 activation boundary are implemented. The B0-v3 remediation adds deterministic control-action transport, fully canonical input-aware schemas, independent validator enforcement, and deterministic fallback parity.
 
-```text
-cd25bb66  Align runtime triage envelopes with validated planner
-317703b7  Use input-aware Groq schema in runtime
-66b375ff  Test production deterministic Groq envelopes
-cfb0b163  Add production deterministic support resolver
-```
+No mutation, direct database, private-corpus runtime, or autonomous model execution authority exists.
 
-This work adds production deterministic case/lookup/clarification envelope parity, input-aware Groq schemas, and a runtime-safe deterministic first-turn resolver with regression tests. These commits were **not** fully revalidated before the pause.
+## Release acceptance and holdout status
 
-Implementation intentionally stopped before the grounded action resolver, Internal API lookup adapter, Discord conversation persistence/message wiring, activation ADR/review, release freeze tooling, or final holdout tooling were completed.
+The consumed B0-v3 run against `4d8790f` failed at 25/30 structured acceptance, 24/30 exact action, 5/30 fallback, and 2/3 restricted safety. It was never rerun. B0-v4 and B0-v5 failed deterministic preflight and received no hosted calls. Fresh synthetic B0-v6 passed deterministic preflight 44/44 and its single hosted Groq run at 44/44 accepted, 44/44 exact, zero fallback, and 3/3 restricted safe.
 
-## Holdout status
-
-The final release holdout was **not selected, inspected, generated, sent to Groq, or scored** during the paused session.
-
-- Do not use consumed V3 as final holdout.
-- Do not assume `historical-rule-holdout.jsonl` is eligible without auditing prior use/provenance.
-- A valid final holdout must subtract all consumed benchmark/training/routing-exemplar provenance before selection.
-- If insufficient truly unused historical records remain, record corpus exhaustion instead of creating a contaminated release metric.
+All 1,578 historical tickets influenced the pipeline; no legitimate untouched historical holdout remains. Synthetic B0-v6 is not historical-generalization evidence. Prospective new-ticket shadow validation remains mandatory under ADR-0014 before any production enablement.
 
 Required activation thresholds remain at least:
 
