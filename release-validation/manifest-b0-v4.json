@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "status": "frozen_for_deterministic_preflight",
+  "status": "consumed_failed_deterministic_preflight",
   "productionCandidateSha": "fb866a665260427944a4335db76e27ab17b3ec0f",
   "privateCorpusSha": "c9e993f17583a607402f4173296f64aac52d2ebe",
   "runtimeManifestGitBlobSha": "27473af570caec4f4066a3e2fb6ca38307c5232c",
@@ -10,6 +10,11 @@
   "fixtureSha256": "5a11e71e78f1fd0af06784e04f5f717304264f862d69e02109018665d66f27e4",
   "canonicalHashing": "UTF-8 text with CRLF and lone CR normalized to LF before SHA-256",
   "rows": 44,
+  "deterministicPreflight": {
+    "passed": 36,
+    "failed": 8,
+    "hostedGroqRunPermitted": false
+  },
   "classification": "fresh_synthetic_release_acceptance_not_historical_generalization",
   "providerConfig": {
     "provider": "Groq",

@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "evaluationClass": "fresh_synthetic_release_acceptance_not_historical_generalization",
+  "fixture": "ai-support-release-acceptance-b0-v4",
+  "fixtureSha256": "5a11e71e78f1fd0af06784e04f5f717304264f862d69e02109018665d66f27e4",
+  "productionCandidateSha": "fb866a665260427944a4335db76e27ab17b3ec0f",
+  "privateCorpusSha": "c9e993f17583a607402f4173296f64aac52d2ebe",
+  "runtimeKnowledgeVersion": "1.0.0",
+  "rows": 44,
+  "passed": 36,
+  "failed": 8,
+  "passRate": 0.8181818181818182,
+  "failures": [
+    {
+      "id": "b0v4.007",
+      "pass": false,
+      "expectedAction": "answer_case",
+      "deterministicAction": "ask_clarification",
+      "reasons": [
+        "deterministic_action:ask_clarification",
+        "fallback:ask_clarification",
+        "schema_action:[\"ask_clarification\"]",
+        "allowed_case:none"
+      ]
+    },
+    {
+      "id": "b0v4.014",
+      "pass": false,
+      "expectedAction": "answer_case",
+      "deterministicAction": "ask_clarification",
+      "reasons": [
+        "deterministic_action:ask_clarification",
+        "fallback:ask_clarification",
+        "schema_action:[\"ask_clarification\"]",
+        "allowed_case:case.order.status,case.order.fulfillment_delayed,case.order.wrong_delivery,case.order.refund_cancel"
+      ]
+    },
+    {
+      "id": "b0v4.017",
+      "pass": false,
+      "expectedAction": "answer_case",
+      "deterministicAction": "ask_clarification",
+      "reasons": [
+        "deterministic_action:ask_clarification",
+        "fallback:ask_clarification",
+        "schema_action:[\"ask_clarification\"]",
+        "allowed_case:case.nfa.invalid_first_use,case.nfa.invalid_after_use,case.nfa.owner_session_conflict,case.nfa.redemption_activation,case.nfa.replacement_dispute,case.nfa.access_model_question"
+      ]
+    },
+    {
+      "id": "b0v4.020",
+      "pass": false,
+      "expectedAction": "ask_clarification",
+      "deterministicAction": "ask_clarification",
+      "reasons": [
+        "fallback:ask_clarification"
+      ]
+    },
+    {
+      "id": "b0v4.024",
+      "pass": false,
+      "expectedAction": "ask_clarification",
+      "deterministicAction": "request_dynamic_lookup",
+      "reasons": [
+        "deterministic_action:request_dynamic_lookup",
+        "fallback:request_dynamic_lookup",
+        "schema_action:[\"request_dynamic_lookup\"]",
+        "allowed_clarification:none"
+      ]
+    },
+    {
+      "id": "b0v4.027",
+      "pass": false,
+      "expectedAction": "request_dynamic_lookup",
+      "deterministicAction": "ask_clarification",
+      "reasons": [
+        "deterministic_action:ask_clarification",
+        "fallback:ask_clarification",
+        "schema_action:[\"ask_clarification\"]"
+      ]
+    },
+    {
+      "id": "b0v4.028",
+      "pass": false,
+      "expectedAction": "ask_clarification",
+      "deterministicAction": "request_dynamic_lookup",
+      "reasons": [
+        "deterministic_action:request_dynamic_lookup",
+        "fallback:request_dynamic_lookup",
+        "schema_action:[\"request_dynamic_lookup\"]",
+        "allowed_clarification:none"
+      ]
+    },
+    {
+      "id": "b0v4.035",
+      "pass": false,
+      "expectedAction": "request_policy_route",
+      "deterministicAction": "ask_clarification",
+      "reasons": [
+        "deterministic_action:ask_clarification",
+        "fallback:ask_clarification",
+        "schema_action:[\"ask_clarification\"]"
+      ]
+    }
+  ]
+}
