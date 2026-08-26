@@ -1,0 +1,23 @@
+name: AI Support Release Preflight V3
+
+on:
+  push:
+    branches:
+      - task/ai-support-release-validation-v3-20260826
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Verify frozen production candidate
+        run: git diff --exit-code 4d8790fc90b351d261f8699c7b3cd989c3787fe9 -- src support-runtime package.json package-lock.json tsconfig.json tsconfig.build.json
+      - name: Run B0 v3 deterministic preflight
+        run: node --import tsx release-validation/preflight-b0-v3.ts
