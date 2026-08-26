@@ -155,3 +155,39 @@ test("B0 regression: explicit spoof reversal outranks incidental temporary-durat
   assert.equal(result.primaryDecision, "direct_static_case");
   assert.deepEqual(result.observableCaseIds, ["case.spoofer.reversal_reset"]);
 });
+
+test("B0 v2 regression: apply-to-make media phrasing resolves media application", () => {
+  const result = reviewFirstTurnObservability("How can I apply to make YouTube media for CM?", runtime.aliases);
+  assert.equal(result.primaryDecision, "direct_static_case");
+  assert.deepEqual(result.observableCaseIds, ["case.media.application"]);
+});
+
+test("B0 v2 regression: set-this-up phrasing resolves product requirements", () => {
+  const result = reviewFirstTurnObservability("How do I set this up and where is the configuration guide?", runtime.aliases);
+  assert.equal(result.primaryDecision, "direct_static_case");
+  assert.deepEqual(result.observableCaseIds, ["case.product.requirements"]);
+});
+
+test("B0 v2 regression: was-fine-earlier phrasing resolves NFA invalid after use", () => {
+  const result = reviewFirstTurnObservability("This NFA was fine earlier but it has become invalid now.", runtime.aliases);
+  assert.equal(result.primaryDecision, "direct_static_case");
+  assert.deepEqual(result.observableCaseIds, ["case.nfa.invalid_after_use"]);
+});
+
+test("B0 v2 regression: refunded wording enters current-authority policy route", () => {
+  const result = reviewFirstTurnObservability("I want this purchase refunded.", runtime.aliases);
+  assert.equal(result.primaryDecision, "direct_policy_route");
+  assert.equal(result.policyRoute, true);
+});
+
+test("B0 v2 regression: product-key activation outranks order-key delivery routing", () => {
+  const result = reviewFirstTurnObservability("Where do I activate the product key I already bought?", runtime.aliases);
+  assert.equal(result.primaryDecision, "direct_static_case");
+  assert.deepEqual(result.observableCaseIds, ["case.license.activation"]);
+});
+
+test("B0 v2 regression: website not-working phrasing keeps website-stage clarification", () => {
+  const result = reviewFirstTurnObservability("The website is not working when I try to buy.", runtime.aliases);
+  assert.equal(result.primaryDecision, "family_scoped_clarification");
+  assert.equal(result.clarificationId, "clarify.website_stage");
+});
