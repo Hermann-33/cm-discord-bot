@@ -29,6 +29,8 @@ function config(overrides: Partial<AppConfig["aiSupport"]> = {}): AppConfig {
     },
     aiSupport: {
       enabled: true,
+      shadowEnabled: false,
+      shadowPseudonymSecret: undefined,
       channelIds: ["200000000000000001"],
       categoryIds: ["300000000000000001"],
       ...overrides
@@ -45,6 +47,7 @@ type FakeOptions = {
   parentId?: string | null;
   isThread?: boolean;
   threadCategoryId?: string | null;
+  createdTimestamp?: number;
 };
 
 function fakeMessage(options: FakeOptions = {}): { message: Message; replies: Array<Record<string, unknown>> } {
@@ -60,6 +63,7 @@ function fakeMessage(options: FakeOptions = {}): { message: Message; replies: Ar
     guildId: options.guildId === undefined ? "100000000000000002" : options.guildId,
     channelId: options.channelId ?? "200000000000000001",
     content: options.content ?? "my order status",
+    createdTimestamp: options.createdTimestamp ?? Date.now(),
     channel,
     reply: async (payload: Record<string, unknown>) => {
       replies.push(payload);
@@ -184,4 +188,107 @@ test("message controller fails closed without leaking exception text to customer
   assert.equal(String(fake.replies[0].content).includes("provider secret"), false);
   assert.equal(logs.some((line) => line.includes("provider secret internal failure detail")), false);
   assert.equal(logs.some((line) => line.includes('"errorName":"Error"')), true);
+});
+
+test("shadow enabled with customer AI disabled processes eligible messages without replying", async () => {
+  const recorded: unknown[] = [];
+  const controller = new SupportAiMessageController(
+    config({ enabled: false, shadowEnabled: true, shadowCohortDir: ".local/test" }),
+    service(),
+    new SupportConversationStateStore(),
+    {
+      accepts: () => true,
+      record: async (input) => { recorded.push(input); return null; }
+    }
+  );
+  const fake = fakeMessage();
+  assert.equal(await controller.handle(fake.message), true);
+  assert.equal(fake.replies.length, 0);
+  assert.equal(recorded.length, 1);
+});
+
+test("visible AI takes precedence over shadow and processes a message once", async () => {
+  let records = 0;
+  let preparations = 0;
+  const controller = new SupportAiMessageController(
+    config({ enabled: true, shadowEnabled: true, shadowCohortDir: ".local/test" }),
+    service(async (_text, state) => {
+      preparations += 1;
+      return {
+        state,
+        action: { kind: "case", canonicalIds: ["case.test"], customerMessage: "visible" },
+        planner: {
+          accepted: true, fallbackUsed: false, model: "test", validationErrors: [],
+          decision: {
+            observations: { explicitEntities: [], supportSurface: null, knownFacts: [], missingFacts: [] },
+            nextAction: "answer_case", caseIds: ["case.test"], clarificationId: null,
+            dynamicLookupIds: [], policyIds: [], confidence: 1, reasonCode: "test"
+          }
+        }
+      };
+    }),
+    new SupportConversationStateStore(),
+    { accepts: () => true, record: async () => { records += 1; return null; } }
+  );
+  const fake = fakeMessage();
+  assert.equal(await controller.handle(fake.message), true);
+  assert.equal(preparations, 1);
+  assert.equal(fake.replies.length, 1);
+  assert.equal(records, 0);
+});
+
+test("pre-start shadow messages are rejected before planner processing", async () => {
+  let preparations = 0;
+  const controller = new SupportAiMessageController(
+    config({ enabled: false, shadowEnabled: true, shadowCohortDir: ".local/test" }),
+    service(async (_text, state) => { preparations += 1; return service().prepareTurn(_text, state); }),
+    new SupportConversationStateStore(),
+    { accepts: () => false, record: async () => null }
+  );
+  const fake = fakeMessage({ createdTimestamp: Date.parse("2026-08-25T00:00:00.000Z") });
+  assert.equal(await controller.handle(fake.message), false);
+  assert.equal(preparations, 0);
+  assert.equal(fake.replies.length, 0);
+});
+
+test("shadow writer failure never replies or exposes the writer error body", async () => {
+  const controller = new SupportAiMessageController(
+    config({ enabled: false, shadowEnabled: true, shadowCohortDir: ".local/test" }),
+    service(),
+    new SupportConversationStateStore(),
+    { accepts: () => true, record: async () => { throw new Error("raw provider body secret"); } }
+  );
+  const fake = fakeMessage();
+  const originalConsoleError = console.error;
+  const logs: string[] = [];
+  console.error = (...values: unknown[]) => { logs.push(values.map(String).join(" ")); };
+  try {
+    assert.equal(await controller.handle(fake.message), true);
+  } finally {
+    console.error = originalConsoleError;
+  }
+  assert.equal(fake.replies.length, 0);
+  assert.equal(logs.some((line) => line.includes("raw provider body secret")), false);
+  assert.equal(logs.some((line) => line.includes("AI support shadow record failure")), true);
+});
+
+test("shadow planner failure is recorded safely and never replies", async () => {
+  const failures: unknown[] = [];
+  const controller = new SupportAiMessageController(
+    config({ enabled: false, shadowEnabled: true, shadowCohortDir: ".local/test" }),
+    service(async () => { throw new Error("provider secret internal body"); }),
+    new SupportConversationStateStore(),
+    { accepts: () => true, record: async (input) => { failures.push(input); return null; } }
+  );
+  const fake = fakeMessage();
+  const originalConsoleError = console.error;
+  console.error = () => {};
+  try {
+    assert.equal(await controller.handle(fake.message), true);
+  } finally {
+    console.error = originalConsoleError;
+  }
+  assert.equal(fake.replies.length, 0);
+  assert.equal(failures.length, 1);
+  assert.equal((failures[0] as { failureCode: string }).failureCode, "Error");
 });

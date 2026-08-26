@@ -8,6 +8,7 @@ import {
   type SupportConversationKey
 } from "../ai/supportStateStore";
 import { logger } from "../logger";
+import type { ShadowCohortRecorder } from "../ai/shadowValidation";
 import { safeAllowedMentions } from "./safeMessages";
 
 export const AI_SUPPORT_UNAVAILABLE_MESSAGE =
@@ -22,6 +23,7 @@ type ParentAwareChannel = {
 };
 
 export type SupportAiService = Pick<SupportConversationService, "prepareTurn">;
+export type SupportAiShadowRecorder = Pick<ShadowCohortRecorder, "accepts" | "record">;
 
 function surfaceIds(message: Message): {
   channelId: string;
@@ -45,7 +47,7 @@ function safeErrorName(error: unknown): string {
 }
 
 export function isSupportAiMessageEligible(message: Message, config: AppConfig): boolean {
-  if (!config.aiSupport.enabled) return false;
+  if (!config.aiSupport.enabled && !config.aiSupport.shadowEnabled) return false;
   if (message.author.bot) return false;
   if (message.guildId !== config.discordGuildId) return false;
   if (isAuraCommand(message.content)) return false;
@@ -81,23 +83,66 @@ export class SupportAiMessageController {
   constructor(
     private readonly config: AppConfig,
     private readonly service: SupportAiService,
-    private readonly store = new SupportConversationStateStore()
+    private readonly store = new SupportConversationStateStore(),
+    private readonly shadowRecorder?: SupportAiShadowRecorder,
+    private readonly nowMs: () => number = () => performance.now()
   ) {}
 
   async handle(message: Message): Promise<boolean> {
     if (!isSupportAiMessageEligible(message, this.config)) return false;
 
+    // Customer-visible mode takes precedence when both flags are set. This keeps
+    // configuration mistakes from processing the same message twice.
+    const shadowMode = !this.config.aiSupport.enabled && this.config.aiSupport.shadowEnabled;
+    const messageCreatedAt = new Date(message.createdTimestamp);
+    if (shadowMode && (!this.shadowRecorder || !this.shadowRecorder.accepts(messageCreatedAt))) return false;
+
     const key = conversationKey(message);
     const state = this.store.getOrCreate(key);
     const lookupContext = extractSupportLookupContext(message.content, message.author.id);
+    const startedAt = this.nowMs();
 
     try {
       const result = await this.service.prepareTurn(message.content, state, lookupContext);
       this.store.set(key, result.state);
-      await replySafely(message, result.action.customerMessage);
+      if (shadowMode) {
+        try {
+          await this.shadowRecorder!.record({
+            messageCreatedAt,
+            guildId: message.guildId!,
+            channelId: message.channelId,
+            userId: message.author.id,
+            customerText: message.content,
+            stateBeforeTurn: state,
+            result,
+            latencyMs: this.nowMs() - startedAt
+          });
+        } catch (recordError) {
+          logger.error("AI support shadow record failure", { errorName: safeErrorName(recordError) });
+        }
+      } else {
+        await replySafely(message, result.action.customerMessage);
+      }
       return true;
     } catch (error) {
       logger.error("AI support failure", { errorName: safeErrorName(error) });
+      if (shadowMode) {
+        try {
+          await this.shadowRecorder!.record({
+            messageCreatedAt,
+            guildId: message.guildId!,
+            channelId: message.channelId,
+            userId: message.author.id,
+            customerText: message.content,
+            stateBeforeTurn: state,
+            latencyMs: this.nowMs() - startedAt,
+            failureCode: safeErrorName(error)
+          });
+        } catch (recordError) {
+          logger.error("AI support shadow record failure", { errorName: safeErrorName(recordError) });
+        }
+        return true;
+      }
       try {
         await replySafely(message, AI_SUPPORT_UNAVAILABLE_MESSAGE);
       } catch (replyError) {

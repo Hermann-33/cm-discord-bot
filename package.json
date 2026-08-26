@@ -33,6 +33,15 @@
     "evaluate:groq-triage": "node tools/ticket-transcript-exporter/evaluate-llm-triage.mjs --provider groq --model openai/gpt-oss-120b",
     "evaluate:openrouter-triage": "node tools/ticket-transcript-exporter/evaluate-llm-triage.mjs --provider openrouter --model google/gemma-4-26b-a4b-it:free",
     "import:support-runtime-pack": "node tools/ticket-transcript-exporter/import-support-runtime-pack.mjs",
+    "shadow:init": "tsx tools/ai-support-shadow.ts init",
+    "shadow:start": "tsx src/index.ts",
+    "shadow:status": "tsx tools/ai-support-shadow.ts status",
+    "shadow:export": "tsx tools/ai-support-shadow.ts export",
+    "shadow:adjudicate": "tsx tools/ai-support-shadow.ts adjudicate",
+    "shadow:import": "tsx tools/ai-support-shadow.ts import",
+    "shadow:summarize": "tsx tools/ai-support-shadow.ts summarize",
+    "shadow:close": "tsx tools/ai-support-shadow.ts close",
+    "shadow:report": "tsx tools/ai-support-shadow.ts report",
     "start": "node dist/index.js"
   },
   "engines": {

@@ -27,7 +27,14 @@ test("loads a complete strict configuration with AI support default-off", () => 
   assert.equal(config.internalApi.clientId, "cm-discord-bot");
   assert.equal(config.internalApi.timeoutMs, 5_000);
   assert.equal(config.internalApi.hmacSecret.byteLength, 32);
-  assert.deepEqual(config.aiSupport, { enabled: false, channelIds: [], categoryIds: [] });
+  assert.deepEqual(config.aiSupport, {
+    enabled: false,
+    shadowEnabled: false,
+    shadowCohortDir: undefined,
+    shadowPseudonymSecret: undefined,
+    channelIds: [],
+    categoryIds: []
+  });
   assert.equal(config.groq, undefined);
   assert.equal(config.openRouter, undefined);
 });
@@ -121,6 +128,9 @@ test("AI support parses explicit channel/category allowlists and remains exact-g
   const config = loadConfig(environment);
   assert.deepEqual(config.aiSupport, {
     enabled: true,
+    shadowEnabled: false,
+    shadowCohortDir: undefined,
+    shadowPseudonymSecret: undefined,
     channelIds: ["123456789012345680", "123456789012345681"],
     categoryIds: ["123456789012345682"]
   });
@@ -135,6 +145,28 @@ test("AI support rejects malformed flags and duplicate allowlist IDs", () => {
   const duplicates = validEnvironment();
   duplicates.AI_SUPPORT_CHANNEL_IDS = "123456789012345680,123456789012345680";
   assert.throws(() => loadConfig(duplicates), /AI_SUPPORT_CHANNEL_IDS/);
+});
+
+test("shadow support is default-off and requires Groq, allowlist and cohort directory", () => {
+  const incomplete = validEnvironment();
+  incomplete.AI_SUPPORT_SHADOW_ENABLED = "true";
+  assert.throws(() => loadConfig(incomplete), (error) => {
+    const message = error instanceof Error ? error.message : String(error);
+    return message.includes("GROQ_API_KEY") && message.includes("AI_SUPPORT_CHANNEL_IDS") &&
+      message.includes("AI_SUPPORT_SHADOW_COHORT_DIR") && message.includes("AI_SUPPORT_SHADOW_PSEUDONYM_SECRET_BASE64");
+  });
+
+  const environment = validEnvironment();
+  environment.AI_SUPPORT_SHADOW_ENABLED = "true";
+  environment.AI_SUPPORT_SHADOW_COHORT_DIR = ".local/ai-support-shadow/cohort-a";
+  environment.AI_SUPPORT_SHADOW_PSEUDONYM_SECRET_BASE64 = validSecret;
+  environment.AI_SUPPORT_CHANNEL_IDS = "123456789012345680";
+  environment.GROQ_API_KEY = "gsk_test_key_12345678901234567890";
+  const config = loadConfig(environment);
+  assert.equal(config.aiSupport.enabled, false);
+  assert.equal(config.aiSupport.shadowEnabled, true);
+  assert.equal(config.aiSupport.shadowCohortDir, ".local/ai-support-shadow/cohort-a");
+  assert.equal(config.aiSupport.shadowPseudonymSecret?.byteLength, 32);
 });
 
 test("Groq remains disabled until an API key is configured", () => {

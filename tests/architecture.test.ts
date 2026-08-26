@@ -85,6 +85,7 @@ test("hosted AI integrations use approved hosts and never import private transcr
 
 test("customer-facing AI is guarded by default-off flag plus exact guild and explicit surface allowlists", () => {
   assert.equal(sourceText.includes("AI_SUPPORT_ENABLED"), true);
+  assert.equal(sourceText.includes("AI_SUPPORT_SHADOW_ENABLED"), true);
   assert.equal(sourceText.includes("AI_SUPPORT_CHANNEL_IDS"), true);
   assert.equal(sourceText.includes("AI_SUPPORT_CATEGORY_IDS"), true);
   assert.equal(sourceText.includes("config.aiSupport.enabled"), true);
@@ -121,6 +122,9 @@ test("environment example contains only the approved root variable surface", () 
     "CM_INTERNAL_INTEGRATIONS_API_HMAC_SECRET_BASE64",
     "CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS",
     "AI_SUPPORT_ENABLED",
+    "AI_SUPPORT_SHADOW_ENABLED",
+    "AI_SUPPORT_SHADOW_COHORT_DIR",
+    "AI_SUPPORT_SHADOW_PSEUDONYM_SECRET_BASE64",
     "AI_SUPPORT_CHANNEL_IDS",
     "AI_SUPPORT_CATEGORY_IDS",
     "GROQ_API_KEY",

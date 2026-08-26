@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import "./shadowValidation.test";
 import { sanitizeSupportText, sanitizeTriagePlannerPayload } from "../../src/ai/privacy";
 
 test("sanitizes common customer identifiers and secrets", () => {

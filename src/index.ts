@@ -8,6 +8,7 @@ import { loadBundledSupportRuntimePack } from "./ai/runtimePack";
 import { SupportConversationService } from "./ai/supportConversation";
 import { InternalApiSupportLiveLookupAdapter } from "./ai/supportLookup";
 import { SupportConversationStateStore } from "./ai/supportStateStore";
+import { ShadowCohortRecorder } from "./ai/shadowValidation";
 import { handleAuraCommand } from "./commands/aura";
 import { CmAdminController } from "./commands/cm";
 import { handleRefreshLeaderboardCommand } from "./commands/refreshLeaderboard";
@@ -38,28 +39,50 @@ const leaderboardSchedule = new LeaderboardSchedule(
   Boolean(config.discordLeaderboardMessageId)
 );
 
-let supportAiController: SupportAiMessageController | null = null;
-if (config.aiSupport.enabled) {
-  try {
-    if (!config.groq) throw new Error("AI support enabled without Groq configuration");
-    const runtime = loadBundledSupportRuntimePack();
-    const service = new SupportConversationService(
-      runtime,
-      new RuntimeDeterministicSupportResolver(),
-      new GroqTriageClient(config.groq),
-      new RuntimeDeterministicSupportActionResolver(new InternalApiSupportLiveLookupAdapter(internalApiClient))
-    );
-    supportAiController = new SupportAiMessageController(
-      config,
-      service,
-      new SupportConversationStateStore()
-    );
-    logger.info("AI support initialized", { knowledgeVersion: runtime.knowledgeVersion });
-  } catch (error) {
-    logger.error("AI support initialization failed", sanitizeError(error));
-    supportAiController = null;
+async function initializeSupportAi(): Promise<SupportAiMessageController | null> {
+  if (config.aiSupport.enabled || config.aiSupport.shadowEnabled) {
+    try {
+      if (!config.groq) throw new Error("AI support enabled without Groq configuration");
+      const runtime = loadBundledSupportRuntimePack();
+      const service = new SupportConversationService(
+        runtime,
+        new RuntimeDeterministicSupportResolver(),
+        new GroqTriageClient(config.groq),
+        new RuntimeDeterministicSupportActionResolver(new InternalApiSupportLiveLookupAdapter(internalApiClient))
+      );
+      const shadowRecorder = !config.aiSupport.enabled && config.aiSupport.shadowEnabled
+        ? await ShadowCohortRecorder.open({
+            rootDir: config.aiSupport.shadowCohortDir!,
+            pseudonymKey: config.aiSupport.shadowPseudonymSecret!,
+            runtimeKnowledgeVersion: runtime.knowledgeVersion,
+            model: config.groq.model,
+            reasoningEffort: config.groq.reasoningEffort,
+            maxCompletionTokens: config.groq.maxCompletionTokens
+          })
+        : undefined;
+      const supportAiController = new SupportAiMessageController(
+        config,
+        service,
+        new SupportConversationStateStore(),
+        shadowRecorder
+      );
+      logger.info("AI support initialized", {
+        knowledgeVersion: runtime.knowledgeVersion,
+        mode: shadowRecorder ? "shadow" : "customer_visible"
+      });
+      return supportAiController;
+    } catch (error) {
+      const errorName = error instanceof Error
+        ? error.name.replace(/[^A-Za-z0-9_.-]/gu, "").slice(0, 64) || "Error"
+        : "UnknownError";
+      logger.error("AI support initialization failed", { errorName });
+      return null;
+    }
   }
+  return null;
 }
+
+const supportAiControllerPromise = initializeSupportAi();
 
 const shutdown = createShutdownHandler(
   leaderboardSchedule,
@@ -92,6 +115,7 @@ discordClient.once(Events.ClientReady, async () => {
 discordClient.on(Events.MessageCreate, (message) => {
   void (async () => {
     await handleAuraCommand(message, config, internalApiClient);
+    const supportAiController = await supportAiControllerPromise;
     if (supportAiController) await supportAiController.handle(message);
   })().catch((error: unknown) => {
     logger.error("sanitized message handler failure", sanitizeError(error));

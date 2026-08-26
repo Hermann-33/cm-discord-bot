@@ -284,6 +284,44 @@ export type GroundedSupportAction = {
   customerMessage: string;
 };
 
+export type SupportTurnTrace = {
+  restricted: boolean;
+  deterministicNextAction: SupportTriageDecision["nextAction"] | null;
+  allowedCaseIds: readonly string[];
+  allowedClarificationIds: readonly string[];
+  allowedDynamicLookupIds: readonly string[];
+  allowedPolicyIds: readonly string[];
+};
+
+export type PreparedSupportTurn = {
+  state: SupportConversationState;
+  action: GroundedSupportAction;
+  planner: SupportTriagePlannerResult;
+  trace?: SupportTurnTrace;
+};
+
+function turnTrace(input: SupportTriageInput): SupportTurnTrace {
+  return {
+    restricted: input.restricted,
+    deterministicNextAction: input.allowed.deterministicNextAction ?? null,
+    allowedCaseIds: [...input.allowed.caseIds],
+    allowedClarificationIds: [...input.allowed.clarificationIds],
+    allowedDynamicLookupIds: [...input.allowed.dynamicLookupIds],
+    allowedPolicyIds: [...input.allowed.policyIds]
+  };
+}
+
+function deterministicTrace(decision: SupportTriageDecision): SupportTurnTrace {
+  return {
+    restricted: decision.nextAction === "restricted_escalation",
+    deterministicNextAction: decision.nextAction,
+    allowedCaseIds: [...decision.caseIds],
+    allowedClarificationIds: decision.clarificationId ? [decision.clarificationId] : [],
+    allowedDynamicLookupIds: [...decision.dynamicLookupIds],
+    allowedPolicyIds: [...decision.policyIds]
+  };
+}
+
 export interface DeterministicSupportActionResolver {
   resolve(input: {
     decision: SupportTriageDecision;
@@ -343,11 +381,7 @@ export class SupportConversationService {
     customerText: string,
     inputState: SupportConversationState,
     lookupContext: SupportLookupContext = {}
-  ): Promise<{
-    state: SupportConversationState;
-    action: GroundedSupportAction;
-    planner: SupportTriagePlannerResult;
-  }> {
+  ): Promise<PreparedSupportTurn> {
     const pending = applyPendingClarificationAnswer(inputState, customerText);
     const continuation = applyConversationContinuation(pending.state, customerText, this.runtime);
 
@@ -360,7 +394,8 @@ export class SupportConversationService {
           canonicalIds: [continuation.resolvedProcedureId],
           customerMessage: "That step resolved the issue. No further automated action is needed."
         },
-        planner: deterministicPlannerResult(decision)
+        planner: deterministicPlannerResult(decision),
+        trace: deterministicTrace(decision)
       };
     }
 
@@ -378,7 +413,7 @@ export class SupportConversationService {
         runtime: this.runtime,
         lookupContext
       });
-      return { ...resolved, planner: deterministicPlannerResult(decision) };
+      return { ...resolved, planner: deterministicPlannerResult(decision), trace: deterministicTrace(decision) };
     }
 
     const context = await this.resolver.resolve({
@@ -394,6 +429,6 @@ export class SupportConversationService {
       runtime: this.runtime,
       lookupContext
     });
-    return { ...resolved, planner };
+    return { ...resolved, planner, trace: turnTrace(context.input) };
   }
 }

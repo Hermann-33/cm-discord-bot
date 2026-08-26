@@ -89,6 +89,12 @@ function isCanonicalSecret(value: string): boolean {
   return decoded.length >= 32 && decoded.toString("base64") === value;
 }
 
+const optionalCanonicalSecret = z.preprocess((value) => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length === 0 ? undefined : trimmed;
+}, z.string().refine(isCanonicalSecret).optional());
+
 const timeoutSchema = z.preprocess(
   (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
   z.coerce.number().int().min(1_000).max(15_000).default(5_000)
@@ -110,6 +116,13 @@ const envSchema = z.object({
   CM_INTERNAL_INTEGRATIONS_API_HMAC_SECRET_BASE64: z.string().refine(isCanonicalSecret),
   CM_INTERNAL_INTEGRATIONS_API_TIMEOUT_MS: timeoutSchema,
   AI_SUPPORT_ENABLED: booleanFlag,
+  AI_SUPPORT_SHADOW_ENABLED: booleanFlag,
+  AI_SUPPORT_SHADOW_COHORT_DIR: z.preprocess((value) => {
+    if (typeof value !== "string") return undefined;
+    const trimmed = value.trim();
+    return trimmed.length === 0 ? undefined : trimmed;
+  }, z.string().max(1024).optional()),
+  AI_SUPPORT_SHADOW_PSEUDONYM_SECRET_BASE64: optionalCanonicalSecret,
   AI_SUPPORT_CHANNEL_IDS: optionalSnowflakeList,
   AI_SUPPORT_CATEGORY_IDS: optionalSnowflakeList,
   GROQ_API_KEY: optionalGroqApiKey,
@@ -119,7 +132,7 @@ const envSchema = z.object({
   OPENROUTER_MODEL: openRouterModel,
   OPENROUTER_DATA_COLLECTION: openRouterDataCollection
 }).superRefine((data, context) => {
-  if (!data.AI_SUPPORT_ENABLED) return;
+  if (!data.AI_SUPPORT_ENABLED && !data.AI_SUPPORT_SHADOW_ENABLED) return;
   if (!data.GROQ_API_KEY) {
     context.addIssue({
       code: "custom",
@@ -133,6 +146,20 @@ const envSchema = z.object({
       code: "custom",
       path: ["AI_SUPPORT_CHANNEL_IDS"],
       message: "At least one AI support channel or category allowlist entry is required"
+    });
+  }
+  if (data.AI_SUPPORT_SHADOW_ENABLED && !data.AI_SUPPORT_ENABLED && !data.AI_SUPPORT_SHADOW_COHORT_DIR) {
+    context.addIssue({
+      code: "custom",
+      path: ["AI_SUPPORT_SHADOW_COHORT_DIR"],
+      message: "A cohort directory is required when AI support shadow mode is enabled"
+    });
+  }
+  if (data.AI_SUPPORT_SHADOW_ENABLED && !data.AI_SUPPORT_ENABLED && !data.AI_SUPPORT_SHADOW_PSEUDONYM_SECRET_BASE64) {
+    context.addIssue({
+      code: "custom",
+      path: ["AI_SUPPORT_SHADOW_PSEUDONYM_SECRET_BASE64"],
+      message: "A dedicated pseudonym secret is required when AI support shadow mode is enabled"
     });
   }
 });
@@ -165,6 +192,9 @@ export type OpenRouterConfig = {
 
 export type AiSupportConfig = {
   enabled: boolean;
+  shadowEnabled: boolean;
+  shadowCohortDir?: string;
+  shadowPseudonymSecret?: Buffer;
   channelIds: readonly string[];
   categoryIds: readonly string[];
 };
@@ -217,6 +247,11 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     },
     aiSupport: {
       enabled: parsed.data.AI_SUPPORT_ENABLED,
+      shadowEnabled: parsed.data.AI_SUPPORT_SHADOW_ENABLED,
+      shadowCohortDir: parsed.data.AI_SUPPORT_SHADOW_COHORT_DIR,
+      shadowPseudonymSecret: parsed.data.AI_SUPPORT_SHADOW_PSEUDONYM_SECRET_BASE64
+        ? Buffer.from(parsed.data.AI_SUPPORT_SHADOW_PSEUDONYM_SECRET_BASE64, "base64")
+        : undefined,
       channelIds: parsed.data.AI_SUPPORT_CHANNEL_IDS ?? [],
       categoryIds: parsed.data.AI_SUPPORT_CATEGORY_IDS ?? []
     },
