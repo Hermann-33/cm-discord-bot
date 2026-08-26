@@ -1,0 +1,41 @@
+name: AI Support Hosted B0 V3
+
+on:
+  push:
+    branches:
+      - task/ai-support-release-validation-v3-20260826
+    paths:
+      - .github/workflows/ai-support-release-hosted-b0-v3.yml
+
+jobs:
+  hosted-b0-v3:
+    runs-on: ubuntu-latest
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Verify frozen production candidate
+        run: git diff --exit-code 4d8790fc90b351d261f8699c7b3cd989c3787fe9 -- src support-runtime package.json package-lock.json tsconfig.json tsconfig.build.json
+      - name: Require Groq release secret before provider construction
+        run: |
+          if [ -z "$GROQ_API_KEY" ]; then
+            echo "GROQ_API_KEY repository secret is not configured; no hosted requests were started."
+            exit 78
+          fi
+      - name: Run frozen hosted B0 v3 once
+        run: node --import tsx release-validation/run-hosted-b0-v3.ts
+      - name: Upload release-evaluation result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-support-b0-v3-hosted-result
+          path: release-validation/results/b0-v3-hosted-result.json
+          if-no-files-found: ignore
+          retention-days: 30
