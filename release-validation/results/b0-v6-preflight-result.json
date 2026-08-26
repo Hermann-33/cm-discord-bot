@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "evaluationClass": "fresh_synthetic_release_acceptance_not_historical_generalization",
+  "fixture": "ai-support-release-acceptance-b0-v6",
+  "fixtureSha256": "64c299a6d07b1f06bd49f14aca0ecd90a52d97298d4094ab19dff832eb855b02",
+  "productionCandidateSha": "2e8b763f699b4c1aaa138320f4e0420c736e82dc",
+  "privateCorpusSha": "c9e993f17583a607402f4173296f64aac52d2ebe",
+  "runtimeKnowledgeVersion": "1.0.0",
+  "rows": 44,
+  "passed": 44,
+  "failed": 0,
+  "passRate": 1,
+  "failures": []
+}
