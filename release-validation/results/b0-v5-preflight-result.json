@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "evaluationClass": "fresh_synthetic_release_acceptance_not_historical_generalization",
+  "fixture": "ai-support-release-acceptance-b0-v5",
+  "fixtureSha256": "32cd1db9a1b122c0d049b2d0891cd4f271ff97eec2773b02f9713945a4cdc973",
+  "productionCandidateSha": "983f9d1b6dd8ae57ffe5fcbc626f2d440953ad6b",
+  "privateCorpusSha": "c9e993f17583a607402f4173296f64aac52d2ebe",
+  "runtimeKnowledgeVersion": "1.0.0",
+  "rows": 44,
+  "passed": 41,
+  "failed": 3,
+  "passRate": 0.9318181818181818,
+  "failures": [
+    {
+      "id": "b0v5.019",
+      "pass": false,
+      "expectedAction": "answer_case",
+      "deterministicAction": "support_operation",
+      "reasons": [
+        "deterministic_action:support_operation",
+        "fallback:support_operation:none",
+        "schema_action:[\"support_operation\"]",
+        "allowed_case:case.dashboard.verification,case.support.followup"
+      ]
+    },
+    {
+      "id": "b0v5.020",
+      "pass": false,
+      "expectedAction": "answer_case",
+      "deterministicAction": "request_dynamic_lookup",
+      "reasons": [
+        "deterministic_action:request_dynamic_lookup",
+        "fallback:request_dynamic_lookup:none",
+        "schema_action:[\"request_dynamic_lookup\"]",
+        "allowed_case:case.order.fulfillment_delayed,case.order.wrong_delivery,case.order.status"
+      ]
+    },
+    {
+      "id": "b0v5.033",
+      "pass": false,
+      "expectedAction": "request_dynamic_lookup",
+      "deterministicAction": "ask_clarification",
+      "reasons": [
+        "deterministic_action:ask_clarification",
+        "fallback:ask_clarification:clarify.support_surface",
+        "schema_action:[\"ask_clarification\"]",
+        "allowed_lookups:none"
+      ]
+    }
+  ]
+}
