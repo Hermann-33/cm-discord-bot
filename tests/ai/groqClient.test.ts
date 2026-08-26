@@ -2,7 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { GroqTriageClient } from "../../src/ai/groqClient";
 import type { GroqConfig } from "../../src/config/env";
-import type { SupportTriageInput } from "../../src/ai/supportTriage";
+import {
+  buildSupportTriageJsonSchema,
+  chooseSupportTriageFallback,
+  validateSupportTriageDecision,
+  type SupportTriageDecision,
+  type SupportTriageInput,
+  type TriageNextAction
+} from "../../src/ai/supportTriage";
 
 const config: GroqConfig = {
   origin: "https://api.groq.com",
@@ -65,6 +72,41 @@ function decision(overrides: Record<string, unknown> = {}) {
     confidence: 0.95,
     reasonCode: "insufficient_context",
     ...overrides
+  };
+}
+
+function emptyDecision(nextAction: TriageNextAction, overrides: Partial<SupportTriageDecision> = {}): SupportTriageDecision {
+  return {
+    observations: { explicitEntities: [], supportSurface: null, knownFacts: [], missingFacts: [] },
+    nextAction,
+    caseIds: [],
+    clarificationId: null,
+    dynamicLookupIds: [],
+    policyIds: [],
+    confidence: 1,
+    reasonCode: "test",
+    ...overrides
+  };
+}
+
+function deterministicInput(nextAction: TriageNextAction): SupportTriageInput {
+  return {
+    customerText: "sanitized test input",
+    state: { questionsAsked: [] },
+    allowed: {
+      entityIds: [],
+      caseIds: [],
+      cases: [],
+      familyIds: [],
+      clarificationIds: [],
+      clarifications: [],
+      dynamicLookupIds: [],
+      dynamicLookups: [],
+      policyIds: [],
+      policies: [],
+      deterministicNextAction: nextAction
+    },
+    restricted: nextAction === "restricted_escalation"
   };
 }
 
@@ -213,6 +255,121 @@ test("deterministic static case is encoded in schema and preserved by fallback",
   assert.equal(result.decision.nextAction, "answer_case");
   assert.deepEqual(result.decision.caseIds, ["case.spoofer.hwid_state"]);
   assert.deepEqual(body?.response_format.json_schema.schema.properties.nextAction.enum, ["answer_case"]);
+});
+
+test("B0 v3 regression: every canonical ID field is constrained by the input-aware schema", () => {
+  const input: SupportTriageInput = {
+    ...triageInput(),
+    allowed: {
+      ...triageInput().allowed,
+      dynamicLookupIds: ["orders.details.read"],
+      dynamicLookups: [{ id: "orders.details.read" }],
+      policyIds: ["policy.refund_or_replacement.current_state_required"],
+      policies: [{ id: "policy.refund_or_replacement.current_state_required" }]
+    }
+  };
+  const schema = buildSupportTriageJsonSchema(input) as any;
+  assert.deepEqual(schema.properties.observations.properties.explicitEntities.items.enum, ["account_model.nfa"]);
+  assert.deepEqual(schema.properties.caseIds.items.enum, ["case.nfa.invalid_first_use"]);
+  assert.deepEqual(schema.properties.clarificationId.enum, ["clarify.nfa.failure_stage", null]);
+  assert.deepEqual(schema.properties.dynamicLookupIds.items.enum, ["orders.details.read"]);
+  assert.deepEqual(schema.properties.policyIds.items.enum, ["policy.refund_or_replacement.current_state_required"]);
+
+  const emptySchema = buildSupportTriageJsonSchema(deterministicInput("human_escalation")) as any;
+  assert.equal(emptySchema.properties.observations.properties.explicitEntities.maxItems, 0);
+  assert.equal(emptySchema.properties.caseIds.maxItems, 0);
+  assert.deepEqual(emptySchema.properties.clarificationId, { type: "null" });
+  assert.equal(emptySchema.properties.dynamicLookupIds.maxItems, 0);
+  assert.equal(emptySchema.properties.policyIds.maxItems, 0);
+});
+
+test("B0 v3 regression: hallucinated observation labels are rejected unless they are canonical entity IDs", () => {
+  for (const entity of ["TikTok", "website login", "PayPal payment pending", "account", "loader"]) {
+    const invalid = validateSupportTriageDecision(
+      emptyDecision("ask_clarification", {
+        observations: { explicitEntities: [entity], supportSurface: null, knownFacts: [], missingFacts: [] },
+        clarificationId: "clarify.nfa.failure_stage"
+      }),
+      triageInput()
+    );
+    assert.equal(invalid.valid, false, entity);
+    assert.ok(invalid.errors.includes(`ungrounded_observation_entity:${entity}`), entity);
+  }
+
+  const valid = validateSupportTriageDecision(decision() as SupportTriageDecision, triageInput());
+  assert.equal(valid.errors.some((error) => error.startsWith("ungrounded_observation_entity:")), false);
+});
+
+test("B0 v3 regression: deterministic control actions have singleton schema enums and empty irrelevant IDs", () => {
+  const actions: TriageNextAction[] = [
+    "request_attachment",
+    "restricted_escalation",
+    "human_escalation",
+    "support_operation",
+    "multi_intent_route"
+  ];
+  for (const action of actions) {
+    const schema = buildSupportTriageJsonSchema(deterministicInput(action)) as any;
+    assert.deepEqual(schema.properties.nextAction.enum, [action]);
+    assert.equal(schema.properties.caseIds.maxItems, 0);
+    assert.deepEqual(schema.properties.clarificationId, { type: "null" });
+    assert.equal(schema.properties.dynamicLookupIds.maxItems, 0);
+    assert.equal(schema.properties.policyIds.maxItems, 0);
+  }
+});
+
+test("B0 v3 regression: deterministic policy schema and fallback preserve the current-authority policy", () => {
+  const policyId = "policy.refund_or_replacement.current_state_required";
+  const input: SupportTriageInput = {
+    ...deterministicInput("request_policy_route"),
+    allowed: {
+      ...deterministicInput("request_policy_route").allowed,
+      policyIds: [policyId],
+      deterministicPolicyIds: [policyId],
+      policies: [{ id: policyId }]
+    }
+  };
+  const schema = buildSupportTriageJsonSchema(input) as any;
+  assert.deepEqual(schema.properties.nextAction.enum, ["request_policy_route"]);
+  assert.deepEqual(schema.properties.policyIds.items.enum, [policyId]);
+  assert.equal(schema.properties.policyIds.minItems, 1);
+  assert.deepEqual(chooseSupportTriageFallback(input).policyIds, [policyId]);
+});
+
+test("B0 v3 regression: a policy route without a specific canonical policy fails closed to that control action", () => {
+  const input = deterministicInput("request_policy_route");
+  const schema = buildSupportTriageJsonSchema(input) as any;
+  assert.deepEqual(schema.properties.nextAction.enum, ["request_policy_route"]);
+  assert.equal(schema.properties.policyIds.maxItems, 0);
+  const fallback = chooseSupportTriageFallback(input);
+  assert.equal(fallback.nextAction, "request_policy_route");
+  assert.deepEqual(fallback.policyIds, []);
+  assert.equal(validateSupportTriageDecision(fallback, input).valid, true);
+});
+
+test("B0 v3 regression: planner cannot override deterministic attachment, security, or restricted routes", () => {
+  const attempts: Array<[TriageNextAction, TriageNextAction]> = [
+    ["request_attachment", "answer_case"],
+    ["human_escalation", "request_policy_route"],
+    ["restricted_escalation", "request_policy_route"],
+    ["restricted_escalation", "answer_case"]
+  ];
+  for (const [required, attempted] of attempts) {
+    const input = deterministicInput(required);
+    const validation = validateSupportTriageDecision(emptyDecision(attempted), input);
+    assert.equal(validation.valid, false, `${required} <- ${attempted}`);
+    assert.ok(validation.errors.includes("deterministic_next_action_mismatch"));
+    assert.equal(chooseSupportTriageFallback(input).nextAction, required);
+  }
+});
+
+test("B0 v3 regression: Groq bypass of the response schema is still rejected and deterministically recovered", async () => {
+  const input = deterministicInput("restricted_escalation");
+  const { result } = await captureRequest(input, emptyDecision("request_policy_route"));
+  assert.equal(result.accepted, false);
+  assert.equal(result.fallbackUsed, true);
+  assert.ok(result.validationErrors.includes("deterministic_next_action_mismatch"));
+  assert.equal(result.decision.nextAction, "restricted_escalation");
 });
 
 test("Groq invalid canonical output is rejected by the deterministic validator", async () => {

@@ -20,6 +20,7 @@ export type FirstTurnDecision = {
   lookupIds?: string[];
   dynamicLookupIds?: string[];
   deterministicClarificationIds?: string[];
+  policyIds?: string[];
   policyRoute?: boolean;
 };
 
@@ -173,7 +174,11 @@ export function reviewFirstTurnObservability(query: string, aliases: readonly Ru
     if (has(/\breplace|replacement|warranty\b/u) && nfaSignal) cases.push("case.nfa.replacement_dispute");
     if (has(/\bwrong delivery|wrong account\b/u)) cases.push("case.order.wrong_delivery", "case.account.wrong_specification");
     if (has(/\brefund(?:ed|ing)?\b|\bcancel\b/u)) cases.push("case.order.refund_cancel");
-    return withBase(result, control("direct_policy_route", cases, "The customer explicitly requests or disputes a current-authority remedy.", { policyRoute: true, observableFamilyIds: ["commerce.policy"] }));
+    return withBase(result, control("direct_policy_route", cases, "The customer explicitly requests or disputes a current-authority remedy.", {
+      policyIds: ["policy.refund_or_replacement.current_state_required"],
+      policyRoute: true,
+      observableFamilyIds: ["commerce.policy"]
+    }));
   }
   if (has(/\b(?:customer role|link(?:ed|ing)? (?:my )?discord|discord (?:is )?linked|dont close (?:the )?ticket|do not close (?:the )?ticket|close (?:the )?ticket)\b/u)) {
     return withBase(result, control("direct_support_operation", ["case.dashboard.verification", "case.support.followup"], "The opening request is an observable support-operation task.", { observableFamilyIds: ["support.operations"] }));

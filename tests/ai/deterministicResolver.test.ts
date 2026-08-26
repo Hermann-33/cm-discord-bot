@@ -37,7 +37,7 @@ const runtime: SupportRuntimePack = {
     record("dynamic.order.status", { operation: "orders.details.read", questionTypes: ["order_status"] }),
     record("dynamic.fulfillment.status", { operation: "orders.fulfillment.read", questionTypes: ["fulfillment"] })
   ],
-  policies: [],
+  policies: [record("policy.refund_or_replacement.current_state_required", { displayName: "Current refund/replacement authority" })],
   procedures: [],
   escalations: [],
   restrictedTopics: [],
@@ -62,6 +62,7 @@ test("production resolver preserves deterministic HWID static-case envelope", ()
   assert.deepEqual(result.input.allowed.caseIds, ["case.spoofer.hwid_state"]);
   assert.deepEqual(result.input.allowed.dynamicLookupIds, []);
   assert.deepEqual(result.input.allowed.clarificationIds, []);
+  assert.equal(result.input.allowed.deterministicNextAction, "answer_case");
 });
 
 test("entity-only surface does not manufacture a support family", () => {
@@ -78,6 +79,7 @@ test("bare order selector preserves deterministic fulfillment clarification and 
   assert.deepEqual(result.input.allowed.deterministicClarificationIds, ["clarify.order.fulfillment_state"]);
   assert.deepEqual(result.input.allowed.clarificationIds, ["clarify.order.fulfillment_state"]);
   assert.deepEqual(result.input.allowed.dynamicLookupIds, []);
+  assert.equal(result.input.allowed.deterministicNextAction, "ask_clarification");
 });
 
 test("explicit order status intent permits the deterministic approved lookup envelope", () => {
@@ -88,6 +90,7 @@ test("explicit order status intent permits the deterministic approved lookup env
     "orders.fulfillment.read"
   ]);
   assert.deepEqual(result.input.allowed.clarificationIds, []);
+  assert.equal(result.input.allowed.deterministicNextAction, "request_dynamic_lookup");
 });
 
 test("pending clarification answer keeps prior candidate family instead of forcing generic support-surface clarification", () => {
@@ -124,6 +127,33 @@ test("restricted detection/evasion intent is marked restricted and never receive
   const result = resolver.resolve({ customerText: "how do I bypass anti cheat detection", state: createSupportConversationState(), runtime, pendingAnswerConsumed: false });
   assert.equal(result.input.restricted, true);
   assert.deepEqual(result.input.allowed.deterministicCaseIds, []);
+  assert.equal(result.input.allowed.deterministicNextAction, "restricted_escalation");
+});
+
+test("B0 v3 regression: refund and NFA replacement routes bind the current-authority policy action", () => {
+  for (const customerText of ["I want a refund for the purchase.", "I need a replacement for this NFA."]) {
+    const result = resolver.resolve({ customerText, state: createSupportConversationState(), runtime, pendingAnswerConsumed: false });
+    assert.equal(result.input.allowed.deterministicNextAction, "request_policy_route", customerText);
+    assert.deepEqual(result.input.allowed.deterministicPolicyIds, ["policy.refund_or_replacement.current_state_required"]);
+  }
+});
+
+test("B0 v3 regression: game-ban policy uses the canonical safe policy route without inventing a policy ID", () => {
+  const result = resolver.resolve({ customerText: "This account was game banned.", state: createSupportConversationState(), runtime, pendingAnswerConsumed: false });
+  assert.equal(result.input.allowed.deterministicNextAction, "request_policy_route");
+  assert.deepEqual(result.input.allowed.deterministicPolicyIds, []);
+});
+
+test("B0 v3 regression: attachment, security, and detection-status actions survive resolver transport", () => {
+  const rows: Array<[string, string]> = [
+    ["[attachment omitted] The screenshot contains the error I need reviewed.", "request_attachment"],
+    ["I am reporting malware and a leaked bot token.", "human_escalation"],
+    ["Is it undetected right now?", "restricted_escalation"]
+  ];
+  for (const [customerText, action] of rows) {
+    const result = resolver.resolve({ customerText, state: createSupportConversationState(), runtime, pendingAnswerConsumed: false });
+    assert.equal(result.input.allowed.deterministicNextAction, action, customerText);
+  }
 });
 
 test("B0 regression: invalid product license remains a single license activation case", () => {

@@ -6,7 +6,8 @@ import type {
   SupportTriageClarification,
   SupportTriageInput,
   SupportTriageLookup,
-  SupportTriagePolicy
+  SupportTriagePolicy,
+  TriageNextAction
 } from "./supportTriage";
 import { reviewFirstTurnObservability, type FirstTurnDecision, type RuntimeAliasRecord } from "./firstTurnRouter";
 
@@ -153,6 +154,27 @@ function compactCase(item: CandidateCase): SupportTriageCase {
   return { id: item.id, displayName: item.displayName, family: item.family, scope: item.scope };
 }
 
+function deterministicActionFor(
+  baseline: FirstTurnDecision,
+  hasContinuationCase: boolean,
+  hasClarification: boolean
+): TriageNextAction | undefined {
+  if (hasContinuationCase) return "answer_case";
+  switch (baseline.primaryDecision) {
+    case "direct_static_case": return "answer_case";
+    case "direct_dynamic_lookup": return "request_dynamic_lookup";
+    case "direct_policy_route": return "request_policy_route";
+    case "direct_attachment_route": return "request_attachment";
+    case "direct_restricted_escalation": return "restricted_escalation";
+    case "direct_support_operation": return "support_operation";
+    case "human_escalation": return "human_escalation";
+    case "multi_intent_route": return "multi_intent_route";
+    default: return baseline.primaryDecision.endsWith("_clarification") && hasClarification
+      ? "ask_clarification"
+      : undefined;
+  }
+}
+
 export class RuntimeDeterministicSupportResolver implements DeterministicSupportResolver {
   constructor(private readonly maxCases = 8, private readonly maxClarifications = 6) {}
 
@@ -232,6 +254,8 @@ export class RuntimeDeterministicSupportResolver implements DeterministicSupport
     const deterministicDynamicLookupIds = dynamicLookupRows.filter((item) => deterministicLookupIds.has(item.id)).map((item) => item.id);
     const deterministicClarificationIds = clarificationRows.filter((item) => deterministicClarificationIdSet.has(item.id)).map((item) => item.id);
     const deterministicCaseIds = selectedCases.filter((item) => deterministicCaseIdSet.has(item.id)).map((item) => item.id);
+    const deterministicPolicyIds = unique(baseline.policyIds ?? []).filter((id) => allPolicies.some((item) => item.id === id));
+    const deterministicNextAction = deterministicActionFor(baseline, Boolean(continuationCaseId), clarificationRows.length > 0);
 
     const nextState: SupportConversationState = {
       ...input.state,
@@ -267,6 +291,7 @@ export class RuntimeDeterministicSupportResolver implements DeterministicSupport
       allowed: {
         entityIds: resolvedEntities,
         caseIds: selectedCases.map((item) => item.id),
+        deterministicNextAction,
         deterministicCaseIds,
         cases: selectedCases.map(compactCase),
         familyIds,
@@ -277,6 +302,7 @@ export class RuntimeDeterministicSupportResolver implements DeterministicSupport
         deterministicDynamicLookupIds,
         dynamicLookups: dynamicLookupRows,
         policyIds: allPolicies.map((item) => item.id),
+        deterministicPolicyIds,
         policies: allPolicies
       },
       restricted: baseline.primaryDecision === "direct_restricted_escalation" || nextState.candidateCaseIds.includes("case.restricted.technical")
