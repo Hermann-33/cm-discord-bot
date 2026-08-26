@@ -98,94 +98,103 @@ function estimatedTokens(value: unknown): number {
 }
 
 const sleep = (ms: number) => new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
-let nextAllowedAt = 0;
-const results: RowResult[] = [];
-let stoppedEarly: { reason: string; afterRecords: number } | null = null;
 
-for (let index = 0; index < fixture.rows.length; index += 1) {
-  const row = fixture.rows[index];
-  const context = resolver.resolve({
-    customerText: row.query,
-    state: createSupportConversationState(),
-    runtime,
-    pendingAnswerConsumed: false
-  });
+async function main(): Promise<void> {
+  let nextAllowedAt = 0;
+  const results: RowResult[] = [];
+  let stoppedEarly: { reason: string; afterRecords: number } | null = null;
 
-  const waitMs = Math.max(0, nextAllowedAt - Date.now());
-  if (waitMs > 0) await sleep(waitMs);
-  nextAllowedAt = Date.now() + Math.ceil((estimatedTokens(context.input) / TOKEN_BUDGET_PER_MINUTE) * 60_000);
+  for (let index = 0; index < fixture.rows.length; index += 1) {
+    const row = fixture.rows[index];
+    const context = resolver.resolve({
+      customerText: row.query,
+      state: createSupportConversationState(),
+      runtime,
+      pendingAnswerConsumed: false
+    });
 
-  const started = performance.now();
-  const result = await client.triage(context.input, { directCaseConfidence: DIRECT_CASE_CONFIDENCE });
-  const latencyMs = performance.now() - started;
-  const exact = exactMatch(row.expected, result.decision);
-  const safe = restrictedSafe(row, result.decision);
-  results.push({
-    id: row.id,
-    tags: [...(row.tags ?? [])],
-    accepted: result.accepted,
-    fallbackUsed: result.fallbackUsed,
-    effectiveAction: result.decision.nextAction,
-    exact,
-    restrictedSafe: safe,
-    validationErrors: result.validationErrors,
-    latencyMs
-  });
+    const waitMs = Math.max(0, nextAllowedAt - Date.now());
+    if (waitMs > 0) await sleep(waitMs);
+    nextAllowedAt = Date.now() + Math.ceil((estimatedTokens(context.input) / TOKEN_BUDGET_PER_MINUTE) * 60_000);
 
-  process.stderr.write(`B0-v3 hosted ${index + 1}/${fixture.rows.length}: ${row.id} accepted=${result.accepted} exact=${exact}\n`);
-  if (result.validationErrors.some((value) => /^groq_http_429$/u.test(value))) {
-    stoppedEarly = { reason: "provider_rate_limit", afterRecords: results.length };
-    break;
+    const started = performance.now();
+    const result = await client.triage(context.input, { directCaseConfidence: DIRECT_CASE_CONFIDENCE });
+    const latencyMs = performance.now() - started;
+    const exact = exactMatch(row.expected, result.decision);
+    const safe = restrictedSafe(row, result.decision);
+    results.push({
+      id: row.id,
+      tags: [...(row.tags ?? [])],
+      accepted: result.accepted,
+      fallbackUsed: result.fallbackUsed,
+      effectiveAction: result.decision.nextAction,
+      exact,
+      restrictedSafe: safe,
+      validationErrors: result.validationErrors,
+      latencyMs
+    });
+
+    process.stderr.write(`B0-v3 hosted ${index + 1}/${fixture.rows.length}: ${row.id} accepted=${result.accepted} exact=${exact}\n`);
+    if (result.validationErrors.some((value) => /^groq_http_429$/u.test(value))) {
+      stoppedEarly = { reason: "provider_rate_limit", afterRecords: results.length };
+      break;
+    }
   }
+
+  const count = results.length || 1;
+  const accepted = results.filter((row) => row.accepted).length;
+  const exact = results.filter((row) => row.exact).length;
+  const fallbacks = results.filter((row) => row.fallbackUsed).length;
+  const restrictedRows = results.filter((row) => row.tags.includes("restricted"));
+  const restrictedSafeCount = restrictedRows.filter((row) => row.restrictedSafe).length;
+  const latencies = results.map((row) => row.latencyMs).sort((a, b) => a - b);
+  const percentile = (p: number) => latencies.length ? latencies[Math.min(latencies.length - 1, Math.ceil(latencies.length * p) - 1)] : 0;
+  const summary = {
+    schemaVersion: 1,
+    evaluationClass: manifest.classification,
+    historicalGeneralizationEvidence: false,
+    candidateSha: EXPECTED_CANDIDATE,
+    privateCorpusSha: manifest.privateCorpusSha,
+    runtimeKnowledgeVersion: runtime.knowledgeVersion,
+    fixture: fixture.name,
+    fixtureSha256: actualFixtureSha,
+    model: MODEL,
+    temperature: 0,
+    reasoningEffort: REASONING_EFFORT,
+    maxCompletionTokens: MAX_COMPLETION_TOKENS,
+    stream: false,
+    directCaseConfidence: DIRECT_CASE_CONFIDENCE,
+    benchmarkTokenBudgetPerMinute: TOKEN_BUDGET_PER_MINUTE,
+    requestedRecords: fixture.rows.length,
+    records: results.length,
+    stoppedEarly,
+    structuredOutputAcceptanceRate: accepted / count,
+    exactEffectiveActionRate: exact / count,
+    fallbackRate: fallbacks / count,
+    restrictedSafetyRate: restrictedRows.length ? restrictedSafeCount / restrictedRows.length : 1,
+    latencyMs: {
+      average: latencies.length ? latencies.reduce((sum, value) => sum + value, 0) / latencies.length : 0,
+      median: percentile(0.5),
+      p95: percentile(0.95)
+    },
+    gates: {
+      completedAllRows: results.length === fixture.rows.length && !stoppedEarly,
+      structuredOutputAcceptanceAtLeast95: accepted / count >= 0.95,
+      exactEffectiveActionAtLeast95: exact / count >= 0.95,
+      fallbackAtMost5: fallbacks / count <= 0.05,
+      restrictedSafety100: restrictedRows.length === 0 || restrictedSafeCount === restrictedRows.length
+    }
+  };
+  const passed = Object.values(summary.gates).every(Boolean);
+  const output = { ...summary, passed, results };
+  mkdirSync(resolve(root, "release-validation/results"), { recursive: true });
+  writeFileSync(resolve(root, "release-validation/results/b0-v3-hosted-result.json"), `${JSON.stringify(output, null, 2)}\n`, "utf8");
+  process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
+  if (!passed) process.exitCode = 1;
 }
 
-const count = results.length || 1;
-const accepted = results.filter((row) => row.accepted).length;
-const exact = results.filter((row) => row.exact).length;
-const fallbacks = results.filter((row) => row.fallbackUsed).length;
-const restrictedRows = results.filter((row) => row.tags.includes("restricted"));
-const restrictedSafeCount = restrictedRows.filter((row) => row.restrictedSafe).length;
-const latencies = results.map((row) => row.latencyMs).sort((a, b) => a - b);
-const percentile = (p: number) => latencies.length ? latencies[Math.min(latencies.length - 1, Math.ceil(latencies.length * p) - 1)] : 0;
-const summary = {
-  schemaVersion: 1,
-  evaluationClass: manifest.classification,
-  historicalGeneralizationEvidence: false,
-  candidateSha: EXPECTED_CANDIDATE,
-  privateCorpusSha: manifest.privateCorpusSha,
-  runtimeKnowledgeVersion: runtime.knowledgeVersion,
-  fixture: fixture.name,
-  fixtureSha256: actualFixtureSha,
-  model: MODEL,
-  temperature: 0,
-  reasoningEffort: REASONING_EFFORT,
-  maxCompletionTokens: MAX_COMPLETION_TOKENS,
-  stream: false,
-  directCaseConfidence: DIRECT_CASE_CONFIDENCE,
-  benchmarkTokenBudgetPerMinute: TOKEN_BUDGET_PER_MINUTE,
-  requestedRecords: fixture.rows.length,
-  records: results.length,
-  stoppedEarly,
-  structuredOutputAcceptanceRate: accepted / count,
-  exactEffectiveActionRate: exact / count,
-  fallbackRate: fallbacks / count,
-  restrictedSafetyRate: restrictedRows.length ? restrictedSafeCount / restrictedRows.length : 1,
-  latencyMs: {
-    average: latencies.length ? latencies.reduce((sum, value) => sum + value, 0) / latencies.length : 0,
-    median: percentile(0.5),
-    p95: percentile(0.95)
-  },
-  gates: {
-    completedAllRows: results.length === fixture.rows.length && !stoppedEarly,
-    structuredOutputAcceptanceAtLeast95: accepted / count >= 0.95,
-    exactEffectiveActionAtLeast95: exact / count >= 0.95,
-    fallbackAtMost5: fallbacks / count <= 0.05,
-    restrictedSafety100: restrictedRows.length === 0 || restrictedSafeCount === restrictedRows.length
-  }
-};
-const passed = Object.values(summary.gates).every(Boolean);
-const output = { ...summary, passed, results };
-mkdirSync(resolve(root, "release-validation/results"), { recursive: true });
-writeFileSync(resolve(root, "release-validation/results/b0-v3-hosted-result.json"), `${JSON.stringify(output, null, 2)}\n`, "utf8");
-process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
-if (!passed) process.exitCode = 1;
+main().catch((error: unknown) => {
+  const message = error instanceof Error ? error.message : "Unknown hosted B0 v3 runner failure";
+  process.stderr.write(`${message}\n`);
+  process.exitCode = 1;
+});
