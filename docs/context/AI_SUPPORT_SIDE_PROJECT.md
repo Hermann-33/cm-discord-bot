@@ -1,7 +1,7 @@
 # AI Support Side Project
 
-Updated: 2026-08-24 10:49 +08:00
-Status: `PAUSED / BENCHMARK-CLEANUP CHECKPOINT`
+Updated: 2026-08-26
+Status: `SYNTHETIC ACCEPTANCE PASS / SHADOW TOOLING IMPLEMENTED / REAL COLLECTION NOT STARTED`
 
 This is the compact durable context for the Cheater's Market AI-support workstream. It complements, but does not supersede, `AGENTS.md`, accepted ADRs, `ACTIVE_CONTEXT.md`, or `HANDOFF.md`.
 
@@ -383,6 +383,7 @@ See `AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md` for exact latency/token metrics
 - `dynamic.catalog.*` uses `catalog.current.read`, but that operation is not confirmed in the documented website Internal Integrations API list. Never replace missing live authority with historical catalog/detection/stock claims.
 - B0-v3 is consumed failed evidence and was never rerun. B0-v4/B0-v5 failed deterministic preflight without hosted calls. Fresh synthetic B0-v6 passed 44/44 deterministic and hosted acceptance, but is not historical generalization evidence.
 - All 1,578 historical tickets influenced the pipeline. Prospective newly arriving ticket shadow validation is the next evidence gate under ADR-0014.
+- Prospective cohort/no-reply/adjudication/metrics tooling is implemented at `fe644f3`; no real ticket was collected and no bot was started or deployed. ADR-0014 has no minimum sample, so the documented 200-turn/14-day recommendation still requires governance approval.
 
 ## Activation gate
 

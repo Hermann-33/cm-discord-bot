@@ -1,6 +1,6 @@
 # AI Support Handover Prompt
 
-Updated: 2026-08-26 14:30 +08:00
+Updated: 2026-08-26
 
 Use this as the copy-paste handover prompt for a new ChatGPT/Codex/agent session. Repository documentation and accepted ADRs are authoritative over chat history.
 
@@ -30,26 +30,27 @@ Read in this order before planning, changing routing/benchmarks, spending hosted
 2. `docs/README.md`
 3. `docs/context/ACTIVE_CONTEXT.md`
 4. `docs/context/AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md`
-5. `docs/context/HANDOFF.md`
-6. `docs/context/AI_SUPPORT_RELEASE_HANDOVER_2026-08-25.md` for historical context
-7. `docs/context/AI_SUPPORT_SIDE_PROJECT.md`
-8. `docs/context/PROJECT_BRIEF.md`
-9. `docs/context/SIDE_PROJECTS.md`
-10. `docs/context/ARCHITECTURE.md`
-11. `docs/context/DATA_STATUS.md`
-12. `docs/context/CODEBASE_MAP.md`
-13. `docs/context/COMMANDS.md`
-14. `docs/context/ROADMAP.md`
-15. `docs/context/WORKFLOW.md`
-16. `docs/context/AUDIT_LOG.md`
-17. `docs/context/PROJECT_HISTORY.md`
-18. `docs/GROQ_SUPPORT_TRIAGE.md`
-19. `docs/OPENROUTER_SUPPORT_TRIAGE.md`
-20. `docs/decisions/ADR-0010-ticket-transcript-data-repository-boundary.md`
-21. `docs/decisions/ADR-0011-pending-purchase-and-fulfillment-support-view.md`
-22. `docs/decisions/ADR-0012-bundled-support-runtime-and-openrouter-planner.md`
-23. `docs/decisions/ADR-0013-groq-primary-support-triage-provider.md`
-24. `docs/decisions/ADR-0014-customer-facing-ai-support-activation-boundary.md`
+5. `docs/AI_SUPPORT_SHADOW_VALIDATION.md`
+6. `docs/context/HANDOFF.md`
+7. `docs/context/AI_SUPPORT_RELEASE_HANDOVER_2026-08-25.md` for historical context
+8. `docs/context/AI_SUPPORT_SIDE_PROJECT.md`
+9. `docs/context/PROJECT_BRIEF.md`
+10. `docs/context/SIDE_PROJECTS.md`
+11. `docs/context/ARCHITECTURE.md`
+12. `docs/context/DATA_STATUS.md`
+13. `docs/context/CODEBASE_MAP.md`
+14. `docs/context/COMMANDS.md`
+15. `docs/context/ROADMAP.md`
+16. `docs/context/WORKFLOW.md`
+17. `docs/context/AUDIT_LOG.md`
+18. `docs/context/PROJECT_HISTORY.md`
+19. `docs/GROQ_SUPPORT_TRIAGE.md`
+20. `docs/OPENROUTER_SUPPORT_TRIAGE.md`
+21. `docs/decisions/ADR-0010-ticket-transcript-data-repository-boundary.md`
+22. `docs/decisions/ADR-0011-pending-purchase-and-fulfillment-support-view.md`
+23. `docs/decisions/ADR-0012-bundled-support-runtime-and-openrouter-planner.md`
+24. `docs/decisions/ADR-0013-groq-primary-support-triage-provider.md`
+25. `docs/decisions/ADR-0014-customer-facing-ai-support-activation-boundary.md`
 
 The 2026-08-26 release validation is authoritative for the current implementation, synthetic acceptance, and remaining activation gate.
 
@@ -62,6 +63,10 @@ private main HEAD:      c9e993f17583a607402f4173296f64aac52d2ebe
 ```
 
 Candidate `2e8b763` passed 375/375 tests, typecheck, build, diff check, and npm audit with zero vulnerabilities. Fresh synthetic B0-v6 passed 44/44 deterministic preflight and 44/44 on its single hosted run, with zero fallback and 3/3 restricted safety.
+
+Prospective shadow tooling is implemented on isolated branch `task/ai-support-shadow-validation`: independent default-off no-reply mode, frozen cutoff cohorts, privacy-safe local evidence, human adjudication, deterministic ADR metrics, and close/report tooling. No real fresh tickets were collected, no bot was started, and no deployment or activation occurred.
+
+Shadow implementation commit: `fe644f33be2341d71bc9c0860d339046fcdf0c37`; validation was 388/388 tests plus typecheck/build/diff/audit pass with zero vulnerabilities.
 
 ### Mandatory reading — private repository
 
@@ -250,10 +255,11 @@ Continue authoritative implementation on `task/ai-support-integration` unless go
 
 1. Verify candidate `2e8b763`, runtime `1.0.0`, and private corpus SHA `c9e993f` remain the documented pins.
 2. Keep `AI_SUPPORT_ENABLED=false` in production.
-3. Design and authorize prospective fresh-ticket shadow collection without customer-visible AI output.
-4. Score privacy, restricted safety, action correctness, fallback, lookup authority, and multi-turn behavior on newly arriving tickets.
-5. Review every imperfect row and operational kill-switch/rollback evidence.
-6. Require a separate explicit release decision before any production enablement or deployment.
+3. Approve a minimum prospective sample/review duration; ADR-0014 defines no minimum and the documented 200-turn/14-day recommendation is proposed only.
+4. Initialize a cohort and separately authorize the bot to run with `AI_SUPPORT_ENABLED=false` and shadow enabled.
+5. Score privacy, restricted safety, action correctness, fallback, lookup authority, and multi-turn behavior on newly arriving tickets.
+6. Review every imperfect row and operational kill-switch/rollback evidence.
+7. Require a separate explicit release decision before any production enablement or deployment.
 
 ### Working rules
 

@@ -240,8 +240,9 @@ Canonical runtime cases:      55
 Data repo:                    private, data/specification-only
 Public runtime derivative:    sanitized support-runtime/ only
 Hosted planner candidate:     Groq openai/gpt-oss-120b
-Customer-facing AI:           disabled / unwired
-Workstream state:             development validation complete; final holdout untouched
+Customer-facing AI:           wired default-off / disabled / not deployed
+Shadow validation tooling:    implemented; real collection not started
+Workstream state:             synthetic acceptance pass; prospective evidence pending
 ```
 
 ### Current V3 benchmark checkpoint

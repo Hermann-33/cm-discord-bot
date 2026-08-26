@@ -7,6 +7,7 @@ This documentation system is the durable memory and governance layer for the Che
 - `../AGENTS.md` — mandatory operating rules
 - `context/ACTIVE_CONTEXT.md` — concise present state
 - `context/AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md` — failed consumed B0-v3, structural remediation, consumed B0-v4/B0-v5 preflights, passing B0-v6 synthetic acceptance, and remaining prospective-shadow gate
+- `AI_SUPPORT_SHADOW_VALIDATION.md` — prospective cohort initialization, no-reply runtime semantics, privacy-safe evidence, adjudication, metrics, and close/report operations
 - `context/AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md` — completed local repair, 236-row benchmark rebuild, clean 20/40-row Groq development results, and remaining final-holdout gate
 - `context/AI_SUPPORT_TRIAGE_PROGRESS_2026-08-25.md` — measured hosted-triage progress, failure analysis and deterministic-clarification hardening
 - `context/AI_SUPPORT_TRIAGE_SCHEMA_HARDENING_2026-08-25.md` — historical addendum describing the input-aware Groq strict-schema action envelope before completed validation

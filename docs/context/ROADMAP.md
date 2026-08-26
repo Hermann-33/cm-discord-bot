@@ -174,11 +174,11 @@ safety_boundary_review:     1
 
 The final post-fix Groq development prefix reached 40/40 safe-progress-or-better: 36 optimal, 4 safe-progress, and zero unsafe, fallback, invalid, leakage, or semantic-review rows. Full local validation passed 308/308 tests plus typecheck/build/diff hygiene. See `AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md`.
 
-### Transcript Phase T6 — Synthetic release acceptance — COMPLETE; PROSPECTIVE SHADOW PENDING
+### Transcript Phase T6 — Synthetic release acceptance — COMPLETE; SHADOW TOOLING IMPLEMENTED, COLLECTION NOT STARTED
 
 The consumed B0-v3 candidate failed structurally. Deterministic action transport and canonical-ID schema/validator/fallback constraints were remediated, and every failure became a regression. B0-v4 and B0-v5 failed deterministic preflight and were not sent to Groq. Fresh B0-v6 passed 44/44 deterministic preflight and a single 44/44 hosted run with 100% acceptance/exact/restricted safety and zero fallback.
 
-All historical tickets influenced the pipeline, so no legitimate untouched historical holdout remains. Prospective fresh-ticket shadow validation is the remaining real-world evidence gate. See `AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md`.
+All historical tickets influenced the pipeline, so no legitimate untouched historical holdout remains. Prospective cohort/no-reply/adjudication/metrics tooling is implemented on `task/ai-support-shadow-validation`, but no real fresh tickets have been collected. Prospective evidence remains the real-world gate. See `AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md` and `../AI_SUPPORT_SHADOW_VALIDATION.md`.
 
 After the completed synthetic acceptance:
 
@@ -191,7 +191,7 @@ After the completed synthetic acceptance:
 
 Do not relabel synthetic acceptance as historical generalization evidence.
 
-### Phase 8 — Customer-facing AI support runtime integration — IMPLEMENTED DEFAULT-OFF / BLOCKED BY PROSPECTIVE SHADOW GATE
+### Phase 8 — Customer-facing AI support runtime integration — DEFAULT-OFF; SHADOW TOOLING IMPLEMENTED / EVIDENCE PENDING
 
 ADR-0014 default-off Discord wiring exists, but production activation remains unauthorized.
 
@@ -208,5 +208,7 @@ context-answerable questions = 0
 Also require high structured-output acceptance, low/zero fallback, acceptable latency/rate-limit behavior, privacy pass, product/variant/account-model isolation, restricted-topic precision and correct multi-turn eventual routing.
 
 Only after these gates pass may a separately authorized task approve production enablement or deployment.
+
+ADR-0014 defines no minimum prospective sample. The current 200-adjudicated-turn/14-day operating recommendation is explicitly proposed and requires governance approval; tooling does not treat it as authoritative or declare release readiness.
 
 No bot startup, command registration, deployment, website mutation or customer-facing AI activation is authorized by the current paused workstream.

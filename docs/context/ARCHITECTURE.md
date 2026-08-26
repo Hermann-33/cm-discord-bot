@@ -219,6 +219,14 @@ Production reads only `support-runtime/` bundled with the public deployment. The
 
 No environment variable or startup path can point production at the private repository.
 
+### Prospective shadow boundary
+
+The separate default-off shadow flag reuses the exact ADR-0014 guild/channel/category/bot/command eligibility and the same deterministic planner/action/read-only lookup pipeline. With customer AI disabled, an eligible post-cutoff message produces only a privacy-safe record in an operator-selected protected local cohort; it sends no Discord reply. Visible mode takes precedence if both flags are true, preventing duplicate processing.
+
+Each cohort freezes candidate `2e8b763f699b4c1aaa138320f4e0420c736e82dc`, runtime `1.0.0`, Groq/model configuration, and collection start. Evidence uses cohort-scoped keyed pseudonyms and sanitized content/state; raw Discord IDs, emails, selectors, secrets, provider bodies, and fulfillment material are excluded. Cohort files are not sent to Groq and do not create a private-corpus or database dependency.
+
+Shadow/adjudication failure cannot block normal bot operation or create a response/mutation path. An approved prospective sample rule and separate release decision remain unresolved governance prerequisites.
+
 ## Fragile boundaries
 
 - HMAC canonicalization/exact-body retries;

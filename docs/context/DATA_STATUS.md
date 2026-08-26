@@ -207,6 +207,8 @@ Raw transcripts, historical evidence, private evaluation rows, fulfillment mater
 
 The public `support-runtime/` pack is an ADR-0012 sanitized derivative, not a copy of private `runtime-kb/`. The import allowlist excludes private manifests, routing exemplars, provenance/evidence fields, transcript/fact IDs and historical match-context prose. Production has no private-repository filesystem dependency.
 
+Prospective shadow evidence is a separate local evaluation class, `prospective_fresh_ticket_shadow`. It contains sanitized adjudication material and cohort-scoped pseudonyms only; it is neither historical corpus data nor planner input. Shadow execution uses only the existing approved read adapter and adds no operation, permission, mutation, database credential, or private-corpus dependency.
+
 ## Current AI benchmark/data checkpoint
 
 The committed V3 adjudication overlay excludes 26 rows. The rebuilt consumed development benchmark retains 236/236 adjudicated rows with review queue 0 and representability 1. The post-fix 40-row Groq prefix had zero unsafe, fallback, invalid, leakage, or semantic-review rows.

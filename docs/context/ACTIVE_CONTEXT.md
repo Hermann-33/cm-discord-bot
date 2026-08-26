@@ -1,22 +1,25 @@
 # Active Context
 
-Updated: 2026-08-26 14:30 +08:00
+Updated: 2026-08-26
 
 ## Read order for AI-support work
 
 1. `AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md`
-2. `HANDOFF.md`
+2. `../AI_SUPPORT_SHADOW_VALIDATION.md`
+3. `HANDOFF.md`
 3. `AI_SUPPORT_RELEASE_HANDOVER_2026-08-25.md` for pre-release history
 4. `AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md` for consumed development history
 5. `AI_SUPPORT_HANDOVER_PROMPT.md` and its remaining ordered references
 
-The 2026-08-26 release validation is authoritative for the current implementation and synthetic acceptance state.
+The release validation remains authoritative for synthetic evidence. The shadow-validation guide owns the prospective collection and adjudication procedure.
 
 ## Current repository state
 
 ```text
 public repo:    Hermann-33/cm-discord-bot
-public branch:  task/ai-support-integration
+authoritative production branch: task/ai-support-integration
+shadow implementation branch:    task/ai-support-shadow-validation
+shadow implementation commit:    fe644f33be2341d71bc9c0860d339046fcdf0c37
 failed B0-v3 production candidate: 4d8790fc90b351d261f8699c7b3cd989c3787fe9
 current remediated candidate:       2e8b763f699b4c1aaa138320f4e0420c736e82dc
 
@@ -25,11 +28,11 @@ private branch: main
 private HEAD:   c9e993f17583a607402f4173296f64aac52d2ebe
 ```
 
-Candidate `2e8b763` passed 375/375 tests, typecheck, build, diff check, and npm audit with zero vulnerabilities.
+Candidate `2e8b763` passed 375/375 tests, typecheck, build, diff check, and npm audit with zero vulnerabilities. Shadow instrumentation commit `fe644f3` subsequently passed 388/388 tests, typecheck, build, diff check, and audit with zero vulnerabilities without changing frozen routing/planner/action/privacy behavior.
 
 ## Production boundary
 
-Customer-facing AI support remains **default-off and not deployed** under ADR-0014. No bot startup, command registration, deployment, website mutation, or customer-facing AI activation was performed.
+Customer-facing AI support remains **default-off and not deployed** under ADR-0014. The isolated shadow branch adds a separate default-off, no-reply prospective evaluator. No real bot startup, ticket collection, command registration, deployment, website mutation, or customer-facing AI activation was performed.
 
 The private `CM-Ticket-Transcripts` repository remains data/specification-only under ADR-0010. Production may use only the sanitized public `support-runtime/` derivative under ADR-0012. Groq `openai/gpt-oss-120b` remains the primary hosted triage candidate under ADR-0013.
 
@@ -76,7 +79,7 @@ Validation at that checkpoint: focused suite 77/77, full suite 308/308, typechec
 
 ## Current implementation state
 
-The grounded action resolver, explicit read-only Internal API lookup adapter, bounded in-memory conversation state, Discord message wiring, default-off configuration/allowlists, privacy controls, and ADR-0014 activation boundary are implemented. The B0-v3 remediation adds deterministic control-action transport, fully canonical input-aware schemas, independent validator enforcement, and deterministic fallback parity.
+The grounded action resolver, explicit read-only Internal API lookup adapter, bounded in-memory conversation state, Discord message wiring, default-off configuration/allowlists, privacy controls, and ADR-0014 activation boundary are implemented. The isolated shadow branch adds cohort start-time enforcement, privacy-safe local JSONL evidence, cohort-scoped pseudonyms, human adjudication, deterministic metrics, and close/report tooling. It reuses the exact visible-mode eligibility and deterministic action pipeline but sends no Discord reply.
 
 No mutation, direct database, private-corpus runtime, or autonomous model execution authority exists.
 
@@ -84,7 +87,9 @@ No mutation, direct database, private-corpus runtime, or autonomous model execut
 
 The consumed B0-v3 run against `4d8790f` failed at 25/30 structured acceptance, 24/30 exact action, 5/30 fallback, and 2/3 restricted safety. It was never rerun. B0-v4 and B0-v5 failed deterministic preflight and received no hosted calls. Fresh synthetic B0-v6 passed deterministic preflight 44/44 and its single hosted Groq run at 44/44 accepted, 44/44 exact, zero fallback, and 3/3 restricted safe.
 
-All 1,578 historical tickets influenced the pipeline; no legitimate untouched historical holdout remains. Synthetic B0-v6 is not historical-generalization evidence. Prospective new-ticket shadow validation remains mandatory under ADR-0014 before any production enablement.
+All 1,578 historical tickets influenced the pipeline; no legitimate untouched historical holdout remains. Synthetic B0-v6 is not historical-generalization evidence. Prospective tooling is implemented, but collection has not started and no real fresh tickets were collected. Prospective evidence and a separate release-governance decision remain mandatory before any production enablement.
+
+ADR-0014 supplies quality thresholds but no minimum prospective sample. The tooling therefore never declares release readiness. `AI_SUPPORT_SHADOW_VALIDATION.md` documents a proposed 200-turn/14-day operational recommendation that requires explicit governance approval and is not authoritative or hardcoded.
 
 Required activation thresholds remain at least:
 

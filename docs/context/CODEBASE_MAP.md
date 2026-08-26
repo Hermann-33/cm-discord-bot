@@ -31,7 +31,7 @@ Never commit `.env`, `dist/`, `node_modules`, logs, archives, generated transcri
 - `src/api/errors.ts` — stable safe API errors.
 - `src/config/env.ts` — Discord/API/admin plus hosted-AI environment validation/defaults.
 
-### AI support source — scaffolded, not customer-enabled
+### AI support source — customer-disabled; prospective shadow tooling available
 
 - `src/ai/groqClient.ts` — primary hosted Groq structured-output triage client for `openai/gpt-oss-120b`; no automatic retry.
 - `src/ai/openRouterClient.ts` — optional secondary OpenRouter development adapter.
@@ -39,10 +39,13 @@ Never commit `.env`, `dist/`, `node_modules`, logs, archives, generated transcri
 - `src/ai/supportTriage.ts` — production-side structured decision schema/validation/fallback boundary.
 - `src/ai/runtimePack.ts` — integrity-checked loader for the bundled public support runtime only.
 - `src/ai/supportConversation.ts` — explicit state model, pending-answer consumption and resolver/planner/action interfaces.
+- `src/ai/shadowValidation.ts` — frozen prospective cohort manifests, pseudonymous privacy-safe evidence, adjudication contracts, and deterministic ADR metrics.
+- `src/discord/supportAi.ts` — shared exact eligibility boundary; visible reply mode or independent no-reply shadow mode with visible-mode precedence.
+- `tools/ai-support-shadow.ts` — local cohort init/status/export/adjudicate/import/summarize/close/report CLI; never imported by production.
 - `src/ai/index.ts` — AI support exports.
 - `support-runtime/` — generated sanitized runtime artifacts and integrity metadata; no raw historical evidence/provenance.
 
-Customer-facing Discord entrypoints are intentionally **not wired** to this support planner yet.
+Customer-facing wiring remains default-off. Shadow wiring uses the same exact surface boundary but sends no Discord reply and is also default-off.
 
 Important validator caveat: direct-case validation still needs a future explicit design for case-specific required observable conditions. Do not replace that with a crude `multiple candidate families => reject direct answer` rule.
 

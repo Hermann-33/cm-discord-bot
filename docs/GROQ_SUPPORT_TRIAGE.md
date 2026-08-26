@@ -1,6 +1,6 @@
 # Groq Support-Triage Setup
 
-Updated: 2026-08-25 07:59 +08:00
+Updated: 2026-08-26
 
 Groq `openai/gpt-oss-120b` is the primary hosted candidate for the constrained support-triage planner under ADR-0013. Customer-facing Discord support is wired default-off under ADR-0014, remains disabled, and is not deployed.
 
@@ -15,6 +15,8 @@ GROQ_REASONING_EFFORT=low
 ```
 
 Only the key must be supplied. Never commit, print, log, or copy it into the transcript repository.
+
+Prospective shadow mode additionally requires its independent default-off flag, protected cohort directory, and dedicated local pseudonym secret. It preserves the same planner privacy contract, records no secret values, and never sends an AI Discord reply. See `AI_SUPPORT_SHADOW_VALIDATION.md`.
 
 ## Hosted boundary
 
@@ -144,7 +146,7 @@ Do not run the bot, register commands, deploy, enable customer-facing support, o
 
 ## Activation gate
 
-The consumed B0-v3 run failed and was never rerun. B0-v4 and B0-v5 failed deterministic preflight without hosted calls. Fresh synthetic B0-v6 passed once, but it is not historical generalization evidence. All historical tickets influenced the pipeline, so production activation requires prospective fresh-ticket shadow validation under ADR-0014, followed by human review and a separate release decision.
+The consumed B0-v3 run failed and was never rerun. B0-v4 and B0-v5 failed deterministic preflight without hosted calls. Fresh synthetic B0-v6 passed once, but it is not historical generalization evidence. Prospective shadow tooling is implemented, but no real fresh tickets have been collected. Production activation still requires completed human-reviewed prospective evidence, governance approval for a minimum sample, and a separate release decision.
 
 Also validate privacy, restricted-topic precision, dynamic lookup authorization/correctness, multi-turn behavior, and operational rollout controls. Development-prefix success alone is not production approval.
 

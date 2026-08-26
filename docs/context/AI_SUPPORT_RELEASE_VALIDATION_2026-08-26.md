@@ -1,6 +1,6 @@
 # AI Support Release Validation — 2026-08-26
 
-Status: `IMPLEMENTATION COMPLETE / SYNTHETIC RELEASE ACCEPTANCE PASS / PROSPECTIVE SHADOW PENDING / PRODUCTION DISABLED`
+Status: `SYNTHETIC RELEASE ACCEPTANCE PASS / SHADOW TOOLING IMPLEMENTED / REAL COLLECTION PENDING / PRODUCTION DISABLED`
 
 ## Production candidate
 
@@ -110,5 +110,13 @@ Until that evidence exists:
 ```text
 AI_SUPPORT_ENABLED=false
 production deployment: not authorized
-prospective shadow validation: pending
+prospective shadow collection/evidence: pending
 ```
+
+## Prospective-shadow implementation addendum
+
+The isolated `task/ai-support-shadow-validation` branch implements the collection mechanism: separate default-off no-reply configuration, exact existing eligibility, frozen prospective cutoff cohorts, privacy-safe local evidence, independent human adjudication, deterministic ADR-0014 metric summaries, and close/governance-report tooling. No real fresh tickets were collected and no bot was started or deployed during implementation.
+
+Implementation commit `fe644f33be2341d71bc9c0860d339046fcdf0c37` passed 388/388 tests, typecheck, build, diff check, and `npm audit` with zero vulnerabilities.
+
+ADR-0014 defines no minimum prospective sample. Tooling reports measured gates but never declares release readiness. The operator guide proposes 200 fully adjudicated turns over 14 days as a conservative governance recommendation requiring explicit approval; it is not an accepted or hardcoded gate.

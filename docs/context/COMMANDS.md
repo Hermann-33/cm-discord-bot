@@ -15,7 +15,7 @@ No command may directly connect to Supabase/Postgres.
 
 ## AI support activation state
 
-ADR-0012 support planner/service scaffolding is not connected to Discord. There is no AI support command and arbitrary `MessageCreate` traffic is not routed to OpenRouter. Customer-facing activation requires a separate benchmark-backed task.
+ADR-0014 customer support wiring is default-off. A separate `AI_SUPPORT_SHADOW_ENABLED` path may process only the same exact eligible `MessageCreate` surfaces while `AI_SUPPORT_ENABLED=false`; it records a frozen prospective cohort and never replies. Visible mode takes precedence if both flags are set, preventing duplicate processing. Cohort lifecycle/review commands are local npm tooling, not Discord commands. Customer activation still requires prospective evidence and a separate release decision.
 
 ## `cm aura`
 

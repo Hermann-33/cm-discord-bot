@@ -4,6 +4,12 @@ Updated: 2026-08-25 10:59 +08:00
 
 Status: **PAUSED FOR HANDOVER**
 
+## 2026-08-26 prospective-shadow addendum
+
+This file remains historical. Current authority is `AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md`, `ACTIVE_CONTEXT.md`, and `../AI_SUPPORT_SHADOW_VALIDATION.md`.
+
+Frozen candidate `2e8b763f699b4c1aaa138320f4e0420c736e82dc` passed consumed synthetic B0-v6 once (44/44 deterministic, 44/44 accepted/exact, zero fallback, 3/3 restricted safe). B0-v3 through B0-v6 are consumed and must not be rerun as unseen acceptance sets. The isolated `task/ai-support-shadow-validation` branch implements the next ADR-0014 gate: prospective cutoff cohorts, no-reply processing, privacy-safe evidence, independent human adjudication, metrics, and close/report tooling. No real tickets were collected, and customer-visible AI remains disabled and not deployed.
+
 This checkpoint records the exact state after production-runtime parity work began and before holdout/release implementation continued. It must be read together with `AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md`. The validation checkpoint remains authoritative for the last fully tested model/runtime behavior.
 
 ## Repository state
