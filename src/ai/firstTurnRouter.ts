@@ -147,7 +147,7 @@ export function reviewFirstTurnObservability(query: string, aliases: readonly Ru
     has(/\b(?:didnt receive|did not receive|never received|missing|waiting for|where is)\b/u)
   );
   const explicitOrderStateIntent = deliverySignal || has(/\b(?:where is my order|order status|check (?:my )?order|check order|didnt get (?:my )?(?:key|account|order)|need (?:my )?key|manual fulfil|manual fulfill)\b/u) || has(/\border\b.{0,24}\b(?:pending|processing|delivered|missing|wrong|failed)\b|\b(?:pending|processing|delivered|missing|wrong|failed)\b.{0,24}\border\b/u);
-  const deliveredOrderAccessProblem = has(/\bdelivered\b/u) && has(/\b(?:view order|order link|order page)\b/u) && has(/\b(?:cant|cannot|dont|doesnt|wont|will not|unable|not able)\b.{0,24}\b(?:click|open|view)\b/u);
+  const deliveredOrderAccessProblem = has(/\bdelivered\b/u) && has(/\b(?:view order|order link|order page)\b/u) && has(/\b(?:cant|cannot|dont|doesnt|wont|will not|unable|not able)\b.{0,24}\b(?:click(?:ed)?|open(?:ed)?|view)\b/u);
   const nfaExecutableSignal = has(/\bnfa\.exe\b/u);
   const nfaSignal = (has(/\bnfas?\b/u) && !nfaExecutableSignal) || entities.includes("account_model.nfa");
   const spooferSignal = has(/\b(?:spoofer|spoof(?:er|ing)?|unspoof|hwid)\b/u);
@@ -222,7 +222,7 @@ export function reviewFirstTurnObservability(query: string, aliases: readonly Ru
     const cases = has(/\b(?:where|status|check)\b/u) ? ["case.order.status"] : ["case.order.fulfillment_delayed"];
     return withBase(result, control("direct_dynamic_lookup", cases, "The customer explicitly asks about current order or fulfillment state, so live order context is required.", { lookupIds: ["orders.lookup.read", "orders.details.read", "orders.fulfillment.read"], observableFamilyIds: ["commerce.order", "commerce.fulfillment"] }));
   }
-  if (has(/\b(?:in stock|out of stock|restock|available|status|working rn|up rn|price|how much|is .{0,30} working)\b/u) && (has(/\b(?:product|cheat|spoofer|account|nfa|rust|cs2|fortnite|apex|pubg|eft|warzone|r6|exodus|ancient|venom)\b/u) || entities.length > 0)) {
+  if (has(/\b(?:in stock|out of stock|restock|available|status|working (?:rn|right now)|up (?:rn|right now)|price|how much|is .{0,30} working)\b/u) && (has(/\b(?:product|cheat|spoofer|account|nfa|rust|cs2|fortnite|apex|pubg|eft|warzone|r6|exodus|ancient|venom)\b/u) || entities.length > 0)) {
     const cases = has(/\b(?:price|how much)\b/u) ? ["case.catalog.pricing_duration"] : ["case.catalog.availability_status"];
     const families = has(/\b(?:price|how much)\b/u) ? ["catalog.commercial"] : ["catalog.dynamic"];
     return withBase(result, control("direct_dynamic_lookup", cases, "The customer asks for current catalog state, stock, status, or price.", { dynamicLookupIds: ["dynamic.catalog.product_status"], observableFamilyIds: families }));

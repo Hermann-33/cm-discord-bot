@@ -191,6 +191,16 @@ test("B0 v4 regression: an explicit router clarification is deterministic in sch
   assert.equal(chooseSupportTriageFallback(result.input).clarificationId, "clarify.loader.failure_stage");
 });
 
+test("B0 v5 regression: clicked dashboard access and up-right-now catalog wording retain live-safe routes", () => {
+  const dashboard = reviewFirstTurnObservability("The order says delivered, but the View Order link cannot be clicked.", runtime.aliases);
+  assert.equal(dashboard.primaryDecision, "direct_static_case");
+  assert.deepEqual(dashboard.observableCaseIds, ["case.dashboard.verification"]);
+
+  const catalog = reviewFirstTurnObservability("Is the Exodus product up right now?", runtime.aliases);
+  assert.equal(catalog.primaryDecision, "direct_dynamic_lookup");
+  assert.deepEqual(catalog.dynamicLookupIds, ["dynamic.catalog.product_status"]);
+});
+
 test("B0 regression: invalid product license remains a single license activation case", () => {
   const result = reviewFirstTurnObservability("My license key is invalid and will not activate.", runtime.aliases);
   assert.equal(result.primaryDecision, "direct_static_case");
