@@ -1,0 +1,21 @@
+name: AI Support Release Preflight
+
+on:
+  push:
+    branches:
+      - task/ai-support-release-validation-20260826
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Verify candidate-only production diff
+        run: git diff --exit-code 926c802d00ad70bab94c2bc8381ec257742b6f5a -- src support-runtime package.json package-lock.json tsconfig.json tsconfig.build.json
+      - name: Run B0 deterministic preflight
+        run: node --import tsx release-validation/preflight-b0.ts
