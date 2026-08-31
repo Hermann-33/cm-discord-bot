@@ -1,6 +1,6 @@
 # Data and Backend Dependency Status
 
-Verified/re-baselined: 2026-08-24 10:49 +08:00
+Verified/re-baselined: 2026-08-31
 
 ## Bot-side invariant
 
@@ -33,7 +33,7 @@ This catalog is not the bot source surface and is not proof of a deployed client
 
 ## Current production/admin bot operation surface
 
-Current tracked admin/leaderboard source intentionally consumes only the operations required by existing production surfaces, including:
+Tracked admin/leaderboard source consumes only operations required by existing production surfaces, including:
 
 ```text
 aura.leaderboards.read
@@ -50,7 +50,7 @@ users.wallet.adjust
 
 Source support alone is not runtime authorization. Deployment must use a least-privilege website integration-client `allowedOperations` list.
 
-Customer-facing AI support remains disabled/unwired, so intended support-planner lookup IDs do not by themselves expand the deployed bot's permissions.
+Customer-facing AI support is presently enabled only for the ADR-0015 controlled single-channel test. AI planner/action execution remains read-only. This deployment-mode change does **not** expand website operation permissions or authorize any mutation.
 
 ## AI support dynamic lookup mapping
 
@@ -59,10 +59,10 @@ The private `runtime-kb/dynamic-lookups.json` contains canonical lookup concepts
 Known mappings include:
 
 ```text
-dynamic.order.status          -> orders.details.read
-dynamic.fulfillment.status    -> orders.fulfillment.read
+dynamic.order.status           -> orders.details.read
+dynamic.fulfillment.status     -> orders.fulfillment.read
 dynamic.purchase_intent.status -> purchase-intents.lookup.read
-dynamic.user.overview         -> users.overview.read
+dynamic.user.overview          -> users.overview.read
 ```
 
 The private runtime source also defines current catalog concepts such as stock, price and product status with an operation label:
@@ -71,9 +71,7 @@ The private runtime source also defines current catalog concepts such as stock, 
 catalog.current.read
 ```
 
-That operation is **not present in the currently documented website V1 operation catalog above**. Treat this as an unresolved API-contract gap.
-
-Until a separately scoped website/API review confirms or adds an approved current-catalog operation, the Discord bot must not execute `catalog.current.read`, invent an equivalent endpoint, or answer current stock/price/product/detection state from historical ticket evidence.
+That operation is **not present** in the documented website V1 operation catalog above. Treat this as an unresolved API-contract gap. The Discord bot must not execute it, invent an equivalent endpoint, or answer current stock/price/product/detection state from historical ticket evidence.
 
 ## HTTP/HMAC contract
 
@@ -83,7 +81,7 @@ AI-support work must not weaken signing, timeout, response-bound or retry semant
 
 ## User selectors and Discord identity
 
-`users.overview.read` continues to accept supported user selectors such as canonical user ID, email and external identity according to the current website contract. `/cm user discord_user:<selected Discord user>` uses Discord external identity resolution through the approved website API boundary.
+`users.overview.read` accepts supported user selectors such as canonical user ID, email and external identity according to the website contract. `/cm user discord_user:<selected Discord user>` uses Discord external identity resolution through the approved website API boundary.
 
 Canonical order and pending purchase flows resolve the website-returned `userId` through `users.overview.read(user_id)` and require exact equality before opening an operator session.
 
@@ -105,13 +103,11 @@ public_ref
 
 `/cm order` uses canonical order first. Only stable `NOT_FOUND` permits fallback to `purchase-intents.lookup.read` with the equivalent selector.
 
-Pending purchase responses expose safe support fields including canonical user, purchase kind/item/variant, quantity, amount/currency, payment method/provider, purchase/provider status, optional `orderId`, expiry and creation time. The private admin UI deliberately displays only the subset needed for staff support.
-
-If `orderId` becomes available, the bot returns to canonical `orders.details.read`; it does not mutate/process the purchase intent.
+Pending purchase responses expose only safe support fields required by the private operator UI. If `orderId` becomes available, the bot returns to canonical `orders.details.read`; it does not mutate/process the purchase intent.
 
 ## AI first-turn selector rule
 
-For customer-facing support triage, an order/public reference can identify **which order** without identifying **what the customer wants about that order**.
+An order/public reference can identify **which order** without identifying **what the customer wants about that order**.
 
 Therefore:
 
@@ -124,30 +120,11 @@ selector + explicit current-state intent
  -> use the approved relevant live lookup
 ```
 
-The current feature branch still has a known deterministic-router overreach on six V3 selector-only rows. This is documented in `HANDOFF.md` and must be corrected before more hosted evaluation.
+The selector-only overreach documented in the old V3 development checkpoint was repaired before B0-v6. Preserve the invariant; do not reintroduce automatic lookup merely because a selector exists.
 
 ## Fulfillment support view
 
-`orders.fulfillment.read` remains read-only diagnostics. Current website contract may add optional:
-
-```text
-support.productTypeLabel
-support.productDurationDays
-support.maskedMaterials[]
-  kind = license_key | account_token
-  maskedValue
-support.manualRequired
-```
-
-Rules:
-
-- `support` is optional/fail-safe;
-- `maskedMaterials` is bounded;
-- values are masked only;
-- raw/decrypted license/account secrets are outside the DTO;
-- bot strict schemas reject unexpected fields;
-- missing support or empty masked material does not imply manual-required;
-- best-effort support fetch failure must not block an otherwise valid canonical order panel.
+`orders.fulfillment.read` remains read-only diagnostics. Optional support data is bounded/masked. Raw/decrypted license/account secrets are outside the DTO and strict schemas reject unexpected fields.
 
 No manual-fulfillment execute operation exists. The bot must not call DB functions, invent an endpoint or reuse `purchase-intents.process` as a substitute.
 
@@ -155,26 +132,20 @@ No manual-fulfillment execute operation exists. The bot must not call DB functio
 
 Share to Chat performs no extra backend mutation. It renders from the already-authorized `CmAdminSession`.
 
-ADR-0009 permits the canonical customer email. ADR-0011 permits a separately rendered customer-safe pending-purchase summary but keeps provider/provider-status internals, purchase-intent UUIDs/internal option IDs and masked fulfillment support material private.
+ADR-0009 permits canonical customer email. ADR-0011 permits a separately rendered customer-safe pending-purchase summary but keeps provider/provider-status internals, purchase-intent UUIDs/internal option IDs and masked fulfillment support material private.
 
-## Refund
+## Existing mutations remain admin-only
 
-Website owns:
+Website-owned admin surfaces remain:
 
 ```text
 orders.refund.preview
 orders.refund.execute
+users.aura.adjust
+users.wallet.adjust
 ```
 
-Refund remains available only after a canonical order exists. The bot retains canonical preview -> explicit confirmation -> fresh exact preview equality -> execute.
-
-## Aura adjustment
-
-`users.aura.adjust` contract and ADR-0007 confirmation/state-equality/idempotency/audit model are unchanged.
-
-## Wallet adjustment
-
-`users.wallet.adjust` contract and ADR-0007 confirmation/state-equality/idempotency/audit model are unchanged. The bot never overwrites wallet balance directly.
+Their existing confirmation/state-equality/idempotency/audit models are unchanged. Customer AI support has no authority to call them.
 
 ## Stable relevant errors
 
@@ -187,7 +158,7 @@ INSUFFICIENT_BALANCE  -> 409
 IDEMPOTENCY_CONFLICT  -> 409
 ```
 
-Pending-purchase fallback is triggered only by `NOT_FOUND` from canonical order lookup. Raw backend error text is never surfaced.
+Raw backend error text is never surfaced to customer AI or the customer.
 
 ## Database/migration ownership
 
@@ -195,22 +166,36 @@ Live Supabase context is upstream dependency evidence only. This repository owns
 
 ## Secret handling
 
-Never commit/log real Discord tokens, HMAC secrets, Groq/OpenRouter keys, website service credentials, Supabase service-role/database credentials or production integration-client key material. Masked fulfillment support values are privileged staff presentation data and must not be republished through customer-safe Share to Chat.
+Never commit/log real Discord tokens, HMAC secrets, Groq/OpenRouter keys, website service credentials, Supabase service-role/database credentials or production integration-client key material. Masked fulfillment support values are privileged staff presentation data and must not be republished through customer-safe AI/share output.
 
 ## Hosted AI planner data boundary
 
-The primary hosted provider is Groq `openai/gpt-oss-120b`; OpenRouter is secondary only.
+Primary provider:
+
+```text
+Groq openai/gpt-oss-120b
+```
 
 The hosted planner receives only a compact sanitized planning payload: masked customer text, bounded support state, and explicit canonical case/clarification/lookup/policy/entity options for the current turn.
 
 Raw transcripts, historical evidence, private evaluation rows, fulfillment material, API request bodies, credentials and the global lookup catalog are forbidden.
 
-The public `support-runtime/` pack is an ADR-0012 sanitized derivative, not a copy of private `runtime-kb/`. The import allowlist excludes private manifests, routing exemplars, provenance/evidence fields, transcript/fact IDs and historical match-context prose. Production has no private-repository filesystem dependency.
+The public `support-runtime/` pack is an ADR-0012 sanitized derivative, not a copy of private `runtime-kb/`. Production has no private-repository filesystem dependency.
 
-Prospective shadow evidence is a separate local evaluation class, `prospective_fresh_ticket_shadow`. It contains sanitized adjudication material and cohort-scoped pseudonyms only; it is neither historical corpus data nor planner input. Shadow execution uses only the existing approved read adapter and adds no operation, permission, mutation, database credential, or private-corpus dependency.
+The active response-reconstruction task may derive new **sanitized customer-response guidance** from the transcript corpus offline, but must preserve the same production boundary: private provenance/evidence stays private; only reviewed safe guidance can enter the public runtime.
+
+## Prospective shadow evidence
+
+Prospective shadow evidence is a separate local evaluation class, `prospective_fresh_ticket_shadow`. It contains sanitized adjudication material and cohort-scoped pseudonyms only; it is neither historical corpus data nor planner input. Shadow execution uses only the approved read adapter and adds no operation, permission, mutation, database credential or private-corpus dependency.
+
+No real prospective cohort has started as of this re-baseline.
 
 ## Current AI benchmark/data checkpoint
 
-The committed V3 adjudication overlay excludes 26 rows. The rebuilt consumed development benchmark retains 236/236 adjudicated rows with review queue 0 and representability 1. The post-fix 40-row Groq prefix had zero unsafe, fallback, invalid, leakage, or semantic-review rows.
+Development V3 is consumed. B0-v3 failed and was consumed; B0-v4/B0-v5 failed deterministic preflight without hosted calls; B0-v6 passed once at 44/44 accepted/exact, zero fallback and 3/3 restricted safety.
 
-The final holdout remains untouched. Do not broaden API permissions or hosted lookup options for benchmark performance, and do not invent the unresolved `catalog.current.read` operation.
+All 1,578 historical tickets influenced the pipeline, so there is no legitimate untouched historical holdout remaining. B0-v6 is synthetic evidence only.
+
+The active response-reconstruction work materially changes routing/knowledge/rendering, so it requires a fresh B0-v7-or-later fixture after the new candidate is frozen, followed by prospective validation before broad rollout.
+
+Do not broaden API permissions or hosted lookup options for benchmark performance, and do not invent the unresolved `catalog.current.read` operation.

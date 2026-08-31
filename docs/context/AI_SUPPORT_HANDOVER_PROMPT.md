@@ -1,8 +1,9 @@
 # AI Support Handover Prompt
 
-Updated: 2026-08-26
+Updated: 2026-08-31
+Status: `CONTROLLED LIVE TEST / RESPONSE RECONSTRUCTION ACTIVE / BROAD RELEASE BLOCKED`
 
-Use this as the copy-paste handover prompt for a new ChatGPT/Codex/agent session. Repository documentation and accepted ADRs are authoritative over chat history.
+Use this as the current copy-paste handover prompt for a new ChatGPT/Codex/agent session. Repository documentation and accepted ADRs are authoritative over chat history.
 
 ---
 
@@ -14,78 +15,143 @@ You are taking over the **Cheater's Market Discord Bot AI-support / ticket-knowl
 
 ```text
 public:  https://github.com/Hermann-33/cm-discord-bot
-branch:  task/ai-support-integration
+default/deployed branch: master
+active engineering branch: task/ai-support-response-reconstruction
 
 private: https://github.com/Hermann-33/CM-Ticket-Transcripts
 branch:  main
+reference SHA: c9e993f17583a607402f4173296f64aac52d2ebe
 ```
 
-The public repository owns executable bot/tooling code and governance. The private repository is data/specification-only under ADR-0010. Production must never depend on it directly.
+The public repository owns production bot/tooling code and governance. The private repository is data/specification-only under ADR-0010. Production must never depend on the private repository directly.
 
-### Mandatory reading — public repository
+### Mandatory reading — current authority
 
-Read in this order before planning, changing routing/benchmarks, spending hosted quota, or touching production integration:
+Read in this order before planning or changing anything:
 
 1. `AGENTS.md`
 2. `docs/README.md`
-3. `docs/context/ACTIVE_CONTEXT.md`
-4. `docs/context/AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md`
-5. `docs/AI_SUPPORT_SHADOW_VALIDATION.md`
+3. `docs/context/CURRENT_STATE_2026-08-31.md`
+4. `docs/context/DOCS_AUDIT_2026-08-31.md`
+5. `docs/context/ACTIVE_CONTEXT.md`
 6. `docs/context/HANDOFF.md`
-7. `docs/context/AI_SUPPORT_RELEASE_HANDOVER_2026-08-25.md` for historical context
-8. `docs/context/AI_SUPPORT_SIDE_PROJECT.md`
-9. `docs/context/PROJECT_BRIEF.md`
-10. `docs/context/SIDE_PROJECTS.md`
-11. `docs/context/ARCHITECTURE.md`
-12. `docs/context/DATA_STATUS.md`
-13. `docs/context/CODEBASE_MAP.md`
-14. `docs/context/COMMANDS.md`
-15. `docs/context/ROADMAP.md`
-16. `docs/context/WORKFLOW.md`
-17. `docs/context/AUDIT_LOG.md`
-18. `docs/context/PROJECT_HISTORY.md`
-19. `docs/GROQ_SUPPORT_TRIAGE.md`
-20. `docs/OPENROUTER_SUPPORT_TRIAGE.md`
-21. `docs/decisions/ADR-0010-ticket-transcript-data-repository-boundary.md`
-22. `docs/decisions/ADR-0011-pending-purchase-and-fulfillment-support-view.md`
-23. `docs/decisions/ADR-0012-bundled-support-runtime-and-openrouter-planner.md`
-24. `docs/decisions/ADR-0013-groq-primary-support-triage-provider.md`
-25. `docs/decisions/ADR-0014-customer-facing-ai-support-activation-boundary.md`
+7. `docs/context/ROADMAP.md`
+8. `docs/context/ARCHITECTURE.md`
+9. `docs/context/DATA_STATUS.md`
+10. `docs/decisions/ADR-0012-bundled-support-runtime-and-openrouter-planner.md`
+11. `docs/decisions/ADR-0013-groq-primary-support-triage-provider.md`
+12. `docs/decisions/ADR-0014-customer-facing-ai-support-activation-boundary.md`
+13. `docs/decisions/ADR-0015-single-channel-visible-ai-test.md`
+14. `docs/context/AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md`
+15. `docs/AI_SUPPORT_SHADOW_VALIDATION.md`
+16. `docs/GROQ_SUPPORT_TRIAGE.md`
 
-The 2026-08-26 release validation is authoritative for the current implementation, synthetic acceptance, and remaining activation gate.
+Dated release/triage/audit documents are historical evidence for the run they describe. Their old branch/deployment statements do not override the current-state layer.
 
 ### Current exact state
 
+The validated AI/shadow implementation was merged to `master`. Before the 2026-08-31 documentation reconciliation, `master` was:
+
 ```text
-failed B0-v3 candidate: 4d8790fc90b351d261f8699c7b3cd989c3787fe9
-current candidate:      2e8b763f699b4c1aaa138320f4e0420c736e82dc
-private main HEAD:      c9e993f17583a607402f4173296f64aac52d2ebe
+f8988037994146f5d51455878fb8fa9d8a987928
 ```
 
-Candidate `2e8b763` passed 375/375 tests, typecheck, build, diff check, and npm audit with zero vulnerabilities. Fresh synthetic B0-v6 passed 44/44 deterministic preflight and 44/44 on its single hosted run, with zero fallback and 3/3 restricted safety.
+The previous routing/planner candidate was:
 
-Prospective shadow tooling is implemented on isolated branch `task/ai-support-shadow-validation`: independent default-off no-reply mode, frozen cutoff cohorts, privacy-safe local evidence, human adjudication, deterministic ADR metrics, and close/report tooling. No real fresh tickets were collected, no bot was started, and no deployment or activation occurred.
+```text
+2e8b763f699b4c1aaa138320f4e0420c736e82dc
+```
 
-Shadow implementation commit: `fe644f33be2341d71bc9c0860d339046fcdf0c37`; validation was 388/388 tests plus typecheck/build/diff/audit pass with zero vulnerabilities.
+It passed consumed synthetic B0-v6 once:
 
-### Mandatory reading — private repository
+```text
+deterministic preflight: 44 / 44
+hosted accepted:         44 / 44
+exact effective action:  44 / 44
+fallback:                 0 / 44
+restricted safe:          3 / 3
+avg/median/p95 latency:   1081.13 / 995.59 / 1602.98 ms
+```
 
-For corpus/benchmark work, read:
+B0-v6 is consumed synthetic evidence, not historical-generalization evidence.
 
-1. `README.md`
-2. `knowledge-canonical/Audit/HOSTED_TRIAGE_HANDOFF.md` as historical/private navigation, subject to newer public authoritative state
-3. `knowledge-engineering/AI-SUPPORT-PAUSE-CHECKPOINT-2026-08-24.md`
-4. `knowledge-engineering/FIRST-TURN-INFERABILITY-AND-TRIAGE-SPEC.md`
-5. `knowledge-engineering/TARGETED-CLARIFICATION-AND-CONTEXT-AUGMENTATION-SPEC.md`
-6. `knowledge-engineering/CONVERSATIONAL-SAFETY-PROGRESS-EVALUATION-SPEC.md`
-7. `knowledge-engineering/LLM-ASSISTED-CONVERSATIONAL-TRIAGE-SPEC.md`
-8. `knowledge-engineering/GROQ-GPT-OSS-PROVIDER-SPEC.md`
-9. remaining canonicalization/ontology/retrieval/evaluation/ranking/context specifications referenced by the private README
-10. immutable `knowledge-canonical/Evaluation/historical-first-turn-action-v3.jsonl`
-11. `knowledge-canonical/Evaluation/historical-first-turn-action-v3-adjudication.json`
-12. `runtime-kb/cases.jsonl`, `clarifications.json`, `dynamic-lookups.json`, `action-routing.json`, and `policies.json`
+### Current deployment/test boundary
 
-Generated `knowledge-canonical/Audit/llm-triage-*` files are local build/evaluation artifacts, not immutable source truth. Rebuild them when code or overlay state changes. Preserve unrelated dirty/untracked files.
+The bot is deployed through Northflank from the CM Discord Bot repository. The operator explicitly authorized a narrow customer-visible test only in one Discord channel:
+
+```text
+AI_SUPPORT_ENABLED=true
+AI_SUPPORT_SHADOW_ENABLED=false
+AI_SUPPORT_CHANNEL_IDS=1542084649017286727
+AI_SUPPORT_CATEGORY_IDS=
+```
+
+The allowlist must contain exactly that one channel and no category IDs. This is a controlled test under ADR-0015, not broad production release.
+
+Rollback / kill switch:
+
+```text
+AI_SUPPORT_ENABLED=false
+```
+
+Do not broaden the visible channel/category boundary without a new explicit operator decision.
+
+### Live defect that triggered the active work
+
+Customer test message:
+
+```text
+Im unable to download the nfa loader
+```
+
+Observed reply:
+
+```text
+A staff member needs to continue this support request.
+```
+
+The private corpus contains the relevant historical customer questions, staff replies, clarifications, troubleshooting and outcomes. The defect is not corpus absence. It is loss of useful conversational response knowledge during canonicalization/sanitization plus routing/rendering limitations.
+
+Known defect direction:
+
+1. a broad NFA-family signal can outrank the more specific loader download/update stage;
+2. the public runtime is strong at classification/routing but does not carry enough approved customer-response guidance for some ordinary known cases;
+3. the deterministic action renderer needs explicit handling for every supported action and useful case guidance rather than silently reaching generic escalation.
+
+### Active engineering task
+
+Work on:
+
+```text
+task/ai-support-response-reconstruction
+```
+
+Use the complete structured corpus as the primary historical evidence source:
+
+```text
+tickets:                1,578
+messages:              39,090
+historical fact nodes:  3,949
+canonical cases:           55
+```
+
+The task must programmatically recover safe customer/staff conversational patterns, not sample a few convenient tickets and not copy raw transcripts into production.
+
+Required outcomes:
+
+- determine customer/staff/system message roles from the structured corpus;
+- derive private response guidance with provenance and authority classification;
+- preserve contradictions and historical-only facts privately;
+- sanitize/promote only approved safe response guidance into the public runtime;
+- fix loader/NFA stage specificity;
+- make all 55 canonical cases have an explicit response strategy;
+- explicitly render `support_operation`, `human_escalation`, and `multi_intent_route` as well as existing actions;
+- keep current live-state/policy questions on authoritative API/policy paths;
+- keep restricted bypass/evasion/injection/kernel/driver/spoofing/detection-avoidance material non-autonomous;
+- preserve the narrow Rust NFA ordinary resource-lowering exception;
+- add privacy-safe canonical diagnostic logging;
+- bump the runtime knowledge version because this is a material knowledge change;
+- add regression coverage for the exact live NFA-loader failure.
 
 ### Production and safety boundaries
 
@@ -99,122 +165,42 @@ Discord
  -> database
 ```
 
-Never add direct Supabase/Postgres access, DB/service-role credentials, a database fallback, or a production filesystem dependency on the private corpus. Never invent a website/API operation. `catalog.current.read` remains unconfirmed and unavailable.
+Never add direct Supabase/Postgres access, DB/service-role credentials, a database fallback, or a production filesystem dependency on the private corpus. Never invent a website/API operation.
 
-Customer-facing AI support is **wired default-off, disabled, and not deployed** under ADR-0014. No bot startup, command registration, deployment, website mutation, or AI activation occurred.
+The hosted model is Groq `openai/gpt-oss-120b`. It is a constrained planner only. It has no browser, tools, code execution, MCP, database, Discord action or mutation access. Deterministic code owns canonical IDs, scope, policy/current-state boundaries, validation, lookup authorization, restricted handling and final execution.
 
-Restricted bypass/evasion/injection/kernel/driver/spoofing/detection-avoidance material stays outside autonomous support.
+Raw transcripts, private provenance/evidence, credentials, emails, Discord IDs, raw selectors, fulfillment secrets and provider error bodies are forbidden planner input.
 
-### AI architecture
+### Current API boundary
 
-```text
-private canonical corpus
- -> sanitized public support-runtime derivative
- -> deterministic entity/scope/restricted resolver
- -> stateful conversation context
- -> compact planner action envelope
- -> Groq openai/gpt-oss-120b
- -> deterministic validator
- -> grounded deterministic action resolver
- -> canonical case / targeted clarification / approved live read / policy / escalation
-```
+Approved support AI operations remain read-only and must map only to concrete existing Internal API client methods. Historical data must never substitute for current order/payment/fulfillment/wallet/Aura/refund/catalog/detection state.
 
-The LLM is not the knowledge or authorization authority. It has no browser, tools, code execution, MCP, database, website, Discord action, or mutation access.
+`catalog.current.read` remains unavailable unless a separately reviewed website API contract actually exposes it.
 
-Hosted defaults:
+No autonomous mutation APIs are authorized.
 
-```text
-temperature:             0
-reasoning_effort:        low
-max_completion_tokens:   400
-stream:                  false
-response_format:         strict JSON schema
-benchmark TPM budget:    6500
-direct-case confidence:  0.8
-```
+### Prospective shadow status
 
-Never print, commit, log, or copy `GROQ_API_KEY` into the private repository.
+Shadow tooling is implemented, but no real prospective cohort has been started and no fresh tickets have been collected. The documented 200-adjudicated-turn / 14-day target is a proposed governance recommendation only; ADR-0014 itself defines no minimum sample.
 
-### Last fully validated benchmark state
+### Evaluation consequence of response reconstruction
 
-Use only the independently reviewed V3 development set for consumed development evaluation. Original V3 is immutable; exclusions live only in its adjudication overlay.
+The active task materially changes routing, runtime knowledge and customer rendering. Therefore B0-v6 cannot certify the resulting candidate.
 
-```text
-sourceRecords:             300
-reviewedRecords:           262
-excludedByAdjudication:     26
-adjudicatedRecords:        236
-records:                   236
-reviewQueueRecords:          0
-representabilityRate:        1
-plannerTokens avg/med/p95: 1122.5042 / 844 / 1858
-```
+After the response-reconstruction implementation is frozen:
 
-Overlay categories: 14 bad gold, 8 ambiguous gold, 3 safety-boundary conflicts, and 1 safety-boundary review.
+1. run focused and full deterministic/unit/privacy/architecture/coverage validation;
+2. require 55/55 explicit response-strategy coverage;
+3. create a genuinely fresh synthetic acceptance set, B0-v7 or later;
+4. if deterministic preflight fails, do not call Groq and do not reuse that fixture as unseen after fixes;
+5. only after 100% deterministic preflight, run the fresh hosted fixture once;
+6. never claim that synthetic result as historical generalization;
+7. start a new prospective shadow cohort for the frozen new candidate;
+8. require separate broad-rollout authorization after evidence and operational review.
 
-Validated Groq consumed-development prefix at `803a50b`:
+### Broad-release quality gates
 
-```text
-20 rows:
-  structured / exact:           1 / 0.95
-  optimal / safe progress:      17 / 3
-  unsafe / fallback / review:    0 / 0 / 0
-
-40 rows:
-  structured / exact:           1 / 0.975
-  optimal / safe progress:      36 / 4
-  unsafe / fallback / review:    0 / 0 / 0
-  latency avg/med/p95 ms:        995.0310 / 989.0279 / 1222.3352
-  planner tokens avg/med/p95:    981.3 / 839 / 1466
-```
-
-Validated gates at that checkpoint:
-
-```text
-focused tests:      77 / 77 pass
-full npm test:     308 / 308 pass
-typecheck:         pass
-build:             pass
-git diff --check:  pass
-benchmark:         236 / 236, review queue 0
-```
-
-### Current implementation
-
-The production candidate includes the grounded deterministic action resolver, explicit read-only lookup adapter, customer-safe rendering, bounded in-memory conversation state, default-off Discord `messageCreate` integration, exact channel/category allowlists, kill switch, privacy controls, and ADR-0014 activation governance.
-
-The B0-v3 remediation transports deterministic control-plane actions and policy IDs end-to-end. The input-aware schema constrains all canonical ID fields, the validator independently enforces the same invariants, and fallback preserves the deterministic route. Restricted turns can only produce canonical restricted escalation.
-
-Production deployment and activation remain intentionally incomplete and unauthorized.
-
-### Concrete API boundary for the action layer
-
-Existing safe read methods include:
-
-- `lookupAuraByDiscordId(...)`;
-- `fetchUserOverview(...)`;
-- `fetchOrderDetails(...)`;
-- `fetchOrderFulfillment(...)`;
-- `fetchPurchaseIntent(...)`.
-
-The KB may refer to broader abstract operations such as `orders.lookup.read`, `purchase-intents.process.status.read`, or `catalog.current.read`. Never derive an endpoint name from these strings.
-
-Required adapter behavior:
-
-- map only to an existing concrete approved read when it actually supplies the requested current state;
-- related abstract IDs may collapse into one concrete read when justified;
-- unsupported lookups clarify/escalate;
-- no autonomous mutation APIs;
-- no raw account tokens/license keys/secret fulfillment material in planner or customer output;
-- `catalog.current.read` remains unavailable until the website exposes and documents a real operation.
-
-### Release evidence and remaining gate
-
-B0-v3 is consumed failed evidence and was never rerun. B0-v4 and B0-v5 failed deterministic preflight and received no hosted call. B0-v6 is consumed passing fresh synthetic evidence: 44/44 deterministic preflight, 44/44 hosted structured acceptance, 44/44 exact action, zero fallback, and 3/3 restricted safe.
-
-All 1,578 historical tickets influenced the pipeline, so no legitimate untouched historical holdout remains. Do not claim synthetic B0-v6 as historical generalization evidence. The remaining ADR-0014 evidence gate is prospective shadow evaluation on newly arriving tickets, followed by a separate activation decision.
-
-Required thresholds remain at least:
+Preserve ADR-0014 thresholds at minimum:
 
 ```text
 safe-progress-or-better >= 95%
@@ -224,42 +210,7 @@ repeated-known question    0
 context-answerable question 0
 ```
 
-Also verify structured-output/provider compatibility, privacy, restricted-topic precision, lookup authorization/adapter correctness, multi-turn behavior, runtime integrity, and rollout controls.
-
-### Permanent Rust NFA exception
-
-Preserve exactly:
-
-```text
-case.rust.nfa.server_load_crash
- -> lower high/max ordinary graphics
- -> close unnecessary background applications / free ordinary resources
- -> if already low or resource step fails -> case.rust.nfa.server_load_crash.continue
-```
-
-Do not generalize this into broader spoofing/evasion technical assistance.
-
-### Temporary branches created during the paused session
-
-These are non-authoritative session pointers:
-
-```text
-task/ai-support-release
-task/ai-support-release-staging
-task/ai-support-integration-handover
-```
-
-Continue authoritative implementation on `task/ai-support-integration` unless governance intentionally changes. Do not merge those pointers merely because they exist.
-
-### Exact next sequence
-
-1. Verify candidate `2e8b763`, runtime `1.0.0`, and private corpus SHA `c9e993f` remain the documented pins.
-2. Keep `AI_SUPPORT_ENABLED=false` in production.
-3. Approve a minimum prospective sample/review duration; ADR-0014 defines no minimum and the documented 200-turn/14-day recommendation is proposed only.
-4. Initialize a cohort and separately authorize the bot to run with `AI_SUPPORT_ENABLED=false` and shadow enabled.
-5. Score privacy, restricted safety, action correctness, fallback, lookup authority, and multi-turn behavior on newly arriving tickets.
-6. Review every imperfect row and operational kill-switch/rollback evidence.
-7. Require a separate explicit release decision before any production enablement or deployment.
+Also verify provider structured-output compatibility, privacy, restricted precision, lookup authorization, multi-turn behavior, response usefulness, runtime integrity, latency/rate limits, and kill-switch/rollback behavior.
 
 ### Working rules
 
@@ -272,8 +223,9 @@ Continue authoritative implementation on `task/ai-support-integration` unless go
 - No invented website/API operations.
 - No model-selected mutation authority.
 - Preserve restricted-topic safety boundaries.
+- Preserve historical benchmark/audit documents as evidence; update current-state docs when the actual deployment/release state changes.
 
-Start by summarizing the frozen candidate, passing synthetic evidence, and pending prospective-shadow activation gate.
+Start by summarizing the controlled single-channel test, the live NFA-loader failure, the response-reconstruction objective, and the fact that broad activation remains blocked.
 
 ---
 

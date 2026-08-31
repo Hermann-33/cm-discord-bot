@@ -1,6 +1,6 @@
 # Current Architecture
 
-Updated: 2026-08-23
+Updated: 2026-08-31
 
 ## System boundary
 
@@ -15,29 +15,32 @@ Discord
 
 The bot has no direct database client, service-role key, RPC/table fallback or DB mutation path. `legacy/` remains frozen/excluded.
 
-## Command surfaces
+## Discord surfaces
+
+Current source contains:
 
 - customer message command `cm aura`;
 - operational `/refresh-leaderboard`;
 - private `/cm user` by email or linked Discord user;
 - private `/cm order` by public ref or order/purchase UUID;
 - private `/cm` navigation/refund/Aura/wallet controls;
-- authorized Share to Chat buttons that publish separate customer-facing read-only summaries.
+- authorized Share to Chat buttons that publish separate customer-facing read-only summaries;
+- AI support `messageCreate` handling behind exact guild + explicit channel/category allowlists and feature flags.
 
-ADR-0005 governs customer/admin presentation, ADR-0006 `/cm` authorization, ADR-0007 Aura/wallet mutation confirmation, ADR-0008/0009 public sharing and email disclosure, ADR-0010 the transcript side-project boundary and ADR-0011 pending-purchase/fulfillment-support behavior.
+ADR-0005 through ADR-0011 govern the existing customer/admin surfaces. ADR-0012/0013 define the sanitized runtime + constrained Groq planner. ADR-0014 defines broad activation governance. ADR-0015 authorizes the current controlled one-channel visible test only.
 
 ## Interaction routing
 
-`src/index.ts` constructs one `CmAdminController` handling `/cm` slash commands plus `cm:*` buttons/modals before unhandled chat-input interactions proceed to `/refresh-leaderboard`. `cm aura` remains on `MessageCreate`.
+`src/index.ts` constructs the admin controller and support-AI controller. `/cm` slash/button/modal interactions remain operator-authorized and independent from customer AI. `cm aura` retains its reserved deterministic message-command path.
 
-Manual guild registration still publishes only:
+Manual slash registration still publishes:
 
 ```text
 /refresh-leaderboard
 /cm
 ```
 
-`user` and `order` remain `/cm` subcommands. TASK-CM-ADMIN-007 does not change the registration JSON.
+AI support is message-based and does not add slash commands.
 
 ## `/cm` authorization/session boundary
 
@@ -45,24 +48,9 @@ Every `/cm` slash/button/modal interaction requires exact configured guild + non
 
 There is no `/cm` command-channel restriction. `/refresh-leaderboard` retains its separate command-channel/permission checks.
 
-`CmSessionStore` holds bounded in-memory UI state:
-
-- random session UUID;
-- operator Discord ID;
-- current user overview;
-- optional selected canonical order;
-- optional selected pending purchase intent;
-- refund proposal;
-- Aura/wallet proposal;
-- current customer-share view;
-- 15-minute inactivity TTL;
-- max 100 sessions.
-
-Component custom IDs contain routing/session/index tokens only; no email, balances, reasons, target UUIDs or credentials.
+`CmSessionStore` holds bounded in-memory UI state with operator ownership and a 15-minute inactivity TTL. Component custom IDs contain routing/session/index tokens only; no email, balances, reasons, target UUIDs or credentials.
 
 ## `/cm order` resolution architecture — ADR-0011
-
-`/cm order` is one support entry point for both canonical orders and pending checkout state.
 
 ```text
 input
@@ -76,171 +64,151 @@ input
              -> otherwise: pending purchase path
 ```
 
-Canonical order path:
+Both canonical and pending paths resolve the website-returned owner through `users.overview.read(user_id)` and require exact equality before opening the operator session.
 
-```text
-order
- -> users.overview.read(user_id)
- -> exact user equality
- -> optional fulfillment support enrichment
- -> operator session/order panel
-```
-
-Pending purchase path:
-
-```text
-purchase intent
- -> users.overview.read(user_id)
- -> exact user equality
- -> operator session/pending panel
- -> refresh purchase by exact purchase_intent_id
- -> transition to canonical order when available
-```
-
-The fallback is never used for authentication, authorization, validation, rate-limit, dependency or other service errors.
+The pending fallback is never used for authentication, authorization, validation, rate-limit, dependency or other service errors.
 
 ## Fulfillment support architecture
 
-`orders.fulfillment.read` remains read-only. Its optional support object may contain:
-
-- human-readable product/account type;
-- finite product duration;
-- bounded masked `license_key` / `account_token` values;
-- canonical manual-required state.
-
-`src/commands/cmOrderSupport.ts` treats automatic support enrichment as best-effort for the order panel. Failure to load it does not block a valid canonical order or existing refund/navigation controls.
-
-Strict DTO validation rejects unexpected/raw secret fields. Missing support or an empty masked list is not interpreted as manual-required.
+`orders.fulfillment.read` remains read-only. Optional support metadata is bounded/masked. Raw decrypted license/account secrets are outside strict DTOs. Missing optional support never implies manual-required, and best-effort enrichment failure never blocks a valid canonical order panel.
 
 ## Customer-safe sharing
 
-Private admin panels and channel-visible customer summaries are intentionally separate renderers.
+Private admin panels and channel-visible customer summaries remain separate renderers. Shared output has no action custom IDs, uses safe mentions and excludes private provider/internal IDs, masked fulfillment support, reasons/audit/idempotency data and credentials.
 
-```text
-private /cm panel
-  -> authorized Share to Chat click
-  -> session-owned current share view
-  -> dedicated customer-safe renderer
-  -> current text-capable guild channel
-  -> Components V2 display-only message
-```
+## Admin mutation boundary
 
-Shared output has no action custom IDs and always uses safe mentions. Canonical customer email is permitted by ADR-0009.
+Refund/Aura/wallet mutations remain explicit private admin operations under ADR-0007/0011. They retain preview/confirmation/fresh-state/idempotency/audit requirements. Customer AI has no mutation authority and cannot invoke these operations.
 
-ADR-0011 adds a pending-purchase share view but keeps these fields private:
+## Internal Integrations API boundary
 
-- purchase-intent UUID/user UUID/internal option IDs;
-- provider/provider-status internals;
-- masked fulfillment support material;
-- admin reasons/audit/transaction/idempotency data;
-- HMAC/API credentials.
-
-Masked support material can be displayed only in the private authorized order/delivery UI.
-
-## Discord audit architecture
-
-`src/discord/adminAudit.ts` remains the concise Components V2 refund/Aura/wallet audit surface. Website immutable audit remains authoritative. Mutation execution still fails closed before backend access when `BOT_AUDIT_LOG_CHANNEL_ID` is missing.
-
-TASK-CM-ADMIN-007 adds no mutation or audit type.
-
-## Bot Internal Integrations API surface
+The bot uses concrete reviewed website operations only. Existing relevant read operations include:
 
 ```text
 aura.leaderboards.read
-  POST /api/internal/integrations/v1/aura/leaderboards
-
 aura.lookup.read
-  POST /api/internal/integrations/v1/aura/lookup
-
 users.overview.read
-  POST /api/internal/integrations/v1/users/overview
-
 orders.details.read
-  POST /api/internal/integrations/v1/orders/details
-
 orders.fulfillment.read
-  POST /api/internal/integrations/v1/orders/fulfillment
-
 purchase-intents.lookup.read
-  POST /api/internal/integrations/v1/purchase-intents/lookup
-
-orders.refund.preview
-  POST /api/internal/integrations/v1/orders/refund/preview
-
-orders.refund.execute
-  POST /api/internal/integrations/v1/orders/refund/execute
-
-users.aura.adjust
-  POST /api/internal/integrations/v1/users/aura/adjust
-
-users.wallet.adjust
-  POST /api/internal/integrations/v1/users/wallet/adjust
 ```
 
-No `purchase-intents.process`, manual-fulfillment mutation or direct DB path exists in active source. Website per-client `allowedOperations` remains independent runtime authorization.
-
-## Mutation invariants
-
-Pending purchase lookup does not create a mutation path. Refund remains canonical-order-only and keeps preview -> confirmation -> exact re-preview -> execute. Aura/wallet retain ADR-0007 current/change/projected confirmation and final fresh-balance equality.
-
-## Configuration
-
-No new bot environment variable is introduced by TASK-CM-ADMIN-007. Runtime website configuration must grant the bot client `purchase-intents.lookup.read` for pending fallback to work.
-
-Because slash-command JSON is unchanged, command re-registration is not required for this task.
-
-## Parallel non-runtime tooling
-
-ADR-0010 remains unchanged: ticket transcript exporter code under `tools/` is non-production and the private `CM-Ticket-Transcripts` corpus is not a runtime dependency.
-
-## AI support architecture — prepared, not activated
-
-ADR-0012 adds a deliberately disconnected production support-service boundary:
+Existing admin-only mutations include:
 
 ```text
-future customer message
-  -> deterministic entity/context resolver
-  -> explicit bounded conversation state
-  -> sanitized compact OpenRouter planner payload
-  -> deterministic decision validation/fallback
-  -> deterministic case/clarification/lookup/policy action resolver
-  -> grounded reply
+orders.refund.preview
+orders.refund.execute
+users.aura.adjust
+users.wallet.adjust
 ```
 
-The OpenRouter model chooses only among supplied canonical IDs/actions. It cannot call APIs, mutate state directly, select arbitrary operations, or produce an unvalidated customer answer. Provider failures use the existing deterministic flow when safe, then an unanswered canonical clarification, then human escalation. There is no aggressive retry.
+Website per-client `allowedOperations` is separate runtime authorization. No abstract KB operation may be converted into an invented endpoint. `catalog.current.read` remains unavailable until separately implemented/reviewed upstream.
 
-`SupportConversationState` retains resolved entities, candidate cases/families, known/unknown context, pending clarification, questions/answers, diagnostics, procedures/outcomes, lookup results, policy state and multiple intents. Pending short answers are consumed before fresh routing.
+## Private transcript / public runtime boundary
 
-`src/index.ts` does not construct this service or route arbitrary Discord messages to it. Customer-facing activation requires the consumed-development OpenRouter benchmark and a separate activation review.
+ADR-0010 remains unchanged: transcript exporter/knowledge tooling is non-production and `CM-Ticket-Transcripts` is a private data/spec repository.
+
+Production reads only the sanitized bundled `support-runtime/` derivative. No environment variable or startup path can point production at the private repository. Private provenance/evidence, raw transcripts, PII, raw selectors and secrets do not enter the public runtime or hosted planner.
+
+## AI support runtime
+
+Current architecture:
+
+```text
+eligible customer message
+  -> deterministic first-turn/context/control-plane resolver
+  -> bounded conversation state
+  -> sanitized compact planner payload
+  -> Groq openai/gpt-oss-120b strict JSON action
+  -> deterministic validation/fallback
+  -> deterministic case/clarification/read/policy/escalation renderer
+  -> grounded customer reply or explicit escalation
+```
+
+The hosted model chooses only within supplied canonical IDs/actions. It has no tools, API execution, browser, database, Discord action or mutation access.
+
+Deterministic constraints take precedence over planner preference. Restricted input is fail-closed to restricted escalation. Provider/schema failure cannot expand authority.
+
+### Conversation state
+
+State retains resolved entities, candidate cases/families, known/unknown context, pending clarification, questions/answers, diagnostics, procedures/outcomes, lookup results, policy state and multiple intents. Pending short answers are consumed relative to the prior question and already-known questions must not be repeated.
 
 ### Bundled support runtime
 
-Production reads only `support-runtime/` bundled with the public deployment. The operator-controlled importer selects 12 sanitized canonical artifacts from a supplied private `runtime-kb/` directory and emits an integrity manifest. It excludes routing exemplars, private manifests/evaluation data, historical match-context prose, provenance, outcome evidence, transcript/fact IDs and PII.
+The public runtime currently derives from private canonical knowledge through an explicit sanitizer/importer with manifest SHA-256 integrity checks. The existing runtime was designed primarily for safe classification/routing and canonical procedures/policies.
 
-No environment variable or startup path can point production at the private repository.
+The active `task/ai-support-response-reconstruction` workstream is expected to add a sanitized response-guidance layer derived offline from transcript conversations. Private evidence/provenance remains private. This material change requires a runtime knowledge-version bump and fresh release evaluation.
 
-### Prospective shadow boundary
+## Current controlled visible test — ADR-0015
 
-The separate default-off shadow flag reuses the exact ADR-0014 guild/channel/category/bot/command eligibility and the same deterministic planner/action/read-only lookup pipeline. With customer AI disabled, an eligible post-cutoff message produces only a privacy-safe record in an operator-selected protected local cohort; it sends no Discord reply. Visible mode takes precedence if both flags are true, preventing duplicate processing.
+The bot is deployed through Northflank. Customer-visible AI is currently authorized only when effective configuration is exactly scoped to:
 
-Each cohort freezes candidate `2e8b763f699b4c1aaa138320f4e0420c736e82dc`, runtime `1.0.0`, Groq/model configuration, and collection start. Evidence uses cohort-scoped keyed pseudonyms and sanitized content/state; raw Discord IDs, emails, selectors, secrets, provider bodies, and fulfillment material are excluded. Cohort files are not sent to Groq and do not create a private-corpus or database dependency.
+```text
+AI_SUPPORT_ENABLED=true
+AI_SUPPORT_SHADOW_ENABLED=false
+AI_SUPPORT_CHANNEL_IDS=1542084649017286727
+AI_SUPPORT_CATEGORY_IDS=
+```
 
-Shadow/adjudication failure cannot block normal bot operation or create a response/mutation path. An approved prospective sample rule and separate release decision remain unresolved governance prerequisites.
+The source does not hard-code the test channel. Every other channel/category and DMs remain outside visible AI support.
+
+Visible mode takes precedence over shadow mode if both flags are true, preventing duplicate processing.
+
+Rollback/kill switch:
+
+```text
+AI_SUPPORT_ENABLED=false
+```
+
+This is not broad release authorization.
+
+## Live response-quality finding
+
+The controlled test message:
+
+```text
+Im unable to download the nfa loader
+```
+
+produced:
+
+```text
+A staff member needs to continue this support request.
+```
+
+The transcript corpus contains relevant customer/staff evidence. The active remediation therefore targets stage specificity, response-knowledge preservation and explicit action rendering rather than giving production direct transcript access.
+
+## Prospective shadow boundary
+
+The separate default-off shadow flag reuses the exact production eligibility and same deterministic/planner/read-only pipeline. With visible AI disabled, eligible post-cutoff messages can produce privacy-safe no-reply cohort records.
+
+Each cohort freezes candidate/runtime/model/config/start time. Evidence uses cohort-scoped keyed pseudonyms and sanitization; raw Discord IDs, emails, selectors, secrets, provider bodies and fulfillment material are excluded. Shadow files are not planner input.
+
+Shadow/adjudication failure cannot block normal bot operation or create a response/mutation path. No real prospective cohort has started yet.
+
+## Release/evaluation boundary
+
+The previous candidate passed consumed synthetic B0-v6, but the active response-reconstruction work materially changes routing/knowledge/rendering. B0-v6 therefore cannot certify the next candidate.
+
+After reconstruction: freeze a new candidate/runtime, create a fresh B0-v7-or-later fixture, require deterministic preflight 100% before any hosted run, then collect prospective fresh-ticket evidence for that exact candidate before broad release.
 
 ## Fragile boundaries
 
 - HMAC canonicalization/exact-body retries;
 - strict DTO mirrors and backend `allowedOperations`;
 - authorization before sensitive access;
+- exact guild/channel/category eligibility for customer AI;
+- deterministic action constraints before planner preference;
+- restricted fail-closed handling;
+- no private-corpus runtime dependency;
+- public runtime sanitizer/integrity manifest;
 - `NOT_FOUND`-only purchase-intent fallback;
-- exact owner equality for canonical and pending targets;
+- exact owner equality for canonical/pending targets;
 - operator-bound session ownership;
 - optional fulfillment support never blocking canonical order controls;
-- missing support never implying manual fulfillment;
-- masked support material never entering public Share to Chat;
+- masked support material never entering customer output;
 - customer-share renderer never inheriting private admin controls;
-- refund fresh-preview equality;
-- Aura/wallet fresh-balance equality + stable idempotency;
-- audit-channel fail-closed prerequisite;
+- refund/Aura/wallet fresh-state + idempotency/audit rules;
 - no direct DB/purchase-processing/manual-fulfillment shortcuts;
-- `/refresh-leaderboard` policy independence.
+- no model-selected mutation authority;
+- kill switch remains effective and documented.
