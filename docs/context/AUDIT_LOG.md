@@ -226,9 +226,9 @@ avg planner tokens:           1684.5
 
 The single unsafe row was `first-turn-action-v3.0016` (`hwid reset plssss`). The planner had been offered the correct static HWID case but also unrelated global lookup tools, and chose `users.overview.read`. After lookup pruning, the same planner input was verified offline with only `case.spoofer.hwid_state`, zero dynamic lookups, zero clarifications and a 693-token estimate. No hosted rerun was performed after that fix.
 
-### Current pause-point benchmark
+### Pause-point benchmark
 
-The latest user-confirmed rebuild after authoritative deterministic-lookup handling is:
+The user-confirmed rebuild at that point was:
 
 ```text
 sourceRecords:             300
@@ -238,25 +238,78 @@ excludedByAdjudication:     25
 records:                   230
 reviewQueueRecords:          7
 representabilityRate:      0.9704641350210971
-representabilityReasons:
-  gold_clarification_unavailable: 7
-planner token average:     1212.286956521739
-median:                     797
-p95:                       2355
 ```
 
-Six review-queue rows are bare order selectors (`0026`, `0108`, `0173`, `0197`, `0249`, `0279`) that the deterministic router over-interprets as a direct order lookup. The intended correction is `selector only -> clarify requested order action`; selector plus explicit status/payment/delivery intent may use live lookup.
+The seven-row queue was later resolved rather than treated as final release evidence.
 
-The seventh row, `0217`, says the order is delivered but `View Order` cannot be clicked/opened. Existing V3 gold asks the fulfillment-state clarification even though delivery state is already supplied. Current handoff judgment is that this row is stale/ambiguous single-path gold and should be re-adjudicated toward order/dashboard-access support if confirmed on resume.
+Verdict at that checkpoint: `PARTIAL / PAUSED`.
 
-The private adjudication overlay still excludes **25** rows. The proposed `0217` exclusion has not been committed; therefore a future 236/236 benchmark is only a projection.
-
-Verdict: `PARTIAL / PAUSED`. Do not spend additional Groq quota until the six selector-only router rows and `0217` adjudication decision are resolved, the benchmark is rebuilt to review queue 0 / representability 1, and repository validation passes. Customer-facing AI remains disabled and unwired.
+---
 
 ## 2026-08-25 — AI support triage development validation complete
 
-The earlier pause condition was resolved. Explicit deterministic static-case/lookup/clarification provenance now constrains candidate construction, Groq schema, validator, and fallback. Selector-only routing, entity-only expansion, scoped generic lookup leakage, operation-backed clarification replacement scoring, loader-link/account-token/technical-signal cases, and Groq strict-schema compatibility were repaired at their narrowest layers.
+Explicit deterministic static-case/lookup/clarification provenance was aligned across candidate construction, Groq schema, validator and fallback. Selector-only routing, entity-only expansion, scoped generic lookup leakage, operation-backed clarification replacement scoring, loader-link/account-token/technical-signal cases, and Groq strict-schema compatibility were repaired at their narrowest layers.
 
 Final consumed-development benchmark: 236/236 adjudicated rows, review queue 0, representability 1. Final post-fix Groq 40-row prefix: structured acceptance 1, exact action 0.975, 36 optimal, 4 safe-progress, and zero unsafe, fallback, invalid, scope-leakage, or semantic-review rows. Local validation passed 308/308 tests, typecheck, build, and diff hygiene.
 
-Verdict: `PARTIAL / DEVELOPMENT VALIDATION COMPLETE`. The untouched final holdout was not run, customer-facing AI remains disabled/unwired, and no bot/deploy/production/website/database action occurred. See `AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md`.
+Verdict: `DEVELOPMENT VALIDATION COMPLETE`; production release still required separate evidence.
+
+---
+
+## 2026-08-26 — Release acceptance and prospective shadow tooling
+
+The first frozen synthetic release set B0-v3 exposed two structural defects: ungrounded planner observation entities and loss of deterministic control-plane actions before Groq. Candidate `4d8790fc90b351d261f8699c7b3cd989c3787fe9` failed B0-v3 at 25/30 structured acceptance, 24/30 exact effective action, 5/30 fallback and 2/3 restricted-safe. B0-v3 was consumed and never rerun as unseen evidence.
+
+The response schema, validator, fallback and deterministic resolver were hardened. B0-v4 and B0-v5 then exposed deterministic-preflight defects and were consumed without hosted calls. The remediated candidate `2e8b763f699b4c1aaa138320f4e0420c736e82dc` passed B0-v6 once:
+
+```text
+deterministic preflight: 44 / 44
+hosted structured acceptance: 44 / 44
+exact effective action: 44 / 44
+fallback: 0 / 44
+restricted safety: 3 / 3
+latency avg/median/p95: 1081.13 / 995.59 / 1602.98 ms
+```
+
+B0-v6 is synthetic release acceptance, not historical-generalization evidence.
+
+Prospective no-reply shadow tooling was then implemented with independent default-off configuration, exact existing eligibility, frozen cutoff cohorts, privacy-safe pseudonymous evidence, human adjudication, deterministic metrics and close/report tooling. Validation passed 388/388 tests plus typecheck/build/diff/audit with zero vulnerabilities. No real cohort was started and no fresh shadow tickets were collected.
+
+Verdict: `IMPLEMENTATION + SYNTHETIC ACCEPTANCE PASS / PROSPECTIVE EVIDENCE PENDING`.
+
+---
+
+## 2026-08-31 — Controlled single-channel visible AI test and response-reconstruction finding
+
+The validated AI/shadow implementation was fast-forwarded into `master`, and the Northflank-hosted bot was explicitly configured for a narrow manual customer-visible test only in Discord channel `1542084649017286727`, with the category allowlist empty. ADR-0015 records the exception without authorizing broad rollout.
+
+Effective intended test boundary:
+
+```text
+AI_SUPPORT_ENABLED=true
+AI_SUPPORT_SHADOW_ENABLED=false
+AI_SUPPORT_CHANNEL_IDS=1542084649017286727
+AI_SUPPORT_CATEGORY_IDS=
+```
+
+A live ordinary support message:
+
+```text
+Im unable to download the nfa loader
+```
+
+received:
+
+```text
+A staff member needs to continue this support request.
+```
+
+The historical corpus already contains relevant customer questions, staff responses and troubleshooting context. The finding therefore identified a response-knowledge/routing/rendering defect rather than missing data: broad NFA-family routing can outrank a more specific loader stage, the sanitized runtime compresses away too much customer-response guidance, and some known actions/cases can collapse into the generic escalation renderer.
+
+The remediation branch `task/ai-support-response-reconstruction` was opened. It must reconstruct a reviewed/sanitized response-guidance layer from the full structured corpus, give all 55 canonical cases an explicit response strategy, preserve current-policy/live-state/restricted boundaries, add explicit action renderers, add privacy-safe diagnostics and bump the runtime knowledge version.
+
+Because that work is material, consumed B0-v6 will not certify its eventual candidate. A fresh B0-v7-or-later synthetic set and later prospective fresh-ticket validation remain required before broad activation.
+
+The documentation system was re-baselined on 2026-08-31 with `CURRENT_STATE_2026-08-31.md`, `DOCS_AUDIT_2026-08-31.md`, refreshed architecture/data/brief/codebase/command/side-project/handoff/roadmap files, and ADR-0015.
+
+Verdict: `CONTROLLED TEST ACTIVE / RESPONSE RECONSTRUCTION PENDING / BROAD RELEASE BLOCKED`.
