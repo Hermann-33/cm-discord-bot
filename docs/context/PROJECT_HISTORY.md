@@ -1,6 +1,6 @@
 # Project History
 
-Updated: 2026-08-24 10:49 +08:00
+Updated: 2026-08-31
 
 This file preserves important chronology without making historical architecture authoritative over current source/ADRs.
 
@@ -110,9 +110,9 @@ Targeted clarification and stateful context carry-forward became first-class beh
 
 ## 2026-08-23 — Hosted LLM planner scaffold
 
-ADR-0012 added a sanitized public `support-runtime/` derivative, explicit conversation state, hosted-planner input/output contracts, privacy sanitization, canonical-ID/scope/restriction/repetition validation and fail-closed provider behavior. Customer-facing Discord AI remained unwired.
+ADR-0012 added a sanitized public `support-runtime/` derivative, explicit conversation state, hosted-planner input/output contracts, privacy sanitization, canonical-ID/scope/restriction/repetition validation and fail-closed provider behavior. Customer-facing Discord AI remained unwired at that point.
 
-OpenRouter was initially evaluated as a development adapter, but free-account/provider limits made it unsuitable as the preferred path.
+OpenRouter was initially evaluated as a development adapter, but provider/account limits made it unsuitable as the preferred path.
 
 ## 2026-08-23/24 — Groq GPT-OSS selected as primary development provider
 
@@ -137,74 +137,113 @@ The older V1/V2 combined reviewed set was rejected as independent hosted-model s
 
 The builder gained explicit gold representability checks so the LLM is not scored against actions it was never allowed to choose.
 
-Targeted router/contract fixes included:
+Targeted router/contract fixes included payment typo normalization, PayPal/payment-state routing, HWID reset, explicit NFA activation, setup/config recognition, media/reseller/partnership recognition, current detection-status restricted routing, security-report escalation, controller compatibility false-positive prevention, product-comparison clarification, spoofer launch-failure clarification and turn-scoped lookup exposure.
 
-- payment typo normalization (`payed` -> `paid`);
-- PayPal/payment-state routing;
-- HWID reset recognition;
-- explicit NFA activation;
-- setup/config recognition;
-- media/reseller/partnership recognition;
-- current detection-status restricted routing;
-- security-report escalation;
-- controller compatibility false-positive prevention;
-- product-comparison clarification;
-- spoofer launch-failure clarification;
-- turn-scoped lookup exposure instead of the global lookup catalog.
+## 2026-08-24 — Groq lookup-leak diagnostic
 
-## 2026-08-24 — 20-row Groq diagnostic and lookup leak
+A cleaned 20-row run reached 100% structured output and 95% safe-progress-or-better but had one unsafe route: `hwid reset plssss` received unrelated global lookup options and the planner chose `users.overview.read` instead of the correct static HWID case.
 
-A cleaned 20-row run produced:
+The defect was treated as action-envelope leakage, not model semantic failure. Lookup exposure was tightened so deterministic/static routes did not inherit the global lookup catalog.
 
-```text
-structured output acceptance: 100%
-safe-progress-or-better:       95%
-unsafe_wrong_route:              1 / 20
-scope leakage:                   0
-fallback:                        0
-average latency:             ~823 ms
-```
+## 2026-08-24 — Benchmark cleanup pause
 
-The one unsafe row was `hwid reset plssss`. The planner received the correct static HWID case but also unrelated global lookup options and selected `users.overview.read`.
-
-This was treated as planner-contract leakage, not a clear model-semantic failure. Lookup exposure was tightened. The corrected `0016` planner input was verified offline with the HWID case only, zero live lookups, zero clarifications and a 693-token estimate. No hosted rerun occurred after that correction.
-
-## 2026-08-24 — Current paused benchmark-cleanup checkpoint
-
-The latest user-confirmed V3 rebuild after authoritative deterministic-lookup handling is:
-
-```text
-sourceRecords:             300
-reviewedRecords:           262
-adjudicatedRecords:        237
-excludedByAdjudication:     25
-representable records:     230
-reviewQueueRecords:          7
-representabilityRate:      0.9704641350210971
-```
-
-Six queue rows are bare/continuation order selectors that the deterministic router over-interprets as direct current-order lookup intent. One row (`0217`) says the order is delivered but `View Order` cannot be opened; its existing fulfillment-state clarification gold is likely stale/ambiguous because that state is already supplied.
-
-The committed adjudication overlay still excludes 25 rows. The proposed `0217` exclusion has not been written. A future 236/236, queue-0 benchmark is only a projection until those changes are implemented and rebuilt.
-
-The workstream was intentionally paused here so current state, architecture, benchmark history, unresolved rows and resume steps could be documented comprehensively.
-
-Authoritative resume guides:
-
-```text
-docs/context/AI_SUPPORT_HANDOVER_PROMPT.md
-docs/context/ACTIVE_CONTEXT.md
-docs/context/AI_SUPPORT_SIDE_PROJECT.md
-docs/context/HANDOFF.md
-docs/GROQ_SUPPORT_TRIAGE.md
-```
-
-Customer-facing AI support remains disabled and unwired. No bot startup, command registration, deployment, website mutation or AI activation is part of this checkpoint.
+A temporary V3 rebuild retained 230 representable rows and seven review-queue rows, mostly selector-only order turns plus one stale/ambiguous delivered-order UI row. The project paused rather than spending more Groq quota against a structurally inconsistent benchmark.
 
 ## 2026-08-25 — Deterministic triage repair and clean development prefixes
 
-The seven-row pause was resolved through selector-aware routing and the committed 26-row adjudication overlay, preserving original V3. Subsequent hosted failures drove explicit deterministic clarification/static-case provenance, input-aware strict schema constraints, scoped clarification lookup isolation, declared operation-backed clarification replacement scoring, and narrow router recognition improvements.
+The seven-row pause was resolved through selector-aware routing and a committed 26-row adjudication overlay while preserving original V3 source. Subsequent hosted failures drove explicit deterministic clarification/static-case provenance, input-aware strict schema constraints, scoped clarification lookup isolation, declared operation-backed clarification replacement scoring and narrow router recognition improvements.
 
-The final benchmark retained 236/236 adjudicated development rows with review queue 0 and representability 1. A post-fix Groq 40-row prefix measured 36 optimal and 4 safe-progress rows with zero unsafe, fallback, invalid, scope-leakage, or semantic-review rows. Full validation passed 308 tests, typecheck, build, and diff hygiene.
+The final benchmark retained 236/236 adjudicated development rows with review queue 0 and representability 1. A post-fix Groq 40-row prefix measured 36 optimal and 4 safe-progress rows with zero unsafe, fallback, invalid, scope-leakage or semantic-review rows. Full validation passed 308 tests, typecheck, build and diff hygiene.
 
-The final holdout remains untouched and production AI remains disabled/unwired. The authoritative checkpoint is `AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md`.
+## 2026-08-25/26 — Grounded runtime/action/Discord integration completed
+
+The production AI path was completed behind default-off controls: deterministic action resolution, approved read-only lookup adapter, bounded per-ticket conversation state, customer-safe rendering, Groq strict schema/validation/fallback, exact guild/channel/category eligibility and `messageCreate` integration. ADR-0014 formalized the default-off customer-facing activation boundary and broad-release evidence requirements.
+
+The AI remained planner-only. No direct database path, service-role secret, private-corpus runtime dependency or model-selected mutation authority was introduced.
+
+## 2026-08-26 — B0-v3 failure and deterministic control-plane remediation
+
+Frozen candidate `4d8790fc90b351d261f8699c7b3cd989c3787fe9` was evaluated once on fresh synthetic B0-v3 and failed:
+
+```text
+structured accepted: 25 / 30
+exact effective action: 24 / 30
+fallback: 5 / 30
+restricted safe: 2 / 3
+```
+
+B0-v3 was never rerun as unseen evidence. The failure exposed ungrounded observation strings and missing deterministic action locking for policy, attachment, security and restricted control-plane routes.
+
+The response schema, validator, resolver and fallback were hardened so deterministic next action and policy IDs survive end-to-end and all canonical ID fields are input-constrained.
+
+## 2026-08-26 — B0-v4/v5 preflight failures, B0-v6 release pass
+
+B0-v4 and B0-v5 failed deterministic preflight and received no hosted Groq calls. Their real defects were converted into regressions before new candidates/fixtures were created.
+
+Candidate `2e8b763f699b4c1aaa138320f4e0420c736e82dc` then passed B0-v6:
+
+```text
+deterministic preflight: 44 / 44
+hosted accepted:         44 / 44
+exact effective action:  44 / 44
+fallback:                 0 / 44
+restricted safe:          3 / 3
+avg/median/p95 latency:   1081.13 / 995.59 / 1602.98 ms
+```
+
+B0-v6 is consumed fresh synthetic release acceptance, not historical-generalization evidence.
+
+## 2026-08-26 — Prospective shadow tooling
+
+A separate no-reply shadow mode was implemented with the exact production eligibility boundary, frozen cohort start time/candidate/runtime/model configuration, pseudonymous privacy-safe records, human adjudication, deterministic ADR-0014 metrics and close/report tooling.
+
+Validation passed 388/388 tests plus typecheck/build/diff/audit with zero vulnerabilities. No real prospective cohort was started and no fresh tickets were collected.
+
+The documented 200-turn / 14-day sample target remained a proposed governance recommendation because ADR-0014 itself defines no minimum sample.
+
+## 2026-08-31 — AI/shadow implementation merged to `master`
+
+The validated AI/shadow branch history was fast-forwarded into `master`, making the production repository itself the Northflank deployment source for the complete bounded AI-support implementation.
+
+## 2026-08-31 — Controlled one-channel visible AI test
+
+Before starting prospective shadow collection, the operator explicitly authorized a narrow manual visible test under ADR-0015:
+
+```text
+AI_SUPPORT_ENABLED=true
+AI_SUPPORT_SHADOW_ENABLED=false
+AI_SUPPORT_CHANNEL_IDS=1542084649017286727
+AI_SUPPORT_CATEGORY_IDS=
+```
+
+No category-wide or guild-wide customer AI activation was authorized.
+
+A live customer-style message:
+
+```text
+Im unable to download the nfa loader
+```
+
+received the generic fallback:
+
+```text
+A staff member needs to continue this support request.
+```
+
+## 2026-08-31 — Response-knowledge reconstruction opened
+
+The live failure confirmed that the transcript corpus itself was not the missing resource: the private repository already contains customer questions, staff answers, clarification sequences, troubleshooting and outcomes across 1,578 tickets / 39,090 messages. The problem is that the production derivative compressed too much of that information into routing/classification metadata, while broad NFA routing could outrank the more specific loader stage and some final actions still fell through to generic escalation.
+
+Branch:
+
+```text
+task/ai-support-response-reconstruction
+```
+
+The new workstream must programmatically recover safe customer-response guidance from the full corpus, preserve private provenance/contradictions, sanitize only approved guidance into `support-runtime/`, cover all 55 canonical cases with explicit response strategies, fix loader/NFA specificity, explicitly render all triage actions, add privacy-safe diagnostics and bump the runtime knowledge version.
+
+This material change invalidates B0-v6 as certification for the next candidate. A fresh B0-v7-or-later fixture and later prospective validation are required before broad rollout.
+
+## 2026-08-31 — Documentation re-baseline
+
+The current documentation layer was reconciled with actual deployment state. `CURRENT_STATE_2026-08-31.md`, `DOCS_AUDIT_2026-08-31.md`, current architecture/data/brief/codebase/commands/side-project/handoff/roadmap files and ADR-0015 now own current status; dated release/benchmark documents remain immutable point-in-time evidence for their original runs.
