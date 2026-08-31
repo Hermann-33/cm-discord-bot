@@ -2,69 +2,69 @@
 
 This documentation system is the durable memory and governance layer for the Cheater's Market Discord bot.
 
-## Read first
+## Current read order
 
-- `../AGENTS.md` — mandatory operating rules
-- `context/ACTIVE_CONTEXT.md` — concise present state
-- `context/AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md` — failed consumed B0-v3, structural remediation, consumed B0-v4/B0-v5 preflights, passing B0-v6 synthetic acceptance, and remaining prospective-shadow gate
-- `AI_SUPPORT_SHADOW_VALIDATION.md` — prospective cohort initialization, no-reply runtime semantics, privacy-safe evidence, adjudication, metrics, and close/report operations
-- `context/AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md` — completed local repair, 236-row benchmark rebuild, clean 20/40-row Groq development results, and remaining final-holdout gate
-- `context/AI_SUPPORT_TRIAGE_PROGRESS_2026-08-25.md` — measured hosted-triage progress, failure analysis and deterministic-clarification hardening
-- `context/AI_SUPPORT_TRIAGE_SCHEMA_HARDENING_2026-08-25.md` — historical addendum describing the input-aware Groq strict-schema action envelope before completed validation
-- `context/AI_SUPPORT_SIDE_PROJECT.md` — authoritative compact context for the ticket-knowledge/AI-support workstream, Groq planner, benchmark history and current checkpoint
-- `context/HANDOFF.md` — exact latest pause point and resume sequence
-- `context/AI_SUPPORT_HANDOVER_PROMPT.md` — copy-paste handover prompt plus ordered guide to all public/private AI-support documents
-- `context/PROJECT_BRIEF.md` — stable product purpose and scope
-- `context/SIDE_PROJECTS.md` — adjacent/non-runtime workstreams, including the ticket transcript corpus
-- `context/ARCHITECTURE.md` — accepted current architecture
-- `context/DATA_STATUS.md` — verified backend/data dependency posture
-- `context/CODEBASE_MAP.md` — module ownership and fragile boundaries
-- `context/COMMANDS.md` — current and accepted command policy
-- `context/ROADMAP.md` — roadmap and completion gates
-- `context/WORKFLOW.md` — task/audit/Git lifecycle
-- `context/AUDIT_LOG.md` — chronological material findings and verdicts
-- `context/PROJECT_HISTORY.md` — durable project chronology
+1. `../AGENTS.md` — mandatory operating rules.
+2. `context/CURRENT_STATE_2026-08-31.md` — authoritative current repository/deployment/AI-support state.
+3. `context/DOCS_AUDIT_2026-08-31.md` — explains which older documents are preserved historical snapshots and what current files supersede their stale status assertions.
+4. `context/ACTIVE_CONTEXT.md` — compact current working context.
+5. `context/HANDOFF.md` — exact next engineering/resume sequence.
+6. `decisions/ADR-0015-single-channel-visible-ai-test.md` — current narrow live-test authorization.
+7. `context/ROADMAP.md` — current project phases and release gates.
+8. `context/ARCHITECTURE.md` — accepted architecture/invariants.
+9. `context/DATA_STATUS.md` — backend/data dependency details; use current-state docs for deployment-status supersession.
+10. `context/CODEBASE_MAP.md` — module ownership and fragile boundaries.
+11. `context/COMMANDS.md` — command policy.
+12. `context/WORKFLOW.md` — task/audit/Git lifecycle.
+13. `context/AUDIT_LOG.md` and `context/PROJECT_HISTORY.md` — chronology.
 
-For AI-support work, read `context/AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md`, then `context/ACTIVE_CONTEXT.md`, `context/HANDOFF.md`, and `context/AI_SUPPORT_HANDOVER_PROMPT.md` before modifying routing, planner contracts, Groq/OpenRouter integration, benchmark/evaluation logic, `support-runtime/`, or private `CM-Ticket-Transcripts` artifacts.
+## AI-support evidence/history
 
-## Full audit reports
+These files are preserved as point-in-time evidence. Their benchmark numbers remain authoritative for the run they describe, but their old deployment/activation statements do not override `CURRENT_STATE_2026-08-31.md`.
 
-- `audits/2026-08-17-full-codebase-audit.md` — exhaustive active-code/test/config/GitHub/dependency re-baseline (`TASK-AUDIT-001`); its slash-only `cm aura` conclusion was superseded by ADR-0005.
-- `audits/2026-08-18-cm-admin-controls-order.md` — `TASK-CM-ADMIN-003` direct order/Aura/wallet implementation and verification audit.
-- `audits/2026-08-18-cm-admin-sharing-discord-audit.md` — `TASK-CM-ADMIN-004` customer-safe share/Discord identity/timestamp/audit implementation audit.
-- `audits/2026-08-18-cm-share-email.md` — `TASK-CM-ADMIN-005` customer-email disclosure follow-up and verification audit.
-- `audits/2026-08-18-cm-admin-ui-declutter.md` — `TASK-CM-ADMIN-006` compact User/Order/Delivery/refund/adjustment/share presentation audit.
-- `audits/2026-08-19-cm-pending-orders-fulfillment-support.md` — `TASK-CM-ADMIN-007` pending purchase lookup + optional masked fulfillment support implementation/verification audit.
+- `context/AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md` — B0-v3 failure, remediation, failed B0-v4/v5 preflights, passing consumed B0-v6 synthetic acceptance.
+- `AI_SUPPORT_SHADOW_VALIDATION.md` — prospective cohort/no-reply/adjudication tooling and privacy model.
+- `context/AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md` — consumed 236-row development benchmark and Groq development results.
+- `context/AI_SUPPORT_TRIAGE_PROGRESS_2026-08-25.md` — earlier hosted triage progress/failure analysis.
+- `context/AI_SUPPORT_TRIAGE_SCHEMA_HARDENING_2026-08-25.md` — earlier strict-schema hardening.
+- `context/AI_SUPPORT_RELEASE_HANDOVER_2026-08-25.md` — pre-release handoff history.
+- `context/AI_SUPPORT_SIDE_PROJECT.md` — detailed 2026-08-26 workstream snapshot; use current-state docs for later deployment/reconstruction state.
+- `context/AI_SUPPORT_HANDOVER_PROMPT.md` — historical handover prompt; current files supersede stale branch/deployment pointers inside it.
+- `GROQ_SUPPORT_TRIAGE.md` — provider contract/reference; current-state docs own current rollout status.
+- `OPENROUTER_SUPPORT_TRIAGE.md` — secondary provider reference.
+
+## Current AI test and remediation
+
+The bot is currently authorized for a controlled visible AI test only in Discord channel `1542084649017286727`, with no category allowlist, under ADR-0015. This is not broad rollout.
+
+A live message, `Im unable to download the nfa loader`, produced the generic staff-escalation fallback. The active branch `task/ai-support-response-reconstruction` exists to reconstruct safe transcript-grounded response knowledge, fix loader/NFA specificity, and give all 55 canonical cases an explicit response strategy.
+
+Because this work materially changes routing/knowledge/rendering, consumed B0-v6 will not certify the next candidate. A fresh B0-v7-or-later set and later prospective validation are required before broad activation.
 
 ## Durable decisions
 
-- `decisions/ADR-0001-standalone-bot-boundary.md`
-- `decisions/ADR-0002-internal-api-data-boundary.md`
-- `decisions/ADR-0003-guild-only-slash-command-policy.md` — historical, superseded by ADR-0005
-- `decisions/ADR-0004-admin-mutation-security-model.md` — historical high-impact model; channel requirement superseded by ADR-0006 and dedicated Aura/wallet preview-endpoint requirement superseded by ADR-0007
-- `decisions/ADR-0005-customer-message-admin-slash-command-policy.md` — current customer/admin command-surface split
-- `decisions/ADR-0006-admin-console-guild-wide-channel-policy.md` — current `/cm` exact-guild/explicit-user authorization policy
-- `decisions/ADR-0007-admin-balance-adjustment-confirmation-model.md` — current Aura/wallet confirmation, fresh-state binding, idempotency and audit model
-- `decisions/ADR-0008-admin-panel-customer-safe-sharing.md` — base customer-safe public-copy/control boundary and Discord lookup/time/audit presentation policy
-- `decisions/ADR-0009-customer-email-in-shared-panels.md` — supersedes ADR-0008 only for the previous full-email prohibition; shared customer identity includes canonical account email
-- `decisions/ADR-0010-ticket-transcript-data-repository-boundary.md` — keeps the parallel `CM-Ticket-Transcripts` repository private, data/specification-only and independent from production runtime
-- `decisions/ADR-0011-pending-purchase-and-fulfillment-support-view.md` — order-first pending-purchase fallback, optional private masked fulfillment support, and public-share exclusions
-- `decisions/ADR-0012-bundled-support-runtime-and-openrouter-planner.md` — sanitized bundled support runtime, constrained optional hosted planner, stateful deterministic service boundary, and benchmark-before-activation gate; provider preference superseded by ADR-0013
-- `decisions/ADR-0013-groq-primary-support-triage-provider.md` — Groq `openai/gpt-oss-120b` is the primary hosted triage candidate; deterministic validation and the ADR-0012 runtime boundary remain authoritative
-- `decisions/ADR-0014-customer-facing-ai-support-activation-boundary.md` — permits only default-off allowlisted Discord wiring; production enablement still requires frozen evidence, prospective shadow validation, and a separate release decision
+- ADR-0001 — standalone bot boundary
+- ADR-0002 — Internal Integrations API data boundary
+- ADR-0003 — historical slash-command policy, superseded by ADR-0005
+- ADR-0004 — historical admin mutation model, partially superseded by ADR-0006/0007
+- ADR-0005 — customer-message/admin-slash command split
+- ADR-0006 — guild-wide `/cm` admin authorization
+- ADR-0007 — Aura/wallet confirmation/idempotency model
+- ADR-0008 — customer-safe sharing base policy
+- ADR-0009 — canonical customer email in shared panels
+- ADR-0010 — private ticket transcript repository boundary
+- ADR-0011 — pending-purchase/fulfillment support view
+- ADR-0012 — sanitized bundled runtime + constrained hosted planner
+- ADR-0013 — Groq GPT-OSS primary provider
+- ADR-0014 — default-off customer-facing activation / broad-release evidence gate
+- ADR-0015 — controlled single-channel customer-visible AI test
 
-## Specialist references
+## Historical audits
 
-- `GROQ_SUPPORT_TRIAGE.md` — primary Groq GPT-OSS provider setup, privacy boundary, benchmark pacing, current benchmark checkpoint and activation gate
-- `OPENROUTER_SUPPORT_TRIAGE.md` — secondary OpenRouter provider setup and compatibility notes
-- `security/ADMIN_MUTATION_MODEL.md` — Aura/wallet/refund mutation security model
-- `security/CM_ADMIN_CONSOLE_SECURITY.md` — current `/cm` authorization/session/share/user/order/pending/refund/balance-control security model
-- `legacy-parity.md` — frozen behavioral/history audit for the pre-rebuild bot
+Files under `docs/audits/` are immutable point-in-time audits unless a later audit explicitly supersedes them. Do not rewrite old findings merely because current source has advanced.
 
-## Rule
+## Authority rule
 
-Current source code and verified external state override stale chat memory. Later accepted ADRs supersede conflicting earlier ADRs. Historical audits describe their point-in-time conclusion and may be superseded. External backend facts are dependency context, never permission for the bot to bypass the website Internal Integrations API.
+Later accepted ADRs and the current-state documentation layer supersede conflicting old status statements. Historical benchmark/audit documents retain their original results. Current source and verified external state override stale chat memory.
 
-Adjacent side projects remain outside the production bot runtime unless an explicit later architecture decision says otherwise. In particular, `CM-Ticket-Transcripts` is a private data/specification corpus, not an executable bot/tool repository.
-
-ADR-0012 permits only an operator-generated, provenance-free `support-runtime/` derivative in this public repository. ADR-0013 changes the preferred hosted planner provider only; it does not weaken that data boundary.
+The production bot may consume only the sanitized bundled `support-runtime/` derivative. `CM-Ticket-Transcripts` remains a private data/specification repository and is never a production filesystem/runtime dependency.

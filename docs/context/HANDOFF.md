@@ -1,62 +1,104 @@
 # Latest Handoff
 
-Updated: 2026-08-26
-Status: `SHADOW TOOLING IMPLEMENTED / REAL PROSPECTIVE COLLECTION NOT STARTED / PRODUCTION DISABLED`
+Updated: 2026-08-31
+Status: `CONTROLLED ONE-CHANNEL LIVE TEST / RESPONSE RECONSTRUCTION PENDING / BROAD RELEASE BLOCKED`
 
-## Read first
+## Read order
 
-1. `AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md` — definitive B0-v3 failure, remediation, B0-v4/B0-v5 preflight, B0-v6 pass, and activation status.
-2. `../AI_SUPPORT_SHADOW_VALIDATION.md` — no-reply cohort operations, privacy, adjudication, and metrics.
-3. `AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md` — consumed development history.
-4. `ACTIVE_CONTEXT.md` — concise current state and remaining gate.
-5. `AI_SUPPORT_HANDOVER_PROMPT.md` and its ordered references.
+1. `CURRENT_STATE_2026-08-31.md`
+2. `DOCS_AUDIT_2026-08-31.md`
+3. `ACTIVE_CONTEXT.md`
+4. `../decisions/ADR-0015-single-channel-visible-ai-test.md`
+5. `AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md`
+6. `../AI_SUPPORT_SHADOW_VALIDATION.md`
+7. `AI_SUPPORT_HANDOVER_PROMPT.md` and accepted ADRs
 
-The validation checkpoint supersedes earlier validation-pending and stale 25-exclusion/230-record text.
-
-## Boundaries
-
-- Public repository: `Hermann-33/cm-discord-bot`, branch `task/ai-support-integration`.
-- Private repository: `Hermann-33/CM-Ticket-Transcripts`, branch `main`, data/specification-only under ADR-0010.
-- Original V3 is immutable; exclusions live only in its adjudication overlay.
-- No bot startup, command registration, deployment, production merge, website mutation, direct database access, or customer-facing AI activation occurred.
-- No unapproved website operation was added. `catalog.current.read` remains unresolved and unavailable.
-- B0-v3 is consumed and failed; B0-v4/B0-v5 are consumed failed preflights; B0-v6 is consumed passing synthetic release evidence.
-- Prospective tooling exists on `task/ai-support-shadow-validation`; no real bot run or fresh-ticket collection occurred.
-
-## What changed
-
-Deterministic routing now transports every known next action, including policy, attachment, restricted, human-security, support-operation, and multi-intent routes. Groq receives singleton action schemas for those routes. Every canonical response ID is constrained by the input-aware schema and independently checked by the validator. Fallback reproduces deterministic actions and IDs, and restricted turns fail closed to canonical escalation.
-
-The private data repository has no source/specification change from this task. Preserve its pre-existing Obsidian graph edit and unrelated generated audit artifacts.
-
-The shadow implementation introduces `AI_SUPPORT_SHADOW_ENABLED=false`, an explicit cohort directory, and a dedicated local pseudonym secret. With visible AI disabled and shadow enabled, exact eligible messages traverse the frozen planner/action path and approved read-only lookup adapter but never receive an AI reply. Prospective cutoff, candidate/runtime/model pins, sanitized evidence, independent labels, deterministic ADR metrics, and cohort close/report operations are implemented. Visible mode wins if both flags are true, preventing duplicate processing.
-
-Implementation commit: `fe644f33be2341d71bc9c0860d339046fcdf0c37` (`TASK-AI-SUPPORT-034: add prospective shadow validation`). Its local gate was 388/388 tests plus typecheck/build/diff/audit pass with zero vulnerabilities.
-
-## Current release evidence
+## Current baseline
 
 ```text
-candidate:                  2e8b763f699b4c1aaa138320f4e0420c736e82dc
-local validation:           375 / 375, typecheck/build/diff pass, audit 0
-shadow implementation:      388 / 388, typecheck/build/diff pass, audit 0
-B0-v6 fixture SHA-256:      64c299a6d07b1f06bd49f14aca0ecd90a52d97298d4094ab19dff832eb855b02
-B0-v6 deterministic:       44 / 44
-B0-v6 hosted accepted:     44 / 44
-B0-v6 hosted exact:        44 / 44
-B0-v6 fallback:             0 / 44
-B0-v6 restricted safe:      3 / 3
+master: f8988037994146f5d51455878fb8fa9d8a987928 before this docs refresh
+Northflank source: cm-discord-bot production/default branch
+private corpus: Hermann-33/CM-Ticket-Transcripts @ c9e993f17583a607402f4173296f64aac52d2ebe
+active engineering branch: task/ai-support-response-reconstruction
 ```
 
-## Next gate
+The validated implementation/shadow branch was fast-forwarded into `master`. The previous routing/planner candidate passed consumed B0-v6 synthetic acceptance at 44/44 exact/accepted, zero fallback and 3/3 restricted safety.
 
-Do not treat synthetic B0-v6 as historical generalization evidence. When an explicit activation-readiness task authorizes it:
+## Controlled live test
 
-1. approve a minimum prospective sample/review duration; ADR-0014 does not define one (the documented 200-turn/14-day rule is a proposal only);
-2. confirm candidate `2e8b763`, runtime, model configuration, and pseudonym secret remain frozen;
-3. initialize an open cohort and separately authorize an operator to start the bot in shadow mode;
-4. collect and independently score newly arriving tickets without customer-visible AI activation;
-5. inspect every non-optimal, fallback, invalid, unsafe, leakage, or semantic-review row;
-6. verify privacy, restricted-topic precision, lookup authorization, multi-turn state, and operational rollout controls;
-7. keep production disabled unless all ADR-0012/ADR-0013/ADR-0014 criteria and a separate release decision pass.
+The operator explicitly authorized customer-visible AI testing only in Discord channel:
 
-No cohort ID/start time/count exists yet because no real collection was started in this implementation task.
+```text
+1542084649017286727
+```
+
+Expected effective configuration:
+
+```text
+AI_SUPPORT_ENABLED=true
+AI_SUPPORT_SHADOW_ENABLED=false
+AI_SUPPORT_CHANNEL_IDS=1542084649017286727
+AI_SUPPORT_CATEGORY_IDS=
+```
+
+This is a narrow test exception recorded in ADR-0015, not a general production activation decision.
+
+## Live defect discovered
+
+Message:
+
+```text
+Im unable to download the nfa loader
+```
+
+Observed bot reply:
+
+```text
+A staff member needs to continue this support request.
+```
+
+Root-cause direction already established:
+
+1. loader download/update specificity must beat broad NFA-family routing when both tokens are present;
+2. the private corpus contains the needed customer/staff conversations, but the sanitized public runtime currently loses too much response content;
+3. the final deterministic renderer needs explicit handling for all supported action types and useful case guidance rather than generic escalation.
+
+## Next engineering task
+
+Work on `task/ai-support-response-reconstruction`.
+
+Use the full 1,578-ticket / 39,090-message structured corpus as the primary historical evidence source. Build deterministic extraction/coverage tooling; do not copy raw transcript text directly into production.
+
+Required outcome:
+
+- derive a private response-guidance layer with provenance/authority classification;
+- sanitize/promote only safe approved guidance into the public runtime;
+- cover all 55 canonical cases with an explicit response strategy;
+- retain current-state/policy/live-lookup boundaries;
+- retain restricted-topic safeguards;
+- make ordinary known cases answer/clarify usefully instead of defaulting to generic escalation;
+- add the exact NFA-loader regression;
+- add explicit `support_operation`, `human_escalation`, and `multi_intent_route` rendering;
+- add safe canonical diagnostics;
+- bump runtime knowledge version;
+- run full tests/typecheck/build/diff/audit/privacy/architecture coverage.
+
+## Evaluation after remediation
+
+Do not rerun B0-v6 as unseen evidence. Create fresh B0-v7 or later only after implementation is frozen. If deterministic preflight fails, consume that fixture as development evidence and create another fresh fixture after fixing the defect. Only run hosted Groq after deterministic preflight reaches 100%.
+
+A passing synthetic result still does not replace prospective fresh-ticket shadow validation.
+
+## Broad rollout blockers
+
+- complete response reconstruction;
+- pass full validation;
+- pass a fresh synthetic release fixture for the new candidate;
+- freeze candidate/runtime/provider configuration;
+- run prospective newly arriving ticket validation;
+- review operational rollback/kill switch;
+- make a separate explicit broad activation decision.
+
+## Kill switch / safety
+
+Set `AI_SUPPORT_ENABLED=false` and restart/redeploy the service to stop visible AI. No mutation/direct-DB/private-corpus-runtime authority is permitted.

@@ -1,201 +1,121 @@
 # Project Roadmap
 
-Updated: 2026-08-24 10:49 +08:00
+Updated: 2026-08-31
 
 ## Completion rule
 
-A phase/task is complete only when applicable Discord behavior, API/data correctness, authorization/security, executable tests/typecheck/build/diff checks, documentation and requested Git/deployment gates pass.
+A phase is complete only when its source behavior, API/data correctness, authorization/security, tests/typecheck/build/diff/audit, documentation, and any explicit Git/deployment gate pass.
 
-## Phase 0 — Read-only foundation — COMPLETE
+## Core bot phases
 
-Customer `cm aura`, Components V2 leaderboard, bootstrap/scheduling/manual refresh, HMAC Internal Integrations API client, legacy isolation and removal of active direct-DB access.
+### Phase 0 — Read-only foundation — COMPLETE
 
-## Phase 1 — Repository governance — COMPLETE
+Customer `cm aura`, leaderboard, HMAC Internal Integrations API client, legacy isolation, and removal of active direct-DB access.
 
-Repository-resident workflow, ADRs, context, audit, history and handoff.
+### Phase 1 — Repository governance — COMPLETE
 
-## Phase 1.5 — Re-baseline / backend contracts — COMPLETE
+Repository workflow, ADRs, context, audit history and handoff system.
 
-Active code/dependency audit plus current Internal Integrations API operation/selector/idempotency contracts verified. ADR-0005 superseded the old slash-only customer recommendation.
+### Phase 2 — Private admin console — COMPLETE
 
-## Phase 2 — Private admin console foundation — COMPLETE
+`/cm user`, private operator sessions, order navigation, fulfillment diagnostics and canonical refund.
 
-`TASK-CM-ADMIN-001`: `/cm user`, private operator-bound sessions, user/order navigation, fulfillment diagnostics and canonical refund.
+### Phase 3 — Guild-wide `/cm` authorization — COMPLETE
 
-## Phase 3 — Guild-wide `/cm` authorization — COMPLETE
+Exact guild + explicit admin allowlist + per-interaction authorization.
 
-`TASK-CM-ADMIN-002` / ADR-0006 established exact configured guild + mandatory explicit `BOT_ADMIN_USER_IDS` + per-interaction authorization with no shared `/cm` channel restriction. Mutation audit channel remains separate.
+### Phase 4 — Order/Aura/wallet controls — COMPLETE
 
-## Phase 4 — Direct order + Aura/wallet controls — COMPLETE ON MAINLINE
+Direct order lookup, confirmed Aura/wallet adjustment and canonical refund with audit/idempotency controls.
 
-`TASK-CM-ADMIN-003` added `/cm order`, confirmed Aura adjustment, confirmed wallet adjustment, canonical refund retention and backend + Discord audit. Manual fulfillment remains blocked.
+### Phase 5 — Customer-safe sharing / Discord admin UX — COMPLETE
 
-## Phase 5 — Customer-safe sharing / Discord admin UX — COMPLETE ON MAINLINE
+Discord-user lookup, linked identity, Share to Chat, customer email policy, decluttered admin UI, pending-purchase fallback and masked fulfillment support.
 
-`TASK-CM-ADMIN-004` added `/cm user` lookup by email/Discord user, linked Discord identity, Share to Chat, Discord timestamps and concise Components V2 audit summaries.
+### Phase 6 — Manual fulfillment — BLOCKED ON BACKEND CONTRACT
 
-## Phase 5.1 — Shared customer email — COMPLETE ON MAINLINE
+No approved execute operation exists. `purchase-intents.process` and direct database access are not substitutes.
 
-`TASK-CM-ADMIN-005` / ADR-0009 intentionally added canonical customer account email to Share to Chat while preserving the separate read-only renderer and internal-field/control exclusions.
+### Phase 7 — Production operations hardening — PARTIAL / ONGOING
 
-## Phase 5.2 — Admin UI declutter — COMPLETE ON MAINLINE
+Remaining operational items include branch protection/status checks, runbooks, credential rotation, controlled smoke tests and production observability.
 
-`TASK-CM-ADMIN-006` simplified private `/cm` and customer-share presentation without changing API, authorization or mutation behavior. PR #4 merged at `6cef7695a09c8761d395f5d530bc79b7532c9b9f` after tests/typecheck/build/diff checks.
+## AI support / transcript workstream
 
-## Phase 5.3 — Pending purchase + fulfillment support integration — IMPLEMENTED / VERIFIED
-
-`TASK-CM-ADMIN-007` / ADR-0011 completed the currently available website-side order-support contract in the Discord bot:
-
-- `/cm order` remains canonical-order first;
-- stable `NOT_FOUND` falls back to `purchase-intents.lookup.read`;
-- exact pending-purchase owner resolution;
-- private Pending Purchase panel;
-- Refresh Purchase with automatic transition to canonical order;
-- no order-only refund/delivery controls while only a purchase intent exists;
-- optional private `orders.fulfillment.read.support` type/duration/masked-material/manual state;
-- optional support failure does not block canonical order controls;
-- strict rejection of unexpected raw fulfillment material;
-- masked fulfillment support/provider internals excluded from Share to Chat;
-- `purchase-intents.process`, manual fulfillment and direct DB remain forbidden.
-
-## Phase 6 — Manual fulfillment — BACKEND OPERATION REQUIRED
-
-Still out of scope. `orders.fulfillment.read` is read-only; `purchase-intents.process` and direct DB are not substitutes.
-
-## Phase 7 — Production hardening / operations
-
-Priorities:
-
-- branch protection/status checks;
-- registration-specific config loader;
-- stronger generic PII/secret redaction;
-- deployment/rollback/credential-rotation runbooks;
-- controlled authenticated read/mutation smoke tests only with explicit authorization.
-
-## Parallel side project — CM Ticket Transcript / AI Support Knowledge Base
-
-This is not a production-bot runtime phase until an explicit activation task passes all gates. It is governed by ADR-0010, ADR-0012, ADR-0013, `SIDE_PROJECTS.md`, `AI_SUPPORT_SIDE_PROJECT.md`, `HANDOFF.md`, and `AI_SUPPORT_HANDOVER_PROMPT.md`.
-
-Private repository:
+### T1 — Corpus acquisition — COMPLETE
 
 ```text
-Hermann-33/CM-Ticket-Transcripts
+structured tickets: 1,578 / 1,578
+messages: 39,090
+extraction failures: 0
 ```
 
-The repository is private and data/specification-only. Executable tooling remains in `cm-discord-bot/tools/ticket-transcript-exporter/`.
+### T2 — Deep review / knowledge graph — COMPLETE
 
-### Transcript Phase T1 — Corpus acquisition — COMPLETE
+All tickets processed into private evidence/knowledge layers; contradictions and provenance preserved.
+
+### T3 — Canonical/runtime KB — COMPLETE FOR ROUTING BASELINE
+
+55 canonical support cases plus aliases, policies, procedures, clarifications, lookups, escalations, product profiles and routing artifacts exist. The public runtime is a sanitized derivative and never reads the private corpus at runtime.
+
+### T4 — Conversational routing / inferability — IMPLEMENTED
+
+Exact-case, family-only, entity-only, control-plane, insufficient-context and multi-intent behavior exists with bounded state and targeted clarifications.
+
+### T5 — Hosted Groq triage — IMPLEMENTED
+
+Groq `openai/gpt-oss-120b` is the primary constrained semantic planner. Deterministic code remains authoritative.
+
+### T6 — Synthetic release acceptance — PASSED FOR PRE-RECONSTRUCTION CANDIDATE
+
+B0-v3 failed and was consumed. B0-v4/B0-v5 failed deterministic preflight with no hosted call. B0-v6 passed 44/44 deterministic and 44/44 hosted exact/accepted with zero fallback and 3/3 restricted safety.
+
+B0-v6 is consumed and does not certify material later changes.
+
+### T7 — Prospective shadow tooling — IMPLEMENTED / COLLECTION NOT STARTED
+
+No-reply cohort creation, privacy-safe evidence, pseudonyms, human adjudication, metrics, close/report tooling and cutoff enforcement are implemented. No real prospective cohort has been started.
+
+### T8 — Controlled single-channel visible test — ACTIVE / LIMITED
+
+ADR-0015 permits manual visible AI testing only in channel `1542084649017286727` with no category allowlist. This is not broad activation.
+
+The first live test exposed an ordinary NFA-loader download request collapsing to generic staff escalation.
+
+### T9 — Response knowledge reconstruction — NEXT / IN PROGRESS BRANCH
+
+Branch:
 
 ```text
-strict View Transcript records: 1,578
-structured tickets:             1,578 / 1,578
-extraction failures:            0
-messages:                       39,090
+task/ai-support-response-reconstruction
 ```
 
-Tickety transcript content is obtained from its Msgpack API path, not the JavaScript shell page. Discovery targets only exact `View Transcript` controls.
+Required outcomes:
 
-### Transcript Phase T2 — Exhaustive deep review / knowledge graph — COMPLETE
+- analyze all relevant transcript conversations programmatically;
+- recover safe staff response/clarification/troubleshooting/resolution patterns;
+- build private response guidance with authority/provenance classification;
+- sanitize into production without raw transcript/provenance/PII/secrets;
+- fix stage specificity, especially loader-vs-NFA routing;
+- explicitly render every triage action;
+- cover 55/55 canonical cases with a response strategy;
+- eliminate generic staff escalation as the normal behavior for known ordinary support cases;
+- add response-quality and privacy regression tests;
+- bump runtime knowledge version.
 
-All 1,578 tickets were processed into the private deep-review / evidence / graph layers. The private evidence system preserves contradictions, unresolved items, attachment/manual-review candidates, source links and provenance rather than flattening all historical support into present policy.
+### T10 — Fresh synthetic acceptance for reconstructed candidate — REQUIRED
 
-```text
-historical fact nodes:     3,949
-fact dispositions:         3,949 / 3,949
-broken links:              0
-fact nodes without evidence: 0
-```
+After T9 is frozen, create B0-v7 or later. Do not reuse B0-v6 as unseen evidence. Require deterministic preflight 100% before a single hosted release run.
 
-### Transcript Phase T3 — Canonical/runtime knowledge compilation — COMPLETE FOR CURRENT OFFLINE SOURCE
+### T11 — Prospective fresh-ticket validation for reconstructed candidate — REQUIRED
 
-The private canonical/runtime source currently contains 55 support cases plus entity, procedure, policy, dynamic lookup, escalation, clarification and routing artifacts. Historical prose/PII/provenance remain outside the production derivative.
+A passing synthetic set is not historical generalization evidence. Start a new cohort only after candidate/runtime/model are frozen. Do not combine evidence across materially different candidates.
 
-Dynamic/current state such as payment/order/fulfillment/balance/price/stock/status must use live authority rather than historical claims.
+ADR-0014 defines quality thresholds but no minimum sample. The current 200-adjudicated-turn / 14-day recommendation remains proposed governance, not a hardcoded release rule.
 
-### Transcript Phase T4 — First-turn inferability / conversational routing — IMPLEMENTED / DEVELOPMENT EVALUATION
+### T12 — Broad customer-facing rollout — BLOCKED
 
-The project pivoted away from forcing exact first-turn case classification. Normative behavior now supports:
-
-```text
-exact_case
-family_only
-entity_only
-control_plane_only
-insufficient_context
-multi_intent
-```
-
-Under-specified messages ask targeted clarification. Stateful replay preserves context and avoids repeated questions/diagnostics.
-
-### Transcript Phase T5 — Hosted LLM triage — IMPLEMENTED / SYNTHETIC ACCEPTANCE PASS
-
-ADR-0013 selects:
-
-```text
-Provider: Groq
-Model: openai/gpt-oss-120b
-```
-
-OpenRouter remains secondary only.
-
-The hosted model chooses a structured next action; it does not own support truth, live state, policy, scope, restricted-topic decisions, state transitions or executable operations.
-
-Implemented safeguards include:
-
-- hosted input privacy sanitization;
-- strict JSON-schema output;
-- canonical-ID/scope/restricted/repetition/known-answer validation;
-- no automatic provider retry/failover;
-- V3 gold representability gating;
-- separate V3 adjudication overlay;
-- turn-scoped live-lookup exposure rather than a global tool catalog;
-- rate-safe Groq benchmark pacing and stop-on-429 behavior.
-
-The consumed development cleanup and hosted validation are complete:
-
-```text
-sourceRecords:             300
-reviewedRecords:           262
-adjudicatedRecords:        236
-excludedByAdjudication:     26
-records:                   236
-reviewQueueRecords:          0
-representabilityRate:        1
-```
-
-Current committed adjudication categories:
-
-```text
-bad_gold:                  14
-ambiguous_gold:             8
-safety_boundary_conflict:   3
-safety_boundary_review:     1
-```
-
-The final post-fix Groq development prefix reached 40/40 safe-progress-or-better: 36 optimal, 4 safe-progress, and zero unsafe, fallback, invalid, leakage, or semantic-review rows. Full local validation passed 308/308 tests plus typecheck/build/diff hygiene. See `AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md`.
-
-### Transcript Phase T6 — Synthetic release acceptance — COMPLETE; SHADOW TOOLING IMPLEMENTED, COLLECTION NOT STARTED
-
-The consumed B0-v3 candidate failed structurally. Deterministic action transport and canonical-ID schema/validator/fallback constraints were remediated, and every failure became a regression. B0-v4 and B0-v5 failed deterministic preflight and were not sent to Groq. Fresh B0-v6 passed 44/44 deterministic preflight and a single 44/44 hosted run with 100% acceptance/exact/restricted safety and zero fallback.
-
-All historical tickets influenced the pipeline, so no legitimate untouched historical holdout remains. Prospective cohort/no-reply/adjudication/metrics tooling is implemented on `task/ai-support-shadow-validation`, but no real fresh tickets have been collected. Prospective evidence remains the real-world gate. See `AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md` and `../AI_SUPPORT_SHADOW_VALIDATION.md`.
-
-After the completed synthetic acceptance:
-
-- inspect every unsafe/safe-no-progress/scope-leak/invalid/fallback/semantic-review row;
-- fix the smallest responsible layer rather than tuning against bad gold;
-- freeze provider/model/prompt/thresholds;
-- freeze the accepted candidate and runtime;
-- collect prospective newly arriving tickets in shadow mode;
-- require a separate activation decision after reviewing prospective evidence.
-
-Do not relabel synthetic acceptance as historical generalization evidence.
-
-### Phase 8 — Customer-facing AI support runtime integration — DEFAULT-OFF; SHADOW TOOLING IMPLEMENTED / EVIDENCE PENDING
-
-ADR-0014 default-off Discord wiring exists, but production activation remains unauthorized.
-
-Activation requires at minimum:
+Requires:
 
 ```text
 safe-progress-or-better >= 95%
@@ -205,10 +125,15 @@ repeated known questions = 0
 context-answerable questions = 0
 ```
 
-Also require high structured-output acceptance, low/zero fallback, acceptable latency/rate-limit behavior, privacy pass, product/variant/account-model isolation, restricted-topic precision and correct multi-turn eventual routing.
+Also require privacy, restricted-topic precision, structured provider compatibility, lookup authorization, multi-turn behavior, acceptable latency/rate-limit behavior, operational rollback review, and a separate explicit broad-release decision.
 
-Only after these gates pass may a separately authorized task approve production enablement or deployment.
+## Permanent invariants
 
-ADR-0014 defines no minimum prospective sample. The current 200-adjudicated-turn/14-day operating recommendation is explicitly proposed and requires governance approval; tooling does not treat it as authoritative or declare release readiness.
-
-No bot startup, command registration, deployment, website mutation or customer-facing AI activation is authorized by the current paused workstream.
+- HMAC Internal Integrations API is the website/data boundary;
+- no direct DB/Supabase/service-role access;
+- no autonomous mutations;
+- private transcript repo remains data/spec-only;
+- model cannot invent IDs/policy/live state or execute tools;
+- historical evidence is not current policy/state;
+- restricted bypass/evasion/injection/kernel/driver/spoofing/detection-avoidance remains outside autonomous support;
+- kill switch for visible AI remains `AI_SUPPORT_ENABLED=false`.

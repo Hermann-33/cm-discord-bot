@@ -1,120 +1,85 @@
 # Active Context
 
-Updated: 2026-08-26
+Updated: 2026-08-31
 
-## Read order for AI-support work
+## Read first
 
-1. `AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md`
-2. `../AI_SUPPORT_SHADOW_VALIDATION.md`
+1. `CURRENT_STATE_2026-08-31.md`
+2. `DOCS_AUDIT_2026-08-31.md`
 3. `HANDOFF.md`
-3. `AI_SUPPORT_RELEASE_HANDOVER_2026-08-25.md` for pre-release history
-4. `AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md` for consumed development history
-5. `AI_SUPPORT_HANDOVER_PROMPT.md` and its remaining ordered references
+4. `../README.md`
+5. `../decisions/ADR-0015-single-channel-visible-ai-test.md`
+6. `AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md` for consumed release history
+7. `../AI_SUPPORT_SHADOW_VALIDATION.md` for prospective shadow operations
 
-The release validation remains authoritative for synthetic evidence. The shadow-validation guide owns the prospective collection and adjudication procedure.
-
-## Current repository state
-
-```text
-public repo:    Hermann-33/cm-discord-bot
-authoritative production branch: task/ai-support-integration
-shadow implementation branch:    task/ai-support-shadow-validation
-shadow implementation commit:    fe644f33be2341d71bc9c0860d339046fcdf0c37
-failed B0-v3 production candidate: 4d8790fc90b351d261f8699c7b3cd989c3787fe9
-current remediated candidate:       2e8b763f699b4c1aaa138320f4e0420c736e82dc
-
-private repo:   Hermann-33/CM-Ticket-Transcripts
-private branch: main
-private HEAD:   c9e993f17583a607402f4173296f64aac52d2ebe
-```
-
-Candidate `2e8b763` passed 375/375 tests, typecheck, build, diff check, and npm audit with zero vulnerabilities. Shadow instrumentation commit `fe644f3` subsequently passed 388/388 tests, typecheck, build, diff check, and audit with zero vulnerabilities without changing frozen routing/planner/action/privacy behavior.
-
-## Production boundary
-
-Customer-facing AI support remains **default-off and not deployed** under ADR-0014. The isolated shadow branch adds a separate default-off, no-reply prospective evaluator. No real bot startup, ticket collection, command registration, deployment, website mutation, or customer-facing AI activation was performed.
-
-The private `CM-Ticket-Transcripts` repository remains data/specification-only under ADR-0010. Production may use only the sanitized public `support-runtime/` derivative under ADR-0012. Groq `openai/gpt-oss-120b` remains the primary hosted triage candidate under ADR-0013.
-
-The LLM has no tools, browser, code execution, MCP, database access, direct website access, Discord action authority, mutation authority, or permission to invent canonical IDs/API operations. Restricted bypass/evasion/injection/kernel/driver/spoofing/detection-avoidance material remains outside autonomous support.
-
-## Last fully validated development result
-
-The consumed V3 development benchmark was fully representable at the validated checkpoint:
+## Repository / deployment
 
 ```text
-sourceRecords:             300
-reviewedRecords:           262
-adjudicatedRecords:        236
-excludedByAdjudication:     26
-records:                   236
-reviewQueueRecords:          0
-representabilityRate:        1
-plannerTokens average:    1122.5042372881355
-plannerTokens median:      844
-plannerTokens p95:        1858
+repository: Hermann-33/cm-discord-bot
+default/deployed branch: master
+validated master baseline: f8988037994146f5d51455878fb8fa9d8a987928
+active remediation branch: task/ai-support-response-reconstruction
+private corpus repo: Hermann-33/CM-Ticket-Transcripts
+private corpus reference SHA: c9e993f17583a607402f4173296f64aac52d2ebe
 ```
 
-Adjudication remains 14 `bad_gold`, 8 `ambiguous_gold`, 3 `safety_boundary_conflict`, and 1 `safety_boundary_review`. Original V3 is immutable.
-
-Validated Groq development prefix at `803a50b`:
+Northflank is linked to the CM Discord Bot repository. The operator has authorized a controlled visible test using exactly one channel and no category allowlist:
 
 ```text
-20 rows:
-  structuredOutputAcceptanceRate: 1
-  exactOptimalActionRate:          0.95
-  optimal / safe_progress:         17 / 3
-  unsafe / fallback / review:       0 / 0 / 0
-
-40 rows:
-  structuredOutputAcceptanceRate: 1
-  exactOptimalActionRate:          0.975
-  optimal / safe_progress:         36 / 4
-  unsafe / fallback / review:       0 / 0 / 0
-  latency avg/med/p95 ms:           995.031035 / 989.0279 / 1222.3352
-  planner tokens avg/med/p95:       981.3 / 839 / 1466
+AI_SUPPORT_ENABLED=true
+AI_SUPPORT_SHADOW_ENABLED=false
+AI_SUPPORT_CHANNEL_IDS=1542084649017286727
+AI_SUPPORT_CATEGORY_IDS=
 ```
 
-Validation at that checkpoint: focused suite 77/77, full suite 308/308, typecheck pass, build pass, benchmark 236/236, and `git diff --check` pass.
+This is not a broad release. Other channels/categories/DMs remain outside visible AI support.
 
-## Current implementation state
+## Current quality finding
 
-The grounded action resolver, explicit read-only Internal API lookup adapter, bounded in-memory conversation state, Discord message wiring, default-off configuration/allowlists, privacy controls, and ADR-0014 activation boundary are implemented. The isolated shadow branch adds cohort start-time enforcement, privacy-safe local JSONL evidence, cohort-scoped pseudonyms, human adjudication, deterministic metrics, and close/report tooling. It reuses the exact visible-mode eligibility and deterministic action pipeline but sends no Discord reply.
-
-No mutation, direct database, private-corpus runtime, or autonomous model execution authority exists.
-
-## Release acceptance and holdout status
-
-The consumed B0-v3 run against `4d8790f` failed at 25/30 structured acceptance, 24/30 exact action, 5/30 fallback, and 2/3 restricted safety. It was never rerun. B0-v4 and B0-v5 failed deterministic preflight and received no hosted calls. Fresh synthetic B0-v6 passed deterministic preflight 44/44 and its single hosted Groq run at 44/44 accepted, 44/44 exact, zero fallback, and 3/3 restricted safe.
-
-All 1,578 historical tickets influenced the pipeline; no legitimate untouched historical holdout remains. Synthetic B0-v6 is not historical-generalization evidence. Prospective tooling is implemented, but collection has not started and no real fresh tickets were collected. Prospective evidence and a separate release-governance decision remain mandatory before any production enablement.
-
-ADR-0014 supplies quality thresholds but no minimum prospective sample. The tooling therefore never declares release readiness. `AI_SUPPORT_SHADOW_VALIDATION.md` documents a proposed 200-turn/14-day operational recommendation that requires explicit governance approval and is not authoritative or hardcoded.
-
-Required activation thresholds remain at least:
+Live test input:
 
 ```text
-safe-progress-or-better >= 95%
-unsafe route            <= 2%
-scope leakage             0
-repeated-known question    0
-context-answerable question 0
+Im unable to download the nfa loader
 ```
 
-Also require structured-output/provider compatibility, privacy, restricted-topic precision, lookup-adapter correctness, multi-turn behavior, runtime integrity, and rollout/kill-switch review.
-
-## Known API boundary
-
-`support-runtime` may reference abstract operations that are not concrete bot endpoints. Production must map only to existing approved `InternalApiClient` reads and fail closed otherwise. `catalog.current.read` remains unconfirmed/unavailable and must not be invented.
-
-## Temporary session branches
-
-The following non-authoritative pointers were created during release exploration:
+Observed response:
 
 ```text
-task/ai-support-release
-task/ai-support-release-staging
-task/ai-support-integration-handover
+A staff member needs to continue this support request.
 ```
 
-Do not merge them merely because they exist. Authoritative implementation work remains on `task/ai-support-integration` unless governance intentionally changes.
+The corpus does contain relevant historical support material. The defect is in how response knowledge is distilled/routed/rendered:
+
+- broad NFA routing can outrank the more specific loader-download stage;
+- the public runtime carries strong classification metadata but insufficient approved customer-response guidance for some ordinary cases;
+- some supported action types still fall through to generic escalation rendering.
+
+## Active work
+
+`task/ai-support-response-reconstruction` is the current engineering branch. Its goal is to reconstruct a safe response-guidance layer from all relevant structured transcript conversations while keeping production independent from the private corpus.
+
+Expected outputs include full 55-case response-strategy coverage, specific loader/NFA precedence, explicit renderers for all triage action types, sanitized response guidance, privacy-safe diagnostics, a runtime knowledge-version bump, and regression coverage for the exact live failure.
+
+## Release evidence
+
+The previous candidate passed B0-v6 at 44/44 deterministic, 44/44 hosted structured acceptance, 44/44 exact action, 0 fallback, and 3/3 restricted safety. B0-v6 is consumed synthetic evidence and cannot certify the material response-reconstruction changes.
+
+A fresh B0-v7-or-later fixture will be required after remediation. It must pass deterministic preflight before any hosted call.
+
+## Shadow / broad rollout
+
+Prospective shadow tooling is implemented, but no real cohort has started and no fresh prospective tickets have been collected. Broad customer-facing activation remains blocked pending fresh release evidence for the remediated candidate, prospective validation, and a separate rollout decision.
+
+The proposed 200-turn / 14-day shadow target remains a governance recommendation, not an ADR-0014 hard requirement.
+
+## Invariants
+
+- no direct DB/Supabase access;
+- HMAC Internal Integrations API only;
+- AI support read-only operations only;
+- model is a constrained planner, never business/action authority;
+- no private transcript repository runtime dependency;
+- raw transcripts/provenance/secrets/PII are not planner input;
+- restricted bypass/evasion/injection/kernel/driver/spoofing/detection-avoidance content remains non-autonomous;
+- existing narrow Rust NFA resource-lowering exception remains unchanged;
+- kill switch remains `AI_SUPPORT_ENABLED=false`.
