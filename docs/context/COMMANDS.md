@@ -1,21 +1,37 @@
 # Command Catalog and Policy
 
-Updated: 2026-08-23
+Updated: 2026-08-31
 
 ## Authorities
 
 - ADR-0005 — customer vs admin command presentation.
 - ADR-0006 — shared `/cm` exact-guild + explicit-user authorization.
 - ADR-0007 — Aura/wallet confirmation/idempotency/audit.
-- ADR-0008 — separate read-only Share to Chat renderer, Discord lookup/time/audit presentation.
-- ADR-0009 — canonical customer account email is intentionally included in shared customer identity sections.
-- ADR-0011 — canonical-order-first pending purchase fallback and private fulfillment support metadata boundary.
+- ADR-0008/0009 — separate customer-safe Share to Chat renderer and canonical email disclosure.
+- ADR-0011 — order-first pending purchase fallback/private fulfillment support boundary.
+- ADR-0014 — broad customer-facing AI activation governance.
+- ADR-0015 — controlled single-channel visible AI test.
 
-No command may directly connect to Supabase/Postgres.
+No command or customer-AI path may directly connect to Supabase/Postgres.
 
-## AI support activation state
+## AI support message surface
 
-ADR-0014 customer support wiring is default-off. A separate `AI_SUPPORT_SHADOW_ENABLED` path may process only the same exact eligible `MessageCreate` surfaces while `AI_SUPPORT_ENABLED=false`; it records a frozen prospective cohort and never replies. Visible mode takes precedence if both flags are set, preventing duplicate processing. Cohort lifecycle/review commands are local npm tooling, not Discord commands. Customer activation still requires prospective evidence and a separate release decision.
+AI support is not a slash command. It uses eligible `MessageCreate` traffic behind exact guild + explicit channel/category allowlists.
+
+Current controlled test configuration is intended to be:
+
+```text
+AI_SUPPORT_ENABLED=true
+AI_SUPPORT_SHADOW_ENABLED=false
+AI_SUPPORT_CHANNEL_IDS=1542084649017286727
+AI_SUPPORT_CATEGORY_IDS=
+```
+
+Therefore visible AI may reply only in that exact channel. DMs, wrong guilds, bots and every other non-allowlisted surface are ignored by AI support. `cm aura` retains its reserved deterministic command path rather than being routed through the support planner.
+
+This is a narrow manual test, not broad customer activation. Kill switch: set `AI_SUPPORT_ENABLED=false` and restart/redeploy.
+
+The separate shadow flag can run the same exact eligibility in no-reply mode when visible AI is disabled. Visible mode takes precedence if both flags are true, preventing duplicate processing. Shadow cohort lifecycle tools are local npm tooling, not Discord commands.
 
 ## `cm aura`
 
@@ -25,7 +41,7 @@ Customer message command. Keeps configured-guild/blocked-channel guards, bot-aut
 
 Operational guild slash command. Keeps exact configured guild + configured command channel + `ManageGuild|Administrator`. It is independent from `/cm` authorization.
 
-## `/cm` shared authorization
+## `/cm` authorization
 
 Before sensitive backend access, every slash/button/modal interaction requires:
 
@@ -35,7 +51,7 @@ Before sensitive backend access, every slash/button/modal interaction requires:
 4. invoking Discord user explicitly allowlisted;
 5. operator-bound unexpired session for subsequent components/modals.
 
-A whitelisted admin may use `/cm` from any channel inside the configured guild. `BOT_ADMIN_COMMAND_CHANNEL_ID` is not supported.
+A whitelisted admin may use `/cm` from any channel inside the configured guild. There is no supported shared `/cm` command-channel restriction.
 
 ## `/cm user`
 
@@ -46,144 +62,39 @@ Exactly one lookup is required:
 /cm user discord_user:<selected Discord user>
 ```
 
-Email and Discord target resolution both use `users.overview.read`. Both/neither input fails before backend access.
+Both resolve through the approved website API boundary. Both/neither input fails before backend access.
 
-### User Operations presentation
+Private User Operations exposes only the explicitly approved account/order/Aura/wallet summary and controls to the operator.
 
-Private User Operations shows canonical email, account status, linked Discord state, current wallet, available/lifetime Aura, pending Aura when non-zero, order/license/account counts, latest order and the core controls.
+## `/cm order reference:<selector>`
 
-Useful timestamps use:
+Order resolution is:
 
 ```text
-<t:unix:f> · <t:unix:R>
+orders.details.read
+  -> success: canonical order
+  -> stable NOT_FOUND only: purchase-intents.lookup.read
 ```
 
-## `/cm order reference:<CM-public-ref-or-order/purchase-UUID>`
+Owner identity is resolved and checked exactly before an operator session opens. Pending purchase state is read-only and may transition to the canonical order after refresh.
 
-ADR-0011 flow:
+Other order errors never trigger pending fallback.
 
-1. shared `/cm` authorization;
-2. normalize input as public reference or UUID;
-3. call `orders.details.read` first;
-4. on success, resolve canonical owner with `users.overview.read(user_id)` and require equality;
-5. **only when order lookup returns stable `NOT_FOUND`**, call `purchase-intents.lookup.read` with equivalent `public_ref` or `purchase_intent_id` selector;
-6. resolve purchase-intent owner with `users.overview.read(user_id)` and require equality;
-7. if the intent already has a resolvable `orderId`, open the canonical order;
-8. otherwise create an operator-bound pending-purchase session.
+## Canonical Order / Delivery
 
-No pending fallback is allowed for authentication, authorization, validation, rate-limit, dependency or other service errors.
-
-### Pending Purchase presentation
-
-The private pending panel may show:
-
-- public purchase reference;
-- pending/current purchase status;
-- canonical customer email and linked Discord identity;
-- customer-facing item/account type/game where available;
-- quantity when meaningful;
-- amount/currency;
-- payment method;
-- safe provider status in the private panel;
-- created/expiry timestamps;
-- Refresh Purchase;
-- User Operations;
-- Share to Chat.
-
-It deliberately does **not** expose order-only Refund or Delivery Details controls before a canonical order exists. It also does not display the purchase-intent UUID, internal option IDs or payment provider name.
-
-`Refresh Purchase` repeats exact purchase-intent lookup, rechecks owner identity and automatically transitions to the canonical Order Operations panel once the website order exists.
-
-## Canonical Order Operations
-
-The private canonical order panel shows:
-
-- public order reference and status;
-- customer email and linked Discord identity;
-- customer-facing item/account details;
-- human-readable product/account type where available;
-- quantity when meaningful;
-- amount;
-- payment method;
-- placed timestamp;
-- delivery progress;
-- optional private support duration/provider/masked material;
-- manual-review warning only when canonical state requires it;
-- Refund;
-- Delivery Details;
-- Refresh Order;
-- User Operations;
-- Share to Chat.
-
-Support enrichment is best-effort; failure to fetch it does not block the order/refund/navigation panel.
-
-## Delivery Details
-
-`orders.fulfillment.read` remains diagnostics-only.
-
-The private panel may show the optional support view:
-
-- human-readable type;
-- finite duration;
-- at most 10 stored masked license/account materials;
-- manual-required state.
-
-Per-fulfillment status/progress/exception/message fields remain visible when useful. Raw/decrypted material is never accepted. Missing support or an empty masked list is not interpreted as manual-required.
+`orders.fulfillment.read` is diagnostics-only. Optional masked support metadata may appear only in the private operator UI. Raw/decrypted material is never accepted or exposed. Missing support does not imply manual fulfillment.
 
 No Manual Fulfillment execute control exists.
 
 ## Share to Chat
 
-Meaningful private User/Orders/Order/Pending Purchase/Delivery/Refund/Adjustment panels can expose **Share to Chat**.
+An authorized operator may publish a separately rendered, buttonless Components V2 customer summary from approved private views. The public copy does not inherit admin controls or private provider/internal/audit/idempotency/masked fulfillment fields.
 
-The click is an authorized `/cm` action and requires the owning session. It sends a separately rendered, buttonless Components V2 message into the current channel with safe mentions.
+Canonical customer email is intentionally permitted under ADR-0009.
 
-Shared customer identity intentionally includes canonical account email (ADR-0009) and linked Discord identity when present.
+## Aura/wallet adjustment
 
-### Pending Purchase share
-
-May include:
-
-- public purchase reference;
-- safe item/variant/game;
-- amount/currency;
-- payment method;
-- purchase status;
-- created/expiry time.
-
-Must omit:
-
-- purchase-intent UUID;
-- internal CM user UUID;
-- internal option IDs;
-- payment provider/provider status;
-- operator/admin internals;
-- interactive controls.
-
-### Fulfillment share
-
-The public delivery summary may show customer-relevant status/progress/message fields, but **must not expose** the private `support.maskedMaterials` or provider internals.
-
-The private masked support view is not a customer credential-reveal surface.
-
-## Aura adjustment
-
-Unchanged ADR-0007 model:
-
-- signed non-zero whole-number delta;
-- max ±1,000,000,000 Aura;
-- reason 1–500;
-- fresh overview before preview;
-- projected negative balance blocked;
-- explicit five-minute confirmation;
-- second fresh available-Aura equality check;
-- stable UUID idempotency/body;
-- required audit channel;
-- website execution + backend/Discord audit.
-
-## Wallet adjustment
-
-Unchanged ADR-0007 model with exact decimal-to-cent parsing, max ±100,000,000 cents and final fresh wallet-balance equality.
+Private admin only. Both retain explicit confirmation, fresh-state equality, stable idempotency and audit requirements under ADR-0007.
 
 ## Refund
 
@@ -191,26 +102,28 @@ Canonical order only:
 
 ```text
 orders.refund.preview
-  -> explicit confirmation <= 5 minutes
-  -> fresh exact preview equality
-  -> orders.refund.execute
+ -> explicit confirmation
+ -> fresh exact preview equality
+ -> orders.refund.execute
 ```
 
-A pending purchase intent has no refund control until a canonical order exists.
+Customer AI cannot invoke this path.
 
 ## Authorization matrix
 
 | Surface | Audience | Location | Explicit whitelist | Mutation |
 | --- | --- | --- | --- | --- |
 | `cm aura` | customer | configured guild; blocked channel excluded | no | no |
-| `/refresh-leaderboard` | staff/admin | configured guild + command channel | no current whitelist | no |
-| `/cm user ...` | admin | any configured-guild channel | **mandatory** | Aura/wallet/refund through canonical order navigation |
-| `/cm order ...` | admin | any configured-guild channel | **mandatory** | pending read-only; canonical order may expose refund/navigation |
-| Share to Chat | admin initiates; channel readers consume | current configured-guild channel | **mandatory for click** | **none** |
+| AI support (ADR-0015 test) | customer | exact configured guild + channel `1542084649017286727` only | surface allowlist | **none** |
+| AI shadow | evaluation only | same eligibility, post-cohort-cutoff | surface allowlist | **none; no reply** |
+| `/refresh-leaderboard` | staff/admin | configured guild + command channel | permission gate | no |
+| `/cm user ...` | admin | configured guild | **mandatory user allowlist** | confirmed admin paths only |
+| `/cm order ...` | admin | configured guild | **mandatory user allowlist** | pending read-only; canonical refund/navigation |
+| Share to Chat | admin initiates; readers consume | current guild channel | **mandatory for click** | none |
 
-Manual fulfillment remains unsupported until a dedicated website-owned mutation operation exists.
+## Bot website-operation surface
 
-## Bot API surface
+Existing concrete operations include:
 
 ```text
 aura.leaderboards.read
@@ -225,6 +138,6 @@ users.aura.adjust
 users.wallet.adjust
 ```
 
-Website per-client `allowedOperations` remains an independent runtime authorization boundary. Deployment must add `purchase-intents.lookup.read` to the bot client for pending lookup to work.
+Website per-client `allowedOperations` is an independent runtime authorization boundary. Customer AI may use only the separately approved read subset through the deterministic lookup adapter; it never gets refund/Aura/wallet mutation authority.
 
-TASK-CM-ADMIN-007 does not change slash-command JSON, so command re-registration is not required.
+Slash-command JSON remains `/refresh-leaderboard` + `/cm`; AI support does not require command re-registration.
