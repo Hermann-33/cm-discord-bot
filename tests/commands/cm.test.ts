@@ -191,7 +191,7 @@ test("/cm registers user, order, and ticket override surfaces", () => {
     ["discord_user", false]
   ]);
   assert.deepEqual(orderCommand.options?.map((option) => [option.name, option.required]), [["reference", true]]);
-  assert.equal(ticketAllow.options, undefined);
+  assert.deepEqual(ticketAllow.options, []);
 });
 
 test("/cm ticket-allow is delegated to the ticket gate controller", async () => {
