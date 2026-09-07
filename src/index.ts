@@ -15,6 +15,7 @@ import { handleRefreshLeaderboardCommand } from "./commands/refreshLeaderboard";
 import { loadConfig, type AppConfig } from "./config/env";
 import { createDiscordClient } from "./discord/client";
 import { SupportAiMessageController } from "./discord/supportAi";
+import { TicketLinkGateController } from "./discord/ticketLinkGate";
 import { LeaderboardService } from "./leaderboard/service";
 import { logger, sanitizeError } from "./logger";
 import { LeaderboardSchedule } from "./scheduler/leaderboardSchedule";
@@ -33,6 +34,11 @@ try {
 const discordClient = createDiscordClient();
 const internalApiClient = new InternalApiClient(config.internalApi);
 const cmAdminController = new CmAdminController(config, internalApiClient);
+const ticketLinkGateController = new TicketLinkGateController(
+  config,
+  discordClient,
+  internalApiClient
+);
 const leaderboardService = new LeaderboardService(config, discordClient, internalApiClient);
 const leaderboardSchedule = new LeaderboardSchedule(
   leaderboardService,
@@ -101,6 +107,10 @@ process.once("SIGTERM", () => {
 discordClient.once(Events.ClientReady, async () => {
   logger.info("Discord ready");
 
+  void ticketLinkGateController.reconcileExistingTickets().catch((error: unknown) => {
+    logger.error("sanitized ticket reconciliation failure", sanitizeError(error));
+  });
+
   try {
     const startResult = await leaderboardSchedule.start();
     if (startResult === "bootstrap-complete") {
@@ -114,6 +124,7 @@ discordClient.once(Events.ClientReady, async () => {
 
 discordClient.on(Events.MessageCreate, (message) => {
   void (async () => {
+    if (await ticketLinkGateController.handleMessage(message)) return;
     await handleAuraCommand(message, config, internalApiClient);
     const supportAiController = await supportAiControllerPromise;
     if (supportAiController) await supportAiController.handle(message);
@@ -124,12 +135,29 @@ discordClient.on(Events.MessageCreate, (message) => {
 
 discordClient.on(Events.InteractionCreate, (interaction) => {
   void (async () => {
+    if (await ticketLinkGateController.handleInteraction(interaction)) return;
     if (await cmAdminController.handle(interaction)) return;
     if (!interaction.isChatInputCommand()) return;
     await handleRefreshLeaderboardCommand(interaction, config, leaderboardService);
   })().catch((error: unknown) => {
     logger.error("sanitized interaction failure", sanitizeError(error));
   });
+});
+
+discordClient.on(Events.ChannelCreate, (channel) => {
+  void ticketLinkGateController.handleChannelCreate(channel).catch((error: unknown) => {
+    logger.error("sanitized ticket channel-create failure", sanitizeError(error));
+  });
+});
+
+discordClient.on(Events.ChannelUpdate, (_oldChannel, newChannel) => {
+  void ticketLinkGateController.handleChannelUpdate(newChannel).catch((error: unknown) => {
+    logger.error("sanitized ticket channel-update failure", sanitizeError(error));
+  });
+});
+
+discordClient.on(Events.ChannelDelete, (channel) => {
+  ticketLinkGateController.handleChannelDelete(channel.id);
 });
 
 discordClient.login(config.discordBotToken).catch(async (error: unknown) => {
