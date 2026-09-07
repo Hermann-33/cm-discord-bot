@@ -53,7 +53,12 @@ export type TicketPermissionSnapshot = {
   denyMask: number;
 };
 
-type RuntimeStatus = "locked" | "verified" | "admin_override" | "verification_unavailable";
+type RuntimeStatus =
+  | "locked"
+  | "verified"
+  | "admin_override"
+  | "verification_unavailable"
+  | "access_unavailable";
 
 type TicketRuntimeState = {
   channelId: string;
@@ -64,7 +69,7 @@ type TicketRuntimeState = {
   gateMessageId?: string;
 };
 
-type GateMessageKind = "unlinked" | "verification_unavailable";
+type GateMessageKind = "unlinked" | "verification_unavailable" | "access_unavailable";
 
 export type TicketLinkGateDependencies = {
   nowMs: () => number;
@@ -130,6 +135,13 @@ function snapshotPermissionValue(
   if ((snapshot.allowMask & bit) !== 0) return true;
   if ((snapshot.denyMask & bit) !== 0) return false;
   return null;
+}
+
+function defaultTicketyParticipantSnapshot(): TicketPermissionSnapshot {
+  return {
+    allowMask: (1 << GATED_PERMISSIONS.length) - 1,
+    denyMask: 0
+  };
 }
 
 function restoreOptions(snapshot?: TicketPermissionSnapshot): PermissionOverwriteOptions {
@@ -212,7 +224,9 @@ function gatePayload(
 ) {
   const title = kind === "unlinked"
     ? "# Link your Cheater's Market account"
-    : "# CM account verification unavailable";
+    : kind === "verification_unavailable"
+      ? "# CM account verification unavailable"
+      : "# CM ticket access unavailable";
   const body = kind === "unlinked"
     ? [
         "Your Discord account isn't linked to a Cheater's Market account. You must link it before continuing with support.",
@@ -223,12 +237,19 @@ function gatePayload(
         "4. Authorize the Discord account you're currently using.",
         "5. Return here and press **Check Again**."
       ].join("\n")
-    : [
-        "CM couldn't verify your account link right now, so this ticket is temporarily read-only.",
-        "",
-        "If you still need to link Discord, open CM Settings. Otherwise wait briefly and press **Check Again**.",
-        "A service error is not treated as proof that your account is unlinked."
-      ].join("\n");
+    : kind === "verification_unavailable"
+      ? [
+          "CM couldn't verify your account link right now, so this ticket is temporarily read-only.",
+          "",
+          "If you still need to link Discord, open CM Settings. Otherwise wait briefly and press **Check Again**.",
+          "A service error is not treated as proof that your account is unlinked."
+        ].join("\n")
+      : [
+          "CM verified your account, but Discord ticket access could not be restored right now.",
+          "",
+          "Your ticket remains temporarily read-only. Wait briefly and press **Check Again**.",
+          "This does not mean your CM account is unlinked."
+        ].join("\n");
 
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
@@ -266,12 +287,6 @@ function runtimeFromAccess(
     snapshot,
     gateMessageId
   };
-}
-
-function safeTimestamp(value: string | null): number | null {
-  if (!value) return null;
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : null;
 }
 
 export async function resolveTicketCreator(
@@ -414,6 +429,38 @@ export class TicketLinkGateController {
     state.gateMessageId = message.id;
   }
 
+  private async trySendGateMessage(
+    channel: TextChannel,
+    state: TicketRuntimeState,
+    kind: GateMessageKind
+  ): Promise<void> {
+    try {
+      await this.sendGateMessage(channel, state, kind);
+    } catch {
+      logger.error("ticket gate notice delivery failed", {
+        channelId: channel.id,
+        kind
+      });
+    }
+  }
+
+  private async markAccessUnavailable(
+    channel: TextChannel,
+    state: TicketRuntimeState
+  ): Promise<void> {
+    state.status = "access_unavailable";
+    state.verifiedUntilMs = null;
+    this.states.set(channel.id, state);
+    try {
+      await this.ensureLocked(channel, state.creatorDiscordId);
+    } catch {
+      logger.error("ticket gate fail-closed permission update failed", {
+        channelId: channel.id
+      });
+    }
+    await this.trySendGateMessage(channel, state, "access_unavailable");
+  }
+
   private async lockForFailure(
     channel: TextChannel,
     creatorDiscordId: string,
@@ -436,7 +483,7 @@ export class TicketLinkGateController {
         logger.warn("ticket gate could not delete blocked creator message", { channelId: channel.id });
       }
     }
-    await this.sendGateMessage(channel, state, "verification_unavailable");
+    await this.trySendGateMessage(channel, state, "verification_unavailable");
   }
 
   private async applyPersistedState(
@@ -451,6 +498,10 @@ export class TicketLinkGateController {
 
     if (state.status === "locked") {
       await this.ensureLocked(channel, state.creatorDiscordId);
+      if (!gate) {
+        state.snapshot = defaultTicketyParticipantSnapshot();
+        await this.trySendGateMessage(channel, state, "unlinked");
+      }
       return state;
     }
 
@@ -470,7 +521,14 @@ export class TicketLinkGateController {
       if (existingGate) {
         state.snapshot = existingGate.snapshot;
         state.gateMessageId = existingGate.message.id;
-        await this.restoreCreatorAccess(channel, state);
+        try {
+          await this.restoreCreatorAccess(channel, state);
+        } catch {
+          logger.error("ticket gate recovery could not restore verified access", {
+            channelId: channel.id
+          });
+          await this.markAccessUnavailable(channel, state);
+        }
       }
     }
 
@@ -486,31 +544,12 @@ export class TicketLinkGateController {
     snapshot: TicketPermissionSnapshot,
     triggerMessage?: Message
   ): Promise<boolean> {
+    let verification: SupportTicketVerifyData;
     try {
-      const verification = await this.api.verifySupportTicketAccess(
+      verification = await this.api.verifySupportTicketAccess(
         channel.id,
         creatorDiscordId
       );
-      const state = runtimeFromAccess(verification.ticketAccess, snapshot);
-      this.states.set(channel.id, state);
-
-      if (verification.accessGranted) {
-        await this.restoreCreatorAccess(channel, state);
-        return false;
-      }
-
-      await this.ensureLocked(channel, creatorDiscordId);
-      if (triggerMessage) {
-        try {
-          await triggerMessage.delete();
-        } catch {
-          logger.warn("ticket gate could not delete unverified creator message", {
-            channelId: channel.id
-          });
-        }
-      }
-      await this.sendGateMessage(channel, state, "unlinked");
-      return true;
     } catch (error) {
       logger.warn("ticket account-link verification failed", {
         channelId: channel.id,
@@ -519,6 +558,35 @@ export class TicketLinkGateController {
       await this.lockForFailure(channel, creatorDiscordId, snapshot, triggerMessage);
       return true;
     }
+
+    const state = runtimeFromAccess(verification.ticketAccess, snapshot);
+    this.states.set(channel.id, state);
+
+    if (verification.accessGranted) {
+      try {
+        await this.restoreCreatorAccess(channel, state);
+        return false;
+      } catch {
+        logger.error("ticket gate could not restore verified creator access", {
+          channelId: channel.id
+        });
+        await this.markAccessUnavailable(channel, state);
+        return true;
+      }
+    }
+
+    await this.ensureLocked(channel, creatorDiscordId);
+    if (triggerMessage) {
+      try {
+        await triggerMessage.delete();
+      } catch {
+        logger.warn("ticket gate could not delete unverified creator message", {
+          channelId: channel.id
+        });
+      }
+    }
+    await this.trySendGateMessage(channel, state, "unlinked");
+    return true;
   }
 
   private async initializeNewTicket(
@@ -550,7 +618,9 @@ export class TicketLinkGateController {
           return true;
         }
 
-        if (state.status === "locked" || state.status === "verification_unavailable") {
+        if (state.status === "locked" ||
+          state.status === "verification_unavailable" ||
+          state.status === "access_unavailable") {
           await this.ensureLocked(channel, creatorDiscordId);
           if (triggerMessage) {
             try { await triggerMessage.delete(); } catch {}
@@ -613,7 +683,9 @@ export class TicketLinkGateController {
     await this.exclusive(textChannel.id, async () => {
       const state = this.states.get(textChannel.id);
       if (state) {
-        if (state.status === "locked" || state.status === "verification_unavailable") {
+        if (state.status === "locked" ||
+          state.status === "verification_unavailable" ||
+          state.status === "access_unavailable") {
           await this.ensureLocked(textChannel, state.creatorDiscordId);
         }
         return;
@@ -657,7 +729,9 @@ export class TicketLinkGateController {
         return false;
       }
 
-      if (state.status === "locked" || state.status === "verification_unavailable") {
+      if (state.status === "locked" ||
+          state.status === "verification_unavailable" ||
+          state.status === "access_unavailable") {
         await this.ensureLocked(channel, state.creatorDiscordId);
         try {
           await message.delete();
