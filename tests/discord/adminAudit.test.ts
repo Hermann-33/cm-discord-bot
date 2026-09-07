@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { MessageFlags, type Client, type MessageCreateOptions } from "discord.js";
-import { postAdjustmentAudit, postRefundAudit } from "../../src/discord/adminAudit";
+import { postAdjustmentAudit, postRefundAudit, postTicketAccessOverrideAudit } from "../../src/discord/adminAudit";
 import { escapeDiscordText } from "../../src/discord/presentation";
 import { safeAllowedMentions } from "../../src/discord/safeMessages";
 
@@ -102,4 +102,32 @@ test("adjustment audit keeps only useful balance-change information and flags a 
   assert.equal(content.includes("idempotent replay"), true);
   assert.equal(content.includes("auditEventId"), false);
   assert.equal(content.includes("transactionId"), false);
+});
+
+
+test("ticket override audit records only ticket, customer, result, and operator context", async () => {
+  const { client, sends } = fakeClient();
+  await postTicketAccessOverrideAudit({
+    client,
+    channelId: "123456789012345699",
+    operatorId: ADMIN_ID,
+    ticketChannelId: "1545695443160137789",
+    ticketChannelName: "support-1234",
+    creatorDiscordId: CUSTOMER_DISCORD_ID,
+    completedAt: COMPLETED_AT,
+    idempotentReplay: false
+  });
+
+  assert.equal(sends.length, 1);
+  assert.equal(sends[0]?.flags, MessageFlags.IsComponentsV2);
+  assert.deepEqual(sends[0]?.allowedMentions, safeAllowedMentions);
+  const content = payloadContent(sends[0]!);
+  assert.equal(content.includes("CM Audit · Support Ticket Override"), true);
+  assert.equal(content.includes("support-1234"), true);
+  assert.equal(content.includes("<#1545695443160137789>"), true);
+  assert.equal(content.includes(`<@${CUSTOMER_DISCORD_ID}>`), true);
+  assert.equal(content.includes(`<@${ADMIN_ID}>`), true);
+  assert.equal(content.includes("Manually allowed"), true);
+  assert.equal(content.includes("reason"), false);
+  assert.equal(content.includes("idempotencyKey"), false);
 });
