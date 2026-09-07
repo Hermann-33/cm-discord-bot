@@ -101,7 +101,10 @@ export function buildCmCommand() {
         .setName("reference")
         .setDescription("CM public reference or order UUID")
         .setRequired(true)
-        .setMaxLength(128)));
+        .setMaxLength(128)))
+    .addSubcommand((subcommand) => subcommand
+      .setName("ticket-allow")
+      .setDescription("Manually allow the creator of this CM support ticket"));
 }
 
 export class CmAdminController {
