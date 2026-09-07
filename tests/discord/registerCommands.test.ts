@@ -22,5 +22,5 @@ test("CM admin command registers user, order, and ticket override surfaces", () 
     ["email", false, 3],
     ["discord_user", false, 6]
   ]);
-  assert.equal(ticketAllow.options, undefined);
+  assert.deepEqual(ticketAllow.options, []);
 });
