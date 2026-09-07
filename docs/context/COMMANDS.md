@@ -1,6 +1,6 @@
 # Command Catalog and Policy
 
-Updated: 2026-08-31
+Updated: 2026-09-08
 
 ## Authorities
 
@@ -11,6 +11,7 @@ Updated: 2026-08-31
 - ADR-0011 — order-first pending purchase fallback/private fulfillment support boundary.
 - ADR-0014 — broad customer-facing AI activation governance.
 - ADR-0015 — controlled single-channel visible AI test.
+- ADR-0016 — Tickety support-ticket account-link gate and ticket-scoped admin override.
 
 No command or customer-AI path may directly connect to Supabase/Postgres.
 
@@ -52,6 +53,40 @@ Before sensitive backend access, every slash/button/modal interaction requires:
 5. operator-bound unexpired session for subsequent components/modals.
 
 A whitelisted admin may use `/cm` from any channel inside the configured guild. There is no supported shared `/cm` command-channel restriction.
+
+## Tickety support-ticket gate
+
+The ticket gate is deterministic authorization logic and runs before customer Aura/AI message handling.
+
+Initial ticket recognition:
+
+```text
+parentId == 1382569775988871330
+OR
+(parentId == null AND name matches /^support-\d+$/i)
+```
+
+Exactly one non-bot member-specific overwrite must resolve as the ticket creator. Ambiguous creator evidence is never guessed.
+
+The creator is made read-only while `support.tickets.verify` checks the authoritative website link. Visibility/history remain unchanged and staff/support role overwrites are never modified.
+
+A successful verification grants an exact eight-hour lease. There is no background eight-hour poll and no verification on every creator message while the lease remains valid. Once expired, only the ticket creator's next message or explicit **Check Again** triggers a fresh verification. Staff/admin/bot messages never renew the customer's link state.
+
+Unlinked or verification-unavailable creators remain read-only. An unlinked creator receives **Open CM Settings** pointing at `https://cheaters.market/dashboard?tab=settings` plus **Check Again**. Service/API failure uses distinct copy and never claims the account is unlinked.
+
+Tickety permission rewrites are re-enforced for locked tickets through `ChannelUpdate`. Startup performs a paced one-time reconciliation from durable website state; it is not periodic polling.
+
+## `/cm ticket-allow`
+
+Ticket-scoped administrator bypass. It must be run in a recognized/durable CM support ticket and uses the exact ADR-0006 `/cm` authorization:
+
+- configured guild only;
+- non-empty explicit `BOT_ADMIN_USER_IDS`;
+- invoker explicitly allowlisted;
+- no role-only authorization;
+- no shared command-channel restriction.
+
+`BOT_AUDIT_LOG_CHANNEL_ID` must be configured before the override mutation. The bot calls only `support.tickets.override`, restores that ticket creator's participation, and emits a sanitized Discord audit. The override applies only to that ticket; future tickets remain gated.
 
 ## `/cm user`
 
@@ -119,6 +154,7 @@ Customer AI cannot invoke this path.
 | `/refresh-leaderboard` | staff/admin | configured guild + command channel | permission gate | no |
 | `/cm user ...` | admin | configured guild | **mandatory user allowlist** | confirmed admin paths only |
 | `/cm order ...` | admin | configured guild | **mandatory user allowlist** | pending read-only; canonical refund/navigation |
+| `/cm ticket-allow` | admin | current CM support ticket | **mandatory user allowlist** | ticket-scoped access override |
 | Share to Chat | admin initiates; readers consume | current guild channel | **mandatory for click** | none |
 
 ## Bot website-operation surface
@@ -129,6 +165,9 @@ Existing concrete operations include:
 aura.leaderboards.read
 aura.lookup.read
 users.overview.read
+support.tickets.access.read
+support.tickets.verify
+support.tickets.override
 orders.details.read
 orders.fulfillment.read
 purchase-intents.lookup.read
@@ -140,4 +179,4 @@ users.wallet.adjust
 
 Website per-client `allowedOperations` is an independent runtime authorization boundary. Customer AI may use only the separately approved read subset through the deterministic lookup adapter; it never gets refund/Aura/wallet mutation authority.
 
-Slash-command JSON remains `/refresh-leaderboard` + `/cm`; AI support does not require command re-registration.
+Top-level slash commands remain `/refresh-leaderboard` + `/cm`, but `/cm` now contains `user`, `order`, and `ticket-allow`. This feature changes command JSON, so production rollout requires one explicit `npm run register:commands` after the site/API permissions are ready. AI support itself still adds no slash command.
