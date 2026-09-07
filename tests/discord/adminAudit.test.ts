@@ -123,7 +123,7 @@ test("ticket override audit records only ticket, customer, result, and operator 
   assert.deepEqual(sends[0]?.allowedMentions, safeAllowedMentions);
   const content = payloadContent(sends[0]!);
   assert.equal(content.includes("CM Audit · Support Ticket Override"), true);
-  assert.equal(content.includes("support-1234"), true);
+  assert.equal(content.includes(escapeDiscordText("support-1234")), true);
   assert.equal(content.includes("<#1545695443160137789>"), true);
   assert.equal(content.includes(`<@${CUSTOMER_DISCORD_ID}>`), true);
   assert.equal(content.includes(`<@${ADMIN_ID}>`), true);
