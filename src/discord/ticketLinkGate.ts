@@ -534,7 +534,8 @@ export class TicketLinkGateController {
   private async hydrateOrInitialize(
     channel: TextChannel,
     creatorDiscordId: string,
-    triggerMessage?: Message
+    triggerMessage?: Message,
+    renewExpired = Boolean(triggerMessage)
   ): Promise<boolean> {
     try {
       const persisted = await this.api.readSupportTicketAccess(channel.id);
@@ -561,6 +562,7 @@ export class TicketLinkGateController {
           state.status === "verified" &&
           (state.verifiedUntilMs === null || state.verifiedUntilMs <= this.dependencies.nowMs())
         ) {
+          if (!renewExpired) return false;
           const snapshot = capturePermissionSnapshot(channel, creatorDiscordId);
           return this.verifyAndApply(channel, creatorDiscordId, snapshot, triggerMessage);
         }
@@ -590,7 +592,10 @@ export class TicketLinkGateController {
       for (let attempt = 0; attempt < 5; attempt += 1) {
         const creatorDiscordId = await resolveTicketCreator(textChannel, this.client.user?.id);
         if (creatorDiscordId) {
-          await this.hydrateOrInitialize(textChannel, creatorDiscordId);
+          // ChannelCreate means this Discord channel ID is new. Lock before
+          // the freshness check so an unlinked creator cannot race the API
+          // round-trip with an early ticket message.
+          await this.initializeNewTicket(textChannel, creatorDiscordId);
           return;
         }
         if (attempt < 4) await this.dependencies.sleep(500 * (attempt + 1));
