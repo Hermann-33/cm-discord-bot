@@ -1,4 +1,4 @@
-# Current State — 2026-08-31
+# Current State — 2026-09-08
 
 This document is the authoritative current-status snapshot for the Cheater's Market Discord bot. It supersedes deployment/status assertions in older dated AI-support handoffs, audits, release reports, and roadmap snapshots, while preserving those documents as historical evidence.
 
@@ -9,6 +9,7 @@ repository: Hermann-33/cm-discord-bot
 default / deployed branch: master
 master baseline before this documentation refresh: f8988037994146f5d51455878fb8fa9d8a987928
 active response-reconstruction branch: task/ai-support-response-reconstruction
+active ticket-gate implementation branch: feature/tickety-account-link-gate
 private corpus/spec repo: Hermann-33/CM-Ticket-Transcripts
 private corpus branch: main
 private corpus reference SHA: c9e993f17583a607402f4173296f64aac52d2ebe
@@ -116,6 +117,28 @@ After the remediation is complete:
 5. keep it clearly classified as synthetic, not historical generalization;
 6. resume prospective fresh-ticket shadow validation for the new frozen candidate before any broad customer-facing rollout.
 
+## Tickety account-link gate implementation
+
+ADR-0016 is implemented on `feature/tickety-account-link-gate` and is deliberately separate from the AI response-reconstruction workstream.
+
+Current branch behavior:
+
+- recognizes initial Tickety text tickets in category `1382569775988871330` plus uncategorized `support-<number>` overflow channels;
+- resolves the creator only from an unambiguous non-bot member-specific permission overwrite;
+- locks only the creator's participation permissions before initial verification;
+- uses only `support.tickets.access.read`, `support.tickets.verify`, and `support.tickets.override` through the existing HMAC Internal Integrations API;
+- persists authorization state on the website/Supabase side rather than in a local bot database;
+- honors the exact eight-hour verified lease without periodic polling;
+- after expiry, re-verifies only on ticket-creator/customer activity or explicit **Check Again**; staff/admin/bot messages never renew the lease;
+- deletes the triggering creator message if the fresh check is unlinked or unavailable, preventing a free post at the renewal boundary;
+- distinguishes unlinked from verification/service failure;
+- re-enforces locked creator permissions after Tickety channel permission rewrites;
+- performs paced one-time startup reconciliation;
+- adds `/cm ticket-allow`, reusing ADR-0006 exact-guild + explicit-user authorization and sanitized audit logging.
+
+Customer linking uses `https://cheaters.market/dashboard?tab=settings` and the existing website **Connect Discord** OAuth flow.
+
+Production rollout is still gated on website HTTP deployment, adding exactly the three support-ticket operations to the dedicated bot integration client's `allowedOperations`, deploying this bot revision, running `npm run register:commands`, and performing end-to-end Discord verification. No live command registration or production API smoke call is performed by repository validation.
 ## Architecture and safety invariants
 
 Production remains:
@@ -128,7 +151,7 @@ Discord
   -> database
 ```
 
-The bot has no direct database/Supabase access. The model remains a constrained semantic planner with no tools or mutation authority. Deterministic code owns canonical IDs, action authority, policy/current-state boundaries, safe procedures, restricted-topic handling, and final execution.
+The bot has no direct database/Supabase access. The ticket gate does not add SQLite, a Northflank persistence volume, a service-role credential, or a direct database fallback. The model remains a constrained semantic planner with no tools or mutation authority. Deterministic code owns canonical IDs, action authority, policy/current-state boundaries, safe procedures, restricted-topic handling, and final execution.
 
 Restricted bypass/evasion/injection/kernel/driver/spoofing/detection-avoidance content remains outside autonomous support. The existing narrow Rust NFA ordinary resource-lowering exception remains unchanged.
 
