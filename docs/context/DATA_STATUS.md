@@ -1,6 +1,6 @@
 # Data and Backend Dependency Status
 
-Verified/re-baselined: 2026-08-31
+Verified/re-baselined: 2026-09-08
 
 ## Bot-side invariant
 
@@ -15,6 +15,9 @@ aura.leaderboards.read
 aura.lookup.read
 users.lookup.read
 users.overview.read
+support.tickets.access.read
+support.tickets.verify
+support.tickets.override
 orders.lookup.read
 orders.details.read
 orders.fulfillment.read
@@ -29,7 +32,7 @@ users.aura.adjust
 
 This catalog is not the bot source surface and is not proof of a deployed client's permission. Website clients have explicit non-empty `allowedOperations`; there is no wildcard/master bypass.
 
-`purchase-intents.process` remains forbidden to the Discord bot AI-support design as well as ordinary bot operations.
+`purchase-intents.process` remains forbidden to the Discord bot AI-support design as well as ordinary bot operations. `support.tickets.override` is the narrow ADR-0016 exception for deterministic, explicitly authorized ticket access; customer AI cannot call it.
 
 ## Current production/admin bot operation surface
 
@@ -39,6 +42,9 @@ Tracked admin/leaderboard source consumes only operations required by existing p
 aura.leaderboards.read
 aura.lookup.read
 users.overview.read
+support.tickets.access.read
+support.tickets.verify
+support.tickets.override
 orders.details.read
 orders.fulfillment.read
 purchase-intents.lookup.read
@@ -134,6 +140,31 @@ Share to Chat performs no extra backend mutation. It renders from the already-au
 
 ADR-0009 permits canonical customer email. ADR-0011 permits a separately rendered customer-safe pending-purchase summary but keeps provider/provider-status internals, purchase-intent UUIDs/internal option IDs and masked fulfillment support material private.
 
+## Support-ticket persistence and link authority
+
+The website/Supabase side owns durable support-ticket access state. The bot mirrors only the strict safe DTO and never stores authoritative ticket access in a local database.
+
+Closed operations:
+
+```text
+support.tickets.access.read
+support.tickets.verify
+support.tickets.override
+```
+
+`support.tickets.verify` checks the current active website Discord link and writes either locked state or an exact eight-hour verified lease while preserving an existing ticket-scoped admin override.
+
+`support.tickets.access.read` is recovery data. For an expired `verified` lease, the bot deliberately does not perform a timer-driven renewal or proactive lock merely because time elapsed; the next ticket-creator/customer message or explicit **Check Again** performs the fresh verification.
+
+`support.tickets.override` is a ticket-scoped admin mutation. The website treats `adminDiscordId` as audit attribution only; human authorization remains the bot's ADR-0006 exact-guild + explicit-user allowlist.
+
+Stable support error:
+
+```text
+TICKET_CREATOR_MISMATCH -> 409
+```
+
+Website operation availability is separate from the deployed bot client's exact `allowedOperations`. Production rollout must add only these three permissions to the dedicated bot credential after the website routes are deployed.
 ## Existing mutations remain admin-only
 
 Website-owned admin surfaces remain:
