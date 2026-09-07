@@ -27,6 +27,9 @@ The bot has no direct Supabase/Postgres access, database credential, service-rol
 aura.leaderboards.read
 aura.lookup.read
 users.overview.read
+support.tickets.access.read
+support.tickets.verify
+support.tickets.override
 orders.details.read
 orders.fulfillment.read
 purchase-intents.lookup.read
@@ -117,6 +120,36 @@ Every `/cm` slash command, button and modal requires:
 5. operator-bound unexpired session for component/modal navigation.
 
 A whitelisted admin may use `/cm` from any channel in the configured guild. DMs and wrong guilds fail closed. Ephemeral output is privacy, not authorization. `/refresh-leaderboard` keeps its separate configured channel and Discord permission policy.
+
+## Tickety account-link gate
+
+CM support-ticket gating is deterministic bot logic, not AI support.
+
+Initial ticket recognition is:
+
+```text
+parent == 1382569775988871330
+OR
+(parent == none AND name matches support-<number>)
+```
+
+The bot resolves exactly one non-bot member overwrite as the ticket creator. It immediately makes only that creator read-only while the website verifies the active CM ↔ Discord link through `support.tickets.verify`.
+
+Unlinked customers receive **Open CM Settings** and **Check Again**. The website linking destination is:
+
+```text
+https://cheaters.market/dashboard?tab=settings
+```
+
+A successful verification creates an exact eight-hour website lease. The bot performs no recurring eight-hour poll and no per-message verification while the lease is active. After expiry, only the ticket creator's next message (or **Check Again**) performs a fresh check. Staff/admin/bot messages never renew the customer's link state.
+
+If that fresh check says unlinked, the triggering creator message is deleted and the creator is locked. API/service failure also fails closed, but uses distinct verification-unavailable copy rather than claiming the user is unlinked.
+
+Tickety permission rewrites are re-enforced while a durable ticket is locked. Startup reconciliation restores durable website state without turning expiry into a timer-driven recheck.
+
+`/cm ticket-allow` is the ticket-scoped administrator bypass. It uses the same exact-guild + explicit `BOT_ADMIN_USER_IDS` authorization as every other `/cm` admin control, requires the configured audit channel, records the website override, restores participation and writes a sanitized Discord audit entry. The bypass does not carry to future tickets.
+
+ADR-0016 defines the complete gate and recovery model.
 
 ## `/cm user`
 
@@ -221,17 +254,21 @@ Registration is explicit and never happens on startup:
 npm run register:commands
 ```
 
-Top-level commands remain `/refresh-leaderboard` and `/cm`; `user` and `order` remain `/cm` subcommands. TASK-CM-ADMIN-007 changes lookup behavior only, not command JSON, so command re-registration is not required for this task.
+Top-level commands remain `/refresh-leaderboard` and `/cm`. The `/cm` subcommands are now `user`, `order`, and `ticket-allow`.
+
+This task **does change guild command JSON**, so run `npm run register:commands` once after deploying the bot revision and website operation permissions. Command registration is still explicit and is never performed at bot startup.
 
 ## Deployment note for pending lookup
 
-The deployed website integration client used by the bot must include:
+The deployed website integration client used by the bot must include every operation required by the deployed source. In addition to the existing lookup/admin permissions, this ticket-gate revision requires:
 
 ```text
-purchase-intents.lookup.read
+support.tickets.access.read
+support.tickets.verify
+support.tickets.override
 ```
 
-in its exact `allowedOperations` list. Endpoint existence does not grant that permission.
+`purchase-intents.lookup.read` remains required for pending order lookup. Endpoint existence does not grant any permission; the website client's exact `allowedOperations` list remains authoritative.
 
 ## Non-production transcript tooling
 
