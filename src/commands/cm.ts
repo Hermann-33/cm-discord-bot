@@ -117,6 +117,7 @@ export class CmAdminController {
 
   async handle(interaction: Interaction): Promise<boolean> {
     if (interaction.isChatInputCommand() && interaction.commandName === "cm") {
+      if (interaction.options.getSubcommand(false) === "ticket-allow") return false;
       await this.handleCommand(interaction);
       return true;
     }
