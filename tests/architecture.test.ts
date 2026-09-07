@@ -41,6 +41,9 @@ test("API client exposes only explicitly approved bot operations", () => {
     "/api/internal/integrations/v1/aura/leaderboards",
     "/api/internal/integrations/v1/aura/lookup",
     "/api/internal/integrations/v1/users/overview",
+    "/api/internal/integrations/v1/support/tickets/access",
+    "/api/internal/integrations/v1/support/tickets/verify",
+    "/api/internal/integrations/v1/support/tickets/override",
     "/api/internal/integrations/v1/orders/details",
     "/api/internal/integrations/v1/orders/fulfillment",
     "/api/internal/integrations/v1/purchase-intents/lookup",
@@ -67,12 +70,28 @@ test("AI support is planner-only and cannot reach mutation methods", () => {
     "previewOrderRefund(",
     "executeOrderRefund(",
     "executeAuraAdjustment(",
-    "executeWalletAdjustment("
+    "executeWalletAdjustment(",
+    "overrideSupportTicketAccess("
   ]) {
     assert.equal(aiSupportSourceText.includes(forbidden), false, `AI support references mutation method ${forbidden}`);
   }
   assert.equal(aiSupportSourceText.includes("catalog.current.read"), false);
   assert.equal(aiSupportSourceText.includes("@supabase/supabase-js"), false);
+});
+
+test("ticket gate persists only through the closed Internal Integrations API", () => {
+  const ticketGate = readFileSync(
+    join(process.cwd(), "src", "discord", "ticketLinkGate.ts"),
+    "utf8"
+  );
+  assert.equal(ticketGate.includes("@supabase/supabase-js"), false);
+  assert.equal(ticketGate.includes("SUPABASE_"), false);
+  assert.equal(ticketGate.includes(".from("), false);
+  assert.equal(ticketGate.includes(".rpc("), false);
+  assert.equal(ticketGate.includes("readSupportTicketAccess("), true);
+  assert.equal(ticketGate.includes("verifySupportTicketAccess("), true);
+  assert.equal(ticketGate.includes("overrideSupportTicketAccess("), true);
+  assert.equal(ticketGate.includes("authorizeAdminInteraction("), true);
 });
 
 test("hosted AI integrations use approved hosts and never import private transcript tooling", () => {
