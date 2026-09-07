@@ -294,8 +294,6 @@ function fakeButtonInteraction(channel: any, customId: string, userId = CREATOR_
   const replies: unknown[] = [];
   const edits: unknown[] = [];
   let deferred = false;
-  const gateMessage = [...(channel.messages as any).fetch ? [] : []];
-  const message = [...(channel as any).__messages ?? []][0];
   const interaction: any = {
     customId,
     guildId: GUILD_ID,
