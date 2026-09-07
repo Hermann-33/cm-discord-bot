@@ -20,7 +20,7 @@ import {
 } from "discord.js";
 import type { InternalApiClient } from "../api/client";
 import { isInternalApiError } from "../api/errors";
-import type { SupportTicketAccess } from "../api/supportTickets";
+import type { SupportTicketAccess, SupportTicketVerifyData } from "../api/supportTickets";
 import type { AppConfig } from "../config/env";
 import { postTicketAccessOverrideAudit } from "./adminAudit";
 import { authorizeAdminInteraction } from "./adminAuthorization";
