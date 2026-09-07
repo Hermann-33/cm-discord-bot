@@ -325,7 +325,7 @@ export class TicketLinkGateController {
     await channel.permissionOverwrites.edit(
       creatorDiscordId,
       LOCK_OPTIONS,
-      "CM account-link verification gate"
+      { reason: "CM account-link verification gate" }
     );
   }
 
@@ -396,7 +396,7 @@ export class TicketLinkGateController {
     await channel.permissionOverwrites.edit(
       state.creatorDiscordId,
       restoreOptions(snapshot),
-      "CM account-link gate released"
+      { reason: "CM account-link gate released" }
     );
     await this.deleteGateMessage(channel, state);
   }
