@@ -133,8 +133,8 @@ Current branch behavior:
 - deletes the triggering creator message if the fresh check is unlinked or unavailable, preventing a free post at the renewal boundary;
 - distinguishes unlinked from verification/service failure;
 - re-enforces locked creator permissions after Tickety channel permission rewrites;
-- performs normal durable-state startup recovery, with a temporary targeted fresh recheck only for `support-2094` (`1546354201368596612`);
-- adds `/cm ticket-allow`, reusing ADR-0006 exact-guild + explicit-user authorization and sanitized audit logging.
+- performs normal durable-state startup recovery without a ticket-specific diagnostic recheck;
+- adds `/cm ticket-allow`, reusing ADR-0006 exact-guild + explicit-user authorization, sanitized audit logging, and a visible ticket-channel override notice naming the operator after successful Discord access restoration.
 
 Customer linking uses `https://cheaters.market/dashboard?tab=settings` and the existing website **Connect Discord** OAuth flow.
 
@@ -150,7 +150,7 @@ npm run build: PASS
 git diff --check: PASS
 ```
 
-Repository validation must remain green after the targeted `support-2094` diagnostic change.
+Repository validation must remain green after the ticket-override public-notice change.
 
 ## Architecture and safety invariants
 
