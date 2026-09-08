@@ -124,21 +124,29 @@ Per-channel work is serialized so concurrent creator activity at the expiry boun
 
 ### Startup reconciliation
 
-Startup reconciliation is a one-time **fresh verification sweep**, not periodic polling.
+Normal startup reconciliation is durable-state recovery, not a global freshness poll.
 
-The bot paces candidates at roughly one every 2.1 seconds so `support.tickets.verify` remains below the 30/minute client limit. Recovery candidates include channels still under the Tickety category plus `support-<number>` channels used for moved/overflow recovery.
+The bot paces candidate recovery and applies durable state as follows:
 
-Durable state is handled as follows:
+- `locked` -> re-enforce the creator deny and recover the permission snapshot when available;
+- `admin_override` -> ensure the creator is unlocked;
+- active/expired `verified` -> repair any half-completed Discord permission transition but do not globally renew the link lease merely because the process restarted;
+- no durable state in a recognized initial ticket -> perform normal initial verification.
 
-- `admin_override` -> ensure the creator is unlocked and skip link verification because the override intentionally bypasses linkage for that ticket;
-- `locked` -> re-enforce the creator deny, recover the pre-gate permission snapshot when available, then perform one fresh verification;
-- active `verified` -> repair any half-completed Discord unlock, then perform one fresh verification and start a fresh exact eight-hour lease if still linked;
-- expired `verified` -> repair any half-completed Discord unlock, then perform one fresh verification immediately on startup rather than waiting for creator activity;
-- no durable state in a recognized initial ticket -> recover an existing gate-message snapshot when present, then perform the normal initial verification.
+The normal eight-hour activity-driven renewal model therefore remains authoritative after restart.
 
-This startup behavior is the only non-customer-triggered link refresh. Once the process is running, the activity-driven renewal rules above apply again.
+#### Temporary operational diagnostic — support-2094
 
-Channel deletion clears only bot runtime cache. No website delete operation exists; Discord channel snowflakes are not reused, so stale durable rows do not authorize another ticket.
+A temporary diagnostic exception is active for:
+
+```text
+channel: support-2094
+channel ID: 1546354201368596612
+```
+
+On process startup, that channel alone receives one fresh `support.tickets.verify` call after durable-state recovery, unless it has `admin_override`.
+
+This exception exists solely to reproduce a Discord permission-restoration failure with structured REST diagnostics. Other persisted tickets are not fresh-verified by this diagnostic change. The exception should be removed after the Discord error has been identified and corrected.
 
 ### Interaction ordering
 
@@ -177,7 +185,7 @@ Benefits:
 - no direct database credential is added to the bot;
 - website link state remains authoritative;
 - stale access after unlinking is bounded to eight hours without background polling;
-- inactive tickets generate no recurring verification traffic; they are checked once per process startup and otherwise remain activity-driven;
+- inactive tickets generate no recurring verification traffic; normal startup restores durable state without globally renewing link verification;
 - staff access is unaffected;
 - restart recovery is durable through website state plus minimal Discord-side permission recovery metadata;
 - administrator bypass remains explicit, ticket-scoped, allowlisted and audited.
@@ -186,7 +194,7 @@ Costs / limitations:
 
 - creator resolution intentionally refuses ambiguous member-overwrite layouts;
 - if the permission snapshot notice is deleted and no runtime snapshot remains, unlock uses the conservative documented Tickety-default fallback for only the gated permissions; thread permissions are inherited rather than force-granted;
-- startup fresh verification of many existing tickets is intentionally paced and can lengthen recovery time in large guilds;
+- startup recovery is paced; the temporary support-2094 diagnostic adds one targeted fresh verification per process start until removed;
 - the website retains ticket rows after Discord channel deletion until a future narrowly scoped cleanup operation exists.
 
 ## Deployment requirements
