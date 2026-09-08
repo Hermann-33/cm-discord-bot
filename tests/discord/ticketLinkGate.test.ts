@@ -229,6 +229,22 @@ function fakeClient() {
   } as unknown as Client;
 }
 
+function fakeStartupClient(channel: any) {
+  return {
+    user: { id: BOT_ID },
+    guilds: {
+      fetch: async (guildId: string) => {
+        assert.equal(guildId, GUILD_ID);
+        return {
+          channels: {
+            fetch: async () => new Collection([[channel.id, channel]])
+          }
+        };
+      }
+    }
+  } as unknown as Client;
+}
+
 function dependencies(overrides: Partial<TicketLinkGateDependencies> = {}) {
   const audits: unknown[] = [];
   const deps: TicketLinkGateDependencies = {
@@ -407,6 +423,121 @@ test("unlinked ticket is locked and receives the link/recheck panel", async () =
   assert.equal(payloadText(sends[0]!).includes(CM_ACCOUNT_SETTINGS_URL), true);
   assert.equal(customIdsFromPayload(sends[0]!).some((id) => id.startsWith("cm:ticket:recheck:")), true);
   assert.equal(overwrites.get(CREATOR_ID)!.deny.has(PermissionFlagsBits.SendMessages), true);
+});
+
+test("startup fresh sweep re-verifies an existing verified ticket once", async () => {
+  const { channel } = fakeChannel();
+  let readCalls = 0;
+  let verifyCalls = 0;
+  const api = {
+    readSupportTicketAccess: async () => {
+      readCalls += 1;
+      return {
+        ticketAccess: ticketAccess("verified"),
+        accessGranted: true
+      } satisfies SupportTicketAccessReadData;
+    },
+    verifySupportTicketAccess: async () => {
+      verifyCalls += 1;
+      return {
+        linked: true,
+        accessGranted: true,
+        ticketAccess: ticketAccess("verified", {
+          verifiedAt: "2026-09-08T01:00:00.000Z",
+          verifiedUntil: "2026-09-08T09:00:00.000Z",
+          updatedAt: "2026-09-08T01:00:00.000Z"
+        })
+      } satisfies SupportTicketVerifyData;
+    }
+  } as unknown as InternalApiClient;
+  const { deps } = dependencies();
+  const controller = new TicketLinkGateController(
+    config,
+    fakeStartupClient(channel),
+    api,
+    deps
+  );
+
+  await controller.reconcileExistingTickets();
+
+  assert.equal(readCalls, 1);
+  assert.equal(verifyCalls, 1);
+});
+
+test("startup fresh sweep preserves admin override without a link verification", async () => {
+  const { channel } = fakeChannel();
+  let verifyCalls = 0;
+  const api = {
+    readSupportTicketAccess: async () => ({
+      ticketAccess: ticketAccess("admin_override"),
+      accessGranted: true
+    } satisfies SupportTicketAccessReadData),
+    verifySupportTicketAccess: async () => {
+      verifyCalls += 1;
+      throw new Error("admin override must bypass fresh link verification");
+    }
+  } as unknown as InternalApiClient;
+  const { deps } = dependencies();
+  const controller = new TicketLinkGateController(
+    config,
+    fakeStartupClient(channel),
+    api,
+    deps
+  );
+
+  await controller.reconcileExistingTickets();
+
+  assert.equal(verifyCalls, 0);
+});
+
+test("restart after a pre-permission verification failure reuses the original gate snapshot and unlocks a now-linked creator", async () => {
+  const { channel, overwrites, messages, sends } = fakeChannel();
+
+  const failingApi = {
+    readSupportTicketAccess: async () => ({ ticketAccess: null, accessGranted: false }),
+    verifySupportTicketAccess: async () => {
+      throw new InternalApiClientError("OPERATION_FORBIDDEN", 403);
+    }
+  } as unknown as InternalApiClient;
+  const firstDeps = dependencies().deps;
+  const firstController = new TicketLinkGateController(
+    config,
+    fakeClient(),
+    failingApi,
+    firstDeps
+  );
+
+  await firstController.handleChannelCreate(channel);
+  assert.equal(overwrites.get(CREATOR_ID)!.deny.has(PermissionFlagsBits.SendMessages), true);
+  assert.equal(messages.size, 1);
+  assert.equal(sends.length, 1);
+
+  let verifyCalls = 0;
+  const recoveredApi = {
+    readSupportTicketAccess: async () => ({ ticketAccess: null, accessGranted: false }),
+    verifySupportTicketAccess: async () => {
+      verifyCalls += 1;
+      return {
+        linked: true,
+        accessGranted: true,
+        ticketAccess: ticketAccess("verified")
+      } satisfies SupportTicketVerifyData;
+    }
+  } as unknown as InternalApiClient;
+  const recoveredDeps = dependencies().deps;
+  const recoveredController = new TicketLinkGateController(
+    config,
+    fakeStartupClient(channel),
+    recoveredApi,
+    recoveredDeps
+  );
+
+  await recoveredController.reconcileExistingTickets();
+
+  assert.equal(verifyCalls, 1);
+  assert.equal(overwrites.get(CREATOR_ID)!.allow.has(PermissionFlagsBits.SendMessages), true);
+  assert.equal(overwrites.get(CREATOR_ID)!.deny.has(PermissionFlagsBits.SendMessages), false);
+  assert.equal(messages.size, 0);
 });
 
 test("verification outage fails closed without claiming the creator is unlinked", async () => {
