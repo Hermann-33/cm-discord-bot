@@ -25,7 +25,7 @@ import type { AppConfig } from "../config/env";
 import { postTicketAccessOverrideAudit } from "./adminAudit";
 import { authorizeAdminInteraction } from "./adminAuthorization";
 import { safeAllowedMentions } from "./safeMessages";
-import { logger } from "../logger";
+import { logger, sanitizeError } from "../logger";
 
 export const TICKETY_SUPPORT_CATEGORY_ID = "1382569775988871330";
 export const CM_ACCOUNT_SETTINGS_URL = "https://cheaters.market/dashboard?tab=settings";
@@ -34,6 +34,8 @@ const SUPPORT_TICKET_NAME = /^support-\d+$/i;
 const RECHECK_PREFIX = "cm:ticket:recheck:";
 const RECONCILE_PACE_MS = 2_100;
 const OVERRIDE_REASON = "Manual support ticket access override.";
+const DIAGNOSTIC_RECHECK_CHANNEL_ID = "1546354201368596612";
+const DIAGNOSTIC_RECHECK_CHANNEL_NAME = "support-2094";
 
 const GATED_PERMISSIONS = [
   ["SendMessages", PermissionFlagsBits.SendMessages],
@@ -84,6 +86,52 @@ const productionDependencies: TicketLinkGateDependencies = {
   sleep: (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
   postOverrideAudit: postTicketAccessOverrideAudit
 };
+
+type DiscordApiErrorMeta = {
+  errorName: string;
+  errorMessage: string;
+  discordCode?: string | number;
+  httpStatus?: number;
+  method?: string;
+  url?: string;
+};
+
+function primitiveCode(value: unknown): string | number | undefined {
+  return typeof value === "string" || typeof value === "number" ? value : undefined;
+}
+
+function primitiveString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function primitiveNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+export function extractDiscordApiErrorMeta(error: unknown): DiscordApiErrorMeta {
+  const base = sanitizeError(error) as {
+    errorName?: string;
+    errorMessage?: string;
+  };
+  const meta: DiscordApiErrorMeta = {
+    errorName: base.errorName ?? "UnknownError",
+    errorMessage: base.errorMessage ?? "An unknown error occurred"
+  };
+
+  if (!error || typeof error !== "object") return meta;
+
+  const record = error as Record<string, unknown>;
+  const rawError = record.rawError && typeof record.rawError === "object"
+    ? record.rawError as Record<string, unknown>
+    : undefined;
+
+  meta.discordCode = primitiveCode(record.code) ?? primitiveCode(rawError?.code);
+  meta.httpStatus = primitiveNumber(record.status);
+  meta.method = primitiveString(record.method);
+  meta.url = primitiveString(record.url);
+
+  return meta;
+}
 
 function text(content: string): TextDisplayBuilder {
   return new TextDisplayBuilder().setContent(content);
@@ -350,11 +398,21 @@ export class TicketLinkGateController {
 
   private async ensureLocked(channel: TextChannel, creatorDiscordId: string): Promise<void> {
     if (hasGateDeny(channel, creatorDiscordId)) return;
-    await channel.permissionOverwrites.edit(
-      creatorDiscordId,
-      LOCK_OPTIONS,
-      { reason: "CM account-link verification gate" }
-    );
+    try {
+      await channel.permissionOverwrites.edit(
+        creatorDiscordId,
+        LOCK_OPTIONS,
+        { reason: "CM account-link verification gate" }
+      );
+    } catch (error) {
+      logger.error("Discord ticket permission update failed", {
+        channelId: channel.id,
+        creatorDiscordId,
+        operation: "lock",
+        ...extractDiscordApiErrorMeta(error)
+      });
+      throw error;
+    }
   }
 
   private async findGateMessage(channel: TextChannel, creatorDiscordId: string): Promise<{
@@ -421,11 +479,21 @@ export class TicketLinkGateController {
       });
     }
 
-    await channel.permissionOverwrites.edit(
-      state.creatorDiscordId,
-      restoreOptions(snapshot),
-      { reason: "CM account-link gate released" }
-    );
+    try {
+      await channel.permissionOverwrites.edit(
+        state.creatorDiscordId,
+        restoreOptions(snapshot),
+        { reason: "CM account-link gate released" }
+      );
+    } catch (error) {
+      logger.error("Discord ticket permission update failed", {
+        channelId: channel.id,
+        creatorDiscordId: state.creatorDiscordId,
+        operation: "restore",
+        ...extractDiscordApiErrorMeta(error)
+      });
+      throw error;
+    }
     await this.deleteGateMessage(channel, state);
   }
 
@@ -1138,17 +1206,35 @@ export class TicketLinkGateController {
               persisted.ticketAccess
             );
 
-            if (state.status === "admin_override") return;
+            const isDiagnosticTarget =
+              channel.id === DIAGNOSTIC_RECHECK_CHANNEL_ID &&
+              channel.name.toLowerCase() === DIAGNOSTIC_RECHECK_CHANNEL_NAME;
+
+            if (!isDiagnosticTarget || state.status === "admin_override") return;
+
+            logger.info("targeted ticket diagnostic recheck starting", {
+              channelId: channel.id,
+              channelName: channel.name,
+              creatorDiscordId: state.creatorDiscordId,
+              state: state.status
+            });
 
             const snapshot = state.snapshot ??
               capturePermissionSnapshot(channel, state.creatorDiscordId);
-            await this.verifyAndApply(
+            const blocked = await this.verifyAndApply(
               channel,
               state.creatorDiscordId,
               snapshot,
               undefined,
               state.gateMessageId
             );
+
+            logger.info("targeted ticket diagnostic recheck complete", {
+              channelId: channel.id,
+              channelName: channel.name,
+              creatorDiscordId: state.creatorDiscordId,
+              blocked
+            });
             return;
           }
 
@@ -1186,9 +1272,10 @@ export class TicketLinkGateController {
       }
     }
 
-    logger.info("ticket gate startup fresh verification sweep complete", {
+    logger.info("ticket gate startup reconciliation complete", {
       candidates: candidates.length,
-      tracked: this.states.size
+      tracked: this.states.size,
+      diagnosticRecheckChannelId: DIAGNOSTIC_RECHECK_CHANNEL_ID
     });
   }
 }
