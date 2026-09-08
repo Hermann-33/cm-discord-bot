@@ -428,3 +428,35 @@ This is explicitly **not** recurring polling. Once startup finishes, normal runt
 ### Deployment effect
 
 Because Northflank deploys this repository's production/default `master` branch, merging the validated change to `master` is the repository-side deployment trigger. Live Northflank rollout status still requires host-side observation; repository tooling cannot inspect the Northflank service directly.
+
+
+---
+
+## 2026-09-08 — TASK-CM-TICKETS-003 — support-2094 Discord permission diagnostics
+
+### Trigger
+
+Ticket `support-2094` / channel `1546354201368596612` passed CM account-link verification but failed while restoring the creator's Discord channel permission overwrite, producing **CM ticket access unavailable**.
+
+This proves website link verification succeeded; the failure is in the Discord permission-restoration step, not in customer purchase status.
+
+### Change
+
+- added structured Discord REST error extraction for permission-overwrite mutations;
+- logs now capture safe fields only:
+  - `errorName`
+  - `errorMessage`
+  - Discord REST `code`
+  - HTTP `status`
+  - HTTP `method`
+  - Discord API `url`
+  - ticket channel ID
+  - creator Discord ID
+  - operation (`lock` or `restore`);
+- no token, authorization header, request body, website account ID, email or secret is logged;
+- returned normal startup to durable-state recovery instead of globally fresh-verifying every persisted ticket;
+- added a temporary targeted startup fresh recheck only for `support-2094` / `1546354201368596612`;
+- `admin_override` still bypasses link verification;
+- all other persisted tickets are recovered without a fresh link check.
+
+The targeted startup recheck is temporary operational diagnostics and should be removed after the Discord error is identified/fixed.
