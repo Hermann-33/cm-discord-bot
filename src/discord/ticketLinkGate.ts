@@ -107,7 +107,10 @@ export function isRecognizedSupportTicketChannel(channel: {
 }
 
 function isRecoveryCandidate(channel: TextChannel, guildId: string): boolean {
-  return channel.guildId === guildId && SUPPORT_TICKET_NAME.test(channel.name);
+  return channel.guildId === guildId && (
+    channel.parentId === TICKETY_SUPPORT_CATEGORY_ID ||
+    SUPPORT_TICKET_NAME.test(channel.name)
+  );
 }
 
 function capturePermissionSnapshot(
@@ -555,10 +558,10 @@ export class TicketLinkGateController {
       }
     }
 
-    // Expired verified leases are intentionally not renewed or proactively
-    // locked by a timer/startup pass. The first creator/customer message after
-    // expiry performs the fresh verification and is deleted if that check does
-    // not grant access.
+    // Outside the one-time startup fresh sweep, expiry alone does not renew
+    // or lock a ticket. During normal runtime the first creator/customer
+    // message after expiry performs the fresh verification and is deleted if
+    // that check does not grant access.
     return state;
   }
 
