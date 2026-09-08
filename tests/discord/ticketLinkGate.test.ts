@@ -23,6 +23,7 @@ import type {
 import type { AppConfig } from "../../src/config/env";
 import {
   CM_ACCOUNT_SETTINGS_URL,
+  extractDiscordApiErrorMeta,
   isRecognizedSupportTicketChannel,
   TicketLinkGateController,
   TICKETY_SUPPORT_CATEGORY_ID,
@@ -31,6 +32,7 @@ import {
 
 const GUILD_ID = "123456789012345672";
 const CHANNEL_ID = "1545695443160137789";
+const DIAGNOSTIC_CHANNEL_ID = "1546354201368596612";
 const CREATOR_ID = "123456789012345682";
 const STAFF_ID = "123456789012345683";
 const ADMIN_ID = "123456789012345681";
@@ -125,11 +127,13 @@ function applyOverwriteOption(
 }
 
 function fakeChannel(options: {
+  id?: string;
   parentId?: string | null;
   name?: string;
   memberIds?: string[];
 } = {}) {
   const {
+    id = CHANNEL_ID,
     parentId = TICKETY_SUPPORT_CATEGORY_ID,
     name = "support-1234",
     memberIds = [CREATOR_ID]
@@ -150,7 +154,7 @@ function fakeChannel(options: {
   let messageCounter = 0;
 
   const channel: any = {
-    id: CHANNEL_ID,
+    id,
     guildId: GUILD_ID,
     type: ChannelType.GuildText,
     parentId,
@@ -349,6 +353,24 @@ function fakeTicketAllowInteraction(channel: any, userId = ADMIN_ID) {
   return { interaction: interaction as Interaction, replies, edits, wasDeferred: () => deferred };
 }
 
+test("extracts safe Discord REST error diagnostics", () => {
+  const error = Object.assign(new Error("Missing Permissions"), {
+    code: 50013,
+    status: 403,
+    method: "PUT",
+    url: "https://discord.com/api/v10/channels/123/permissions/456"
+  });
+
+  assert.deepEqual(extractDiscordApiErrorMeta(error), {
+    errorName: "Error",
+    errorMessage: "Missing Permissions",
+    discordCode: 50013,
+    httpStatus: 403,
+    method: "PUT",
+    url: "https://discord.com/api/v10/channels/123/permissions/456"
+  });
+});
+
 test("recognizes configured Tickety category and only numeric uncategorized support channels", () => {
   assert.equal(isRecognizedSupportTicketChannel({
     guildId: GUILD_ID,
@@ -425,15 +447,18 @@ test("unlinked ticket is locked and receives the link/recheck panel", async () =
   assert.equal(overwrites.get(CREATOR_ID)!.deny.has(PermissionFlagsBits.SendMessages), true);
 });
 
-test("startup fresh sweep re-verifies an existing verified ticket once", async () => {
-  const { channel } = fakeChannel();
+test("startup fresh recheck verifies support-2094 exactly once", async () => {
+  const { channel } = fakeChannel({
+    id: DIAGNOSTIC_CHANNEL_ID,
+    name: "support-2094"
+  });
   let readCalls = 0;
   let verifyCalls = 0;
   const api = {
     readSupportTicketAccess: async () => {
       readCalls += 1;
       return {
-        ticketAccess: ticketAccess("verified"),
+        ticketAccess: ticketAccess("verified", { channelId: channel.id }),
         accessGranted: true
       } satisfies SupportTicketAccessReadData;
     },
@@ -443,6 +468,7 @@ test("startup fresh sweep re-verifies an existing verified ticket once", async (
         linked: true,
         accessGranted: true,
         ticketAccess: ticketAccess("verified", {
+          channelId: channel.id,
           verifiedAt: "2026-09-08T01:00:00.000Z",
           verifiedUntil: "2026-09-08T09:00:00.000Z",
           updatedAt: "2026-09-08T01:00:00.000Z"
@@ -464,12 +490,41 @@ test("startup fresh sweep re-verifies an existing verified ticket once", async (
   assert.equal(verifyCalls, 1);
 });
 
-test("startup fresh sweep preserves admin override without a link verification", async () => {
-  const { channel } = fakeChannel();
+test("startup recovery does not fresh-verify a non-target verified ticket", async () => {
+  const { channel } = fakeChannel({ name: "support-1234" });
   let verifyCalls = 0;
   const api = {
     readSupportTicketAccess: async () => ({
-      ticketAccess: ticketAccess("admin_override"),
+      ticketAccess: ticketAccess("verified"),
+      accessGranted: true
+    } satisfies SupportTicketAccessReadData),
+    verifySupportTicketAccess: async () => {
+      verifyCalls += 1;
+      throw new Error("non-target ticket must not be fresh-verified");
+    }
+  } as unknown as InternalApiClient;
+  const { deps } = dependencies();
+  const controller = new TicketLinkGateController(
+    config,
+    fakeStartupClient(channel),
+    api,
+    deps
+  );
+
+  await controller.reconcileExistingTickets();
+
+  assert.equal(verifyCalls, 0);
+});
+
+test("targeted startup recheck preserves admin override without a link verification", async () => {
+  const { channel } = fakeChannel({
+    id: DIAGNOSTIC_CHANNEL_ID,
+    name: "support-2094"
+  });
+  let verifyCalls = 0;
+  const api = {
+    readSupportTicketAccess: async () => ({
+      ticketAccess: ticketAccess("admin_override", { channelId: channel.id }),
       accessGranted: true
     } satisfies SupportTicketAccessReadData),
     verifySupportTicketAccess: async () => {
@@ -490,8 +545,11 @@ test("startup fresh sweep preserves admin override without a link verification",
   assert.equal(verifyCalls, 0);
 });
 
-test("restart after a pre-permission verification failure reuses the original gate snapshot and unlocks a now-linked creator", async () => {
-  const { channel, overwrites, messages, sends } = fakeChannel();
+test("targeted restart after a pre-permission failure reuses the original snapshot and unlocks support-2094", async () => {
+  const { channel, overwrites, messages, sends } = fakeChannel({
+    id: DIAGNOSTIC_CHANNEL_ID,
+    name: "support-2094"
+  });
 
   const failingApi = {
     readSupportTicketAccess: async () => ({ ticketAccess: null, accessGranted: false }),
@@ -520,7 +578,7 @@ test("restart after a pre-permission verification failure reuses the original ga
       return {
         linked: true,
         accessGranted: true,
-        ticketAccess: ticketAccess("verified")
+        ticketAccess: ticketAccess("verified", { channelId: channel.id })
       } satisfies SupportTicketVerifyData;
     }
   } as unknown as InternalApiClient;
