@@ -74,7 +74,7 @@ A successful verification grants an exact eight-hour lease. There is no backgrou
 
 Unlinked or verification-unavailable creators remain read-only. An unlinked creator receives **Open CM Settings** pointing at `https://cheaters.market/dashboard?tab=settings` plus **Check Again**. Service/API failure uses distinct copy and never claims the account is unlinked.
 
-Tickety permission rewrites are re-enforced for locked tickets through `ChannelUpdate`. Startup normally performs durable-state recovery only. A temporary diagnostic exception fresh-verifies only `support-2094` (`1546354201368596612`) so its Discord permission-restoration failure can be reproduced with structured error logging.
+Tickety permission rewrites are re-enforced for locked tickets through `ChannelUpdate`. Startup performs durable-state recovery only; it does not globally fresh-verify every persisted ticket.
 
 ## `/cm ticket-allow`
 
@@ -86,7 +86,7 @@ Ticket-scoped administrator bypass. It must be run in a recognized/durable CM su
 - no role-only authorization;
 - no shared command-channel restriction.
 
-`BOT_AUDIT_LOG_CHANNEL_ID` must be configured before the override mutation. The bot calls only `support.tickets.override`, restores that ticket creator's participation, and emits a sanitized Discord audit. The override applies only to that ticket; future tickets remain gated.
+`BOT_AUDIT_LOG_CHANNEL_ID` must be configured before the override mutation. The bot calls only `support.tickets.override`, restores that ticket creator's participation, posts `Ticket lockdown has been overridden by <@operator>.` in the ticket after a successful Discord unlock, and emits a sanitized Discord audit. If Discord access restoration fails, the public success notice is not posted. The override applies only to that ticket; future tickets remain gated.
 
 ## `/cm user`
 
