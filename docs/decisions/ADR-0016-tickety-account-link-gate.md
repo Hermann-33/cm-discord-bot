@@ -135,19 +135,6 @@ The bot paces candidate recovery and applies durable state as follows:
 
 The normal eight-hour activity-driven renewal model therefore remains authoritative after restart.
 
-#### Temporary operational diagnostic — support-2094
-
-A temporary diagnostic exception is active for:
-
-```text
-channel: support-2094
-channel ID: 1546354201368596612
-```
-
-On process startup, that channel alone receives one fresh `support.tickets.verify` call after durable-state recovery, unless it has `admin_override`.
-
-This exception exists solely to reproduce a Discord permission-restoration failure with structured REST diagnostics. Other persisted tickets are not fresh-verified by this diagnostic change. The exception should be removed after the Discord error has been identified and corrected.
-
 ### Interaction ordering
 
 The ticket gate handles customer ticket messages before `cm aura` and before customer AI support. A blocked creator message therefore cannot continue into Aura or AI handling.
@@ -173,7 +160,7 @@ Authorization is exactly ADR-0006:
 
 No Discord-role-only or website-side human-admin authorization model is added.
 
-The bot calls `support.tickets.override` with a fresh logical UUID idempotency key and a fixed safe reason. The website records administrator attribution. The bot restores ticket participation and writes the normal sanitized Discord audit entry. `BOT_AUDIT_LOG_CHANNEL_ID` must be configured before the override mutation is attempted.
+The bot calls `support.tickets.override` with a fresh logical UUID idempotency key and a fixed safe reason. The website records administrator attribution. The bot restores ticket participation, posts a visible ticket-channel notice naming the invoking administrator only after Discord access restoration succeeds, and writes the normal sanitized Discord audit entry. If the backend override persists but Discord permission restoration fails, the bot does not post the public success notice. `BOT_AUDIT_LOG_CHANNEL_ID` must be configured before the override mutation is attempted.
 
 The override applies only to the current ticket channel. Future tickets from the same Discord user remain subject to the normal account-link gate.
 
@@ -194,7 +181,7 @@ Costs / limitations:
 
 - creator resolution intentionally refuses ambiguous member-overwrite layouts;
 - if the permission snapshot notice is deleted and no runtime snapshot remains, unlock uses the conservative documented Tickety-default fallback for only the gated permissions; thread permissions are inherited rather than force-granted;
-- startup recovery is paced; the temporary support-2094 diagnostic adds one targeted fresh verification per process start until removed;
+- startup recovery is paced and restores durable state without a ticket-specific freshness exception;
 - the website retains ticket rows after Discord channel deletion until a future narrowly scoped cleanup operation exists.
 
 ## Deployment requirements
