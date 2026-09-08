@@ -302,3 +302,12 @@ bot starts
 This also fixed the specific pre-permission recovery case: if an earlier verification failure had locked a creator and posted the CM gate notice without creating durable website state, startup now recovers the original pre-gate permission snapshot from that notice before re-verifying. A linked user can therefore be unlocked correctly after the website client permissions become available.
 
 The sweep remains paced below the website verification limit and is not recurring polling.
+
+
+## 2026-09-08 — support-2094 targeted Discord permission diagnostics
+
+A linked creator in `support-2094` (`1546354201368596612`) reached the Discord access-restoration stage but the permission overwrite edit failed.
+
+The bot was updated to log the sanitized Discord REST failure code/status/method/URL at the exact permission mutation boundary. The earlier all-ticket startup freshness sweep was reduced back to normal durable-state recovery, with one temporary targeted startup fresh verification only for `support-2094` so the problem can be reproduced without rechecking unrelated persisted tickets.
+
+This is an operational diagnostic exception, not a permanent expansion of the ADR-0016 polling model.
