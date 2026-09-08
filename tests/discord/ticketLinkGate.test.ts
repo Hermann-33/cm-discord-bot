@@ -32,7 +32,6 @@ import {
 
 const GUILD_ID = "123456789012345672";
 const CHANNEL_ID = "1545695443160137789";
-const DIAGNOSTIC_CHANNEL_ID = "1546354201368596612";
 const CREATOR_ID = "123456789012345682";
 const STAFF_ID = "123456789012345683";
 const ADMIN_ID = "123456789012345681";
@@ -476,50 +475,7 @@ test("unlinked ticket is locked and receives the link/recheck panel", async () =
   assert.equal(overwrites.get(CREATOR_ID)!.deny.has(PermissionFlagsBits.SendMessages), true);
 });
 
-test("startup fresh recheck verifies support-2094 exactly once", async () => {
-  const { channel } = fakeChannel({
-    id: DIAGNOSTIC_CHANNEL_ID,
-    name: "support-2094"
-  });
-  let readCalls = 0;
-  let verifyCalls = 0;
-  const api = {
-    readSupportTicketAccess: async () => {
-      readCalls += 1;
-      return {
-        ticketAccess: ticketAccess("verified", { channelId: channel.id }),
-        accessGranted: true
-      } satisfies SupportTicketAccessReadData;
-    },
-    verifySupportTicketAccess: async () => {
-      verifyCalls += 1;
-      return {
-        linked: true,
-        accessGranted: true,
-        ticketAccess: ticketAccess("verified", {
-          channelId: channel.id,
-          verifiedAt: "2026-09-08T01:00:00.000Z",
-          verifiedUntil: "2026-09-08T09:00:00.000Z",
-          updatedAt: "2026-09-08T01:00:00.000Z"
-        })
-      } satisfies SupportTicketVerifyData;
-    }
-  } as unknown as InternalApiClient;
-  const { deps } = dependencies();
-  const controller = new TicketLinkGateController(
-    config,
-    fakeStartupClient(channel),
-    api,
-    deps
-  );
-
-  await controller.reconcileExistingTickets();
-
-  assert.equal(readCalls, 1);
-  assert.equal(verifyCalls, 1);
-});
-
-test("startup recovery does not fresh-verify a non-target verified ticket", async () => {
+test("startup recovery does not fresh-verify a persisted verified ticket", async () => {
   const { channel } = fakeChannel({ name: "support-1234" });
   let verifyCalls = 0;
   const api = {
@@ -545,15 +501,12 @@ test("startup recovery does not fresh-verify a non-target verified ticket", asyn
   assert.equal(verifyCalls, 0);
 });
 
-test("targeted startup recheck preserves admin override without a link verification", async () => {
-  const { channel } = fakeChannel({
-    id: DIAGNOSTIC_CHANNEL_ID,
-    name: "support-2094"
-  });
+test("startup recovery preserves admin override without a link verification", async () => {
+  const { channel } = fakeChannel();
   let verifyCalls = 0;
   const api = {
     readSupportTicketAccess: async () => ({
-      ticketAccess: ticketAccess("admin_override", { channelId: channel.id }),
+      ticketAccess: ticketAccess("admin_override"),
       accessGranted: true
     } satisfies SupportTicketAccessReadData),
     verifySupportTicketAccess: async () => {
@@ -574,11 +527,8 @@ test("targeted startup recheck preserves admin override without a link verificat
   assert.equal(verifyCalls, 0);
 });
 
-test("targeted restart after a pre-permission failure reuses the original snapshot and unlocks support-2094", async () => {
-  const { channel, overwrites, messages, sends } = fakeChannel({
-    id: DIAGNOSTIC_CHANNEL_ID,
-    name: "support-2094"
-  });
+test("restart after a pre-permission failure reuses the original snapshot and unlocks the creator", async () => {
+  const { channel, overwrites, messages, sends } = fakeChannel();
 
   const failingApi = {
     readSupportTicketAccess: async () => ({ ticketAccess: null, accessGranted: false }),
@@ -607,7 +557,7 @@ test("targeted restart after a pre-permission failure reuses the original snapsh
       return {
         linked: true,
         accessGranted: true,
-        ticketAccess: ticketAccess("verified", { channelId: channel.id })
+        ticketAccess: ticketAccess("verified")
       } satisfies SupportTicketVerifyData;
     }
   } as unknown as InternalApiClient;
