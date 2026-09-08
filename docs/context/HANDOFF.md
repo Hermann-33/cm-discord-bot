@@ -43,8 +43,8 @@ Implemented behavior:
 - unlinked/verification-failure creator messages at the expiry boundary are deleted before the ticket remains locked;
 - distinct user copy for unlinked vs verification/service failure;
 - locked permission re-enforcement after Tickety rewrites;
-- normal startup durable-state recovery plus a temporary targeted fresh recheck for `support-2094` (`1546354201368596612`);
-- `/cm ticket-allow` reuses ADR-0006 exact-guild + explicit-user authorization, requires `BOT_AUDIT_LOG_CHANNEL_ID`, persists a ticket-scoped override, restores participation, and emits sanitized Discord audit.
+- normal startup durable-state recovery without a ticket-specific diagnostic recheck;
+- `/cm ticket-allow` reuses ADR-0006 exact-guild + explicit-user authorization, requires `BOT_AUDIT_LOG_CHANNEL_ID`, persists a ticket-scoped override, restores participation, posts a visible ticket-channel notice naming the operator after a successful unlock, and emits sanitized Discord audit.
 
 Customer link destination:
 
