@@ -141,11 +141,11 @@ Unlinked customers receive **Open CM Settings** and **Check Again**. The website
 https://cheaters.market/dashboard?tab=settings
 ```
 
-A successful verification creates an exact eight-hour website lease. The bot performs no recurring eight-hour poll and no per-message verification while the lease is active. After expiry, only the ticket creator's next message (or **Check Again**) performs a fresh check. Staff/admin/bot messages never renew the customer's link state.
+A successful verification creates an exact eight-hour website lease. The bot performs no recurring eight-hour poll and no per-message verification while the lease is active. During normal runtime after expiry, only the ticket creator's next message (or **Check Again**) performs a fresh check. Staff/admin/bot messages never renew the customer's link state. **Process startup is the deliberate exception:** one paced startup sweep fresh-verifies every existing non-overridden support ticket once.
 
 If that fresh check says unlinked, the triggering creator message is deleted and the creator is locked. API/service failure also fails closed, but uses distinct verification-unavailable copy rather than claiming the user is unlinked.
 
-Tickety permission rewrites are re-enforced while a durable ticket is locked. Startup reconciliation restores durable website state without turning expiry into a timer-driven recheck.
+Tickety permission rewrites are re-enforced while a durable ticket is locked. Startup reconciliation now performs a paced one-time fresh verification sweep across existing support tickets so a restart can recover immediately after API-permission/configuration fixes. `admin_override` tickets remain bypassed, and no recurring polling is introduced.
 
 `/cm ticket-allow` is the ticket-scoped administrator bypass. It uses the same exact-guild + explicit `BOT_ADMIN_USER_IDS` authorization as every other `/cm` admin control, requires the configured audit channel, records the website override, restores participation and writes a sanitized Discord audit entry. The bypass does not carry to future tickets.
 
