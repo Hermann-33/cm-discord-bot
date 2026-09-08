@@ -104,13 +104,15 @@ During the active lease:
 - creator messages cause zero CM verification calls;
 - staff/admin/bot messages cause zero CM verification calls.
 
-After expiry:
+After expiry during normal runtime:
 
 - there is no eight-hour timer;
 - there is no global ticket poll;
-- an inactive ticket causes no verification work;
+- an inactive ticket causes no verification work until either process restart or customer re-activity;
 - staff/admin/bot activity does not renew the creator;
 - only the ticket creator's next message, or explicit **Check Again**, performs a fresh verification.
+
+Process startup is a deliberate exception: one paced startup sweep fresh-verifies every existing non-overridden support ticket once. This exists so a restart can immediately recover tickets after API permission/configuration fixes without introducing recurring polling.
 
 When an expired creator message triggers verification:
 
@@ -122,15 +124,19 @@ Per-channel work is serialized so concurrent creator activity at the expiry boun
 
 ### Startup reconciliation
 
-Startup reconciliation is one-time recovery, not periodic polling.
+Startup reconciliation is a one-time **fresh verification sweep**, not periodic polling.
 
-The bot paces candidate recovery to stay below the website support-ticket operation limits. Durable state is applied as follows:
+The bot paces candidates at roughly one every 2.1 seconds so `support.tickets.verify` remains below the 30/minute client limit. Recovery candidates include channels still under the Tickety category plus `support-<number>` channels used for moved/overflow recovery.
 
-- `locked` -> re-enforce the creator deny;
-- `admin_override` -> ensure the creator is unlocked;
-- active `verified` -> preserve access and repair a half-completed unlock if Discord still carries the CM deny;
-- expired `verified` -> do not proactively renew or lock merely because time elapsed; if Discord is still carrying a half-completed CM deny from a crash, release that deny first so the creator can generate the activity that triggers fresh verification;
-- no durable state in a recognized initial ticket -> perform the normal initial verification.
+Durable state is handled as follows:
+
+- `admin_override` -> ensure the creator is unlocked and skip link verification because the override intentionally bypasses linkage for that ticket;
+- `locked` -> re-enforce the creator deny, recover the pre-gate permission snapshot when available, then perform one fresh verification;
+- active `verified` -> repair any half-completed Discord unlock, then perform one fresh verification and start a fresh exact eight-hour lease if still linked;
+- expired `verified` -> repair any half-completed Discord unlock, then perform one fresh verification immediately on startup rather than waiting for creator activity;
+- no durable state in a recognized initial ticket -> recover an existing gate-message snapshot when present, then perform the normal initial verification.
+
+This startup behavior is the only non-customer-triggered link refresh. Once the process is running, the activity-driven renewal rules above apply again.
 
 Channel deletion clears only bot runtime cache. No website delete operation exists; Discord channel snowflakes are not reused, so stale durable rows do not authorize another ticket.
 
@@ -171,7 +177,7 @@ Benefits:
 - no direct database credential is added to the bot;
 - website link state remains authoritative;
 - stale access after unlinking is bounded to eight hours without background polling;
-- inactive tickets generate no recurring verification traffic;
+- inactive tickets generate no recurring verification traffic; they are checked once per process startup and otherwise remain activity-driven;
 - staff access is unaffected;
 - restart recovery is durable through website state plus minimal Discord-side permission recovery metadata;
 - administrator bypass remains explicit, ticket-scoped, allowlisted and audited.
@@ -180,7 +186,7 @@ Costs / limitations:
 
 - creator resolution intentionally refuses ambiguous member-overwrite layouts;
 - if the permission snapshot notice is deleted and no runtime snapshot remains, unlock uses the conservative documented Tickety-default fallback for only the gated permissions; thread permissions are inherited rather than force-granted;
-- startup recovery of many first-time tickets is intentionally paced;
+- startup fresh verification of many existing tickets is intentionally paced and can lengthen recovery time in large guilds;
 - the website retains ticket rows after Discord channel deletion until a future narrowly scoped cleanup operation exists.
 
 ## Deployment requirements
