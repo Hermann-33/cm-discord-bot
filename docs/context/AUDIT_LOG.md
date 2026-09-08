@@ -313,3 +313,70 @@ Because that work is material, consumed B0-v6 will not certify its eventual cand
 The documentation system was re-baselined on 2026-08-31 with `CURRENT_STATE_2026-08-31.md`, `DOCS_AUDIT_2026-08-31.md`, refreshed architecture/data/brief/codebase/command/side-project/handoff/roadmap files, and ADR-0015.
 
 Verdict: `CONTROLLED TEST ACTIVE / RESPONSE RECONSTRUCTION PENDING / BROAD RELEASE BLOCKED`.
+
+---
+
+## 2026-09-08 — TASK-CM-TICKETS-001 — Tickety account-link gate
+
+### Scope
+
+Implemented the bot side of the website-persisted CM support-ticket account-link gate on `feature/tickety-account-link-gate` / draft PR #15.
+
+### Architecture / security review
+
+- preserved the standalone `Discord -> HMAC Internal Integrations API -> website -> database` boundary;
+- added no Supabase/Postgres client, service-role/database credential, SQLite database, Northflank persistence-volume dependency or direct database fallback;
+- consumed only the reviewed website operations `support.tickets.access.read`, `support.tickets.verify`, and `support.tickets.override`;
+- mirrored the website support-ticket DTOs strictly and added deterministic `TICKET_CREATOR_MISMATCH` handling;
+- reused ADR-0006 exact-guild + explicit `BOT_ADMIN_USER_IDS` authorization for `/cm ticket-allow`; no role-only or website-side human authorization path was added;
+- kept the hosted AI planner unable to call the ticket override mutation;
+- retained `legacy/` isolation and did not change HMAC canonicalization/signing.
+
+### Discord behavior
+
+- initial ticket recognition: category `1382569775988871330` or uncategorized `support-<number>` overflow channel;
+- creator resolution accepts exactly one non-bot member-specific overwrite and never guesses ambiguous ownership;
+- creator-only participation gate preserves visibility/read access and never edits staff/support role overwrites;
+- lock happens before initial verification to close the channel-creation race;
+- unlinked customers receive CM Settings + **Check Again**;
+- verification/service failure fails closed with distinct wording and is not misreported as unlinked;
+- exact permission snapshot metadata is carried only in the bot's gate component custom ID for restart restoration; it contains no website ID, email, reason, token or credential;
+- `ChannelUpdate` re-enforces locked creator denies after Tickety rewrites;
+- startup performs paced one-time durable-state reconciliation rather than recurring polling.
+
+### Eight-hour lease behavior
+
+- successful website verification establishes the exact eight-hour lease returned by the API;
+- no creator verification call occurs while that lease is active;
+- no global eight-hour timer/poll exists;
+- expired inactive tickets generate no verification work;
+- staff/admin/bot activity never renews customer verification;
+- only ticket-creator/customer activity or explicit **Check Again** performs the next fresh check;
+- if an expired creator message finds the account unlinked or verification unavailable, that triggering message is deleted before access remains locked;
+- per-channel serialization prevents redundant concurrent verification at the expiry boundary.
+
+### Administrator override
+
+`/cm ticket-allow` is ticket-scoped only. It requires the normal `/cm` administrator allowlist and configured `BOT_AUDIT_LOG_CHANNEL_ID`, calls `support.tickets.override` with UUID idempotency, restores only the creator permissions affected by the CM gate, and emits a sanitized Discord audit. It does not exempt the Discord user from future tickets.
+
+### Test / CI evidence
+
+During implementation, CI first caught three incorrect test expectations and then a `discord.js` permission-overwrite option typing error; both were corrected rather than bypassed.
+
+Intermediate implementation head `e1e4830dcc8ea28ee093dd2c3c3f51a67eba9a65` passed GitHub Actions CI run `34171504351`:
+
+```text
+npm ci: PASS
+npm test: PASS
+npm run typecheck: PASS
+npm run build: PASS
+git diff --check: PASS
+```
+
+Later hardening/documentation commits add recovery/error handling and repository truth updates. The completion gate therefore requires a fresh CI pass on the final branch head before merge.
+
+### Deployment boundary
+
+No Discord bot login, slash-command registration, production API smoke call, website edit, database migration or merge was performed from this task. Production rollout additionally requires the website support routes to be deployed, the bot integration client to receive exactly the three support-ticket operations, the bot revision to deploy, `npm run register:commands` to run once, and end-to-end linked/unlinked/recheck/expiry/restart/Tickety-rewrite/admin-override smoke verification.
+
+Verdict: `IMPLEMENTED / FINAL BRANCH CI + PRODUCTION ROLLOUT GATES PENDING`.
