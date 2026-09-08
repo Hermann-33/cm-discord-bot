@@ -154,12 +154,14 @@ function defaultTicketyParticipantSnapshot(): TicketPermissionSnapshot {
 
 function restoreOptions(snapshot?: TicketPermissionSnapshot): PermissionOverwriteOptions {
   const options: Partial<Record<GatePermissionName, boolean | null>> = {};
+  const effectiveSnapshot = snapshot ?? defaultTicketyParticipantSnapshot();
 
   GATED_PERMISSIONS.forEach(([name], index) => {
-    // If the durable Discord-side snapshot is unavailable, restore Tickety's
-    // default participant behavior for the gated permissions only. The current
-    // CM server uses Tickety's default participant permissions.
-    options[name] = snapshot ? snapshotPermissionValue(snapshot, index) : true;
+    // Snapshot recovery is exact when available. If it is unavailable, use
+    // the conservative documented Tickety participant fallback rather than
+    // force-granting thread permissions that Tickety does not explicitly
+    // grant by default.
+    options[name] = snapshotPermissionValue(effectiveSnapshot, index);
   });
 
   return options as PermissionOverwriteOptions;
@@ -466,6 +468,11 @@ export class TicketLinkGateController {
         channelId: channel.id
       });
     }
+
+    // A prior unlinked/error notice is now stale because CM has granted
+    // access but Discord restoration failed. Replace it when possible.
+    await this.deleteGateMessage(channel, state);
+    state.gateMessageId = undefined;
     await this.trySendGateMessage(channel, state, "access_unavailable");
   }
 
@@ -698,6 +705,17 @@ export class TicketLinkGateController {
           state.status === "verification_unavailable" ||
           state.status === "access_unavailable") {
           await this.ensureLocked(textChannel, state.creatorDiscordId);
+        } else if (
+          state.status === "admin_override" &&
+          hasGateDeny(textChannel, state.creatorDiscordId)
+        ) {
+          try {
+            await this.restoreCreatorAccess(textChannel, state);
+          } catch {
+            logger.error("ticket override access restore retry failed", {
+              channelId: textChannel.id
+            });
+          }
         }
         return;
       }
@@ -790,46 +808,80 @@ export class TicketLinkGateController {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     await this.exclusive(channel.id, async () => {
+      let verification: SupportTicketVerifyData;
       try {
-        const verification = await this.api.verifySupportTicketAccess(
+        verification = await this.api.verifySupportTicketAccess(
           channel.id,
           parsed.creatorDiscordId
         );
-        const state = runtimeFromAccess(
-          verification.ticketAccess,
-          parsed.snapshot,
-          interaction.message.id
-        );
-        this.states.set(channel.id, state);
-
-        if (!verification.accessGranted) {
-          await this.ensureLocked(channel, parsed.creatorDiscordId);
-          await interaction.editReply({
-            content: "Your Discord account is still not linked to a Cheater's Market account. Link it in CM Settings, then press **Check Again**.",
-            allowedMentions: safeAllowedMentions
-          });
-          return;
-        }
-
-        await this.restoreCreatorAccess(channel, state);
-        await interaction.editReply({
-          content: "CM account verification succeeded. You can continue with this support ticket.",
-          allowedMentions: safeAllowedMentions
-        });
       } catch (error) {
-        logger.warn("ticket recheck failed", {
+        logger.warn("ticket recheck verification failed", {
           channelId: channel.id,
           code: isInternalApiError(error) ? error.code : "UNKNOWN"
         });
-        await this.ensureLocked(channel, parsed.creatorDiscordId);
+        try {
+          await this.ensureLocked(channel, parsed.creatorDiscordId);
+        } catch {
+          logger.error("ticket recheck fail-closed permission update failed", {
+            channelId: channel.id
+          });
+        }
         await interaction.editReply({
           content: isInternalApiError(error, "TICKET_CREATOR_MISMATCH")
             ? "This ticket's stored creator does not match the current verification request. Staff must review the ticket."
             : "CM account verification is temporarily unavailable. Your ticket remains read-only; try **Check Again** shortly.",
           allowedMentions: safeAllowedMentions
         });
+        return;
       }
+
+      const state = runtimeFromAccess(
+        verification.ticketAccess,
+        parsed.snapshot,
+        interaction.message.id
+      );
+      this.states.set(channel.id, state);
+
+      if (!verification.accessGranted) {
+        try {
+          await this.ensureLocked(channel, parsed.creatorDiscordId);
+        } catch {
+          logger.error("ticket recheck could not enforce unlinked lock", {
+            channelId: channel.id
+          });
+          await interaction.editReply({
+            content: "CM confirmed that this Discord account is not linked, but the ticket permission gate could not be refreshed. Staff must review the ticket permissions.",
+            allowedMentions: safeAllowedMentions
+          });
+          return;
+        }
+        await interaction.editReply({
+          content: "Your Discord account is still not linked to a Cheater's Market account. Link it in CM Settings, then press **Check Again**.",
+          allowedMentions: safeAllowedMentions
+        });
+        return;
+      }
+
+      try {
+        await this.restoreCreatorAccess(channel, state);
+      } catch {
+        logger.error("ticket recheck verified but Discord access restore failed", {
+          channelId: channel.id
+        });
+        await this.markAccessUnavailable(channel, state);
+        await interaction.editReply({
+          content: "Your CM account link is verified, but Discord ticket access could not be restored automatically. Staff must review the ticket permissions.",
+          allowedMentions: safeAllowedMentions
+        });
+        return;
+      }
+
+      await interaction.editReply({
+        content: "CM account verification succeeded. You can continue with this support ticket.",
+        allowedMentions: safeAllowedMentions
+      });
     });
+  }
   }
 
   private async resolveOverrideCreator(channel: TextChannel): Promise<{
@@ -894,68 +946,40 @@ export class TicketLinkGateController {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     await this.exclusive(channel.id, async () => {
+      let target: { creatorDiscordId: string; persisted?: SupportTicketAccess } | null;
       try {
-        const target = await this.resolveOverrideCreator(channel);
-        if (!target) {
-          await interaction.editReply({
-            content: "This channel is not a recognized CM support ticket, or its creator cannot be resolved safely.",
-            allowedMentions: safeAllowedMentions
-          });
-          return;
-        }
+        target = await this.resolveOverrideCreator(channel);
+      } catch (error) {
+        logger.warn("ticket override target resolution failed", {
+          channelId: channel.id,
+          code: isInternalApiError(error) ? error.code : "UNKNOWN"
+        });
+        await interaction.editReply({
+          content: "The ticket override could not be prepared.",
+          allowedMentions: safeAllowedMentions
+        });
+        return;
+      }
 
-        const override = await this.api.overrideSupportTicketAccess({
+      if (!target) {
+        await interaction.editReply({
+          content: "This channel is not a recognized CM support ticket, or its creator cannot be resolved safely.",
+          allowedMentions: safeAllowedMentions
+        });
+        return;
+      }
+
+      let override;
+      try {
+        override = await this.api.overrideSupportTicketAccess({
           channelId: channel.id,
           creatorDiscordId: target.creatorDiscordId,
           adminDiscordId: interaction.user.id,
           reason: OVERRIDE_REASON,
           idempotencyKey: this.dependencies.idempotencyKey()
         });
-
-        const existing = this.states.get(channel.id);
-        const gate = existing?.snapshot
-          ? null
-          : await this.findGateMessage(channel, target.creatorDiscordId);
-        const state = runtimeFromAccess(
-          override.ticketAccess,
-          existing?.snapshot ?? gate?.snapshot,
-          existing?.gateMessageId ?? gate?.message.id
-        );
-        this.states.set(channel.id, state);
-        await this.restoreCreatorAccess(channel, state);
-
-        let auditDelivered = true;
-        try {
-          await this.dependencies.postOverrideAudit({
-            client: interaction.client,
-            channelId: this.config.botAuditLogChannelId!,
-            operatorId: interaction.user.id,
-            ticketChannelId: channel.id,
-            ticketChannelName: channel.name,
-            creatorDiscordId: target.creatorDiscordId,
-            completedAt: override.ticketAccess.overrideAt!,
-            idempotentReplay: override.idempotentReplay
-          });
-        } catch {
-          auditDelivered = false;
-          logger.error("ticket override Discord audit delivery failed", {
-            channelId: channel.id
-          });
-        }
-
-        await interaction.editReply({
-          content: [
-            "Support override applied.",
-            "",
-            `User: <@${target.creatorDiscordId}>`,
-            `Ticket: ${channel.name}`,
-            "Access: Manually allowed",
-            ...(auditDelivered ? [] : ["Audit: Backend recorded; Discord audit delivery failed"])
-          ].join("\n"),
-          allowedMentions: safeAllowedMentions
-        });
       } catch (error) {
-        logger.warn("ticket override failed", {
+        logger.warn("ticket override backend mutation failed", {
           channelId: channel.id,
           code: isInternalApiError(error) ? error.code : "UNKNOWN"
         });
@@ -965,8 +989,71 @@ export class TicketLinkGateController {
             : "The ticket override could not be completed.",
           allowedMentions: safeAllowedMentions
         });
+        return;
       }
+
+      const existing = this.states.get(channel.id);
+      const gate = existing?.snapshot
+        ? null
+        : await this.findGateMessage(channel, target.creatorDiscordId);
+      const state = runtimeFromAccess(
+        override.ticketAccess,
+        existing?.snapshot ?? gate?.snapshot,
+        existing?.gateMessageId ?? gate?.message.id
+      );
+      this.states.set(channel.id, state);
+
+      let accessRestored = true;
+      try {
+        await this.restoreCreatorAccess(channel, state);
+      } catch {
+        accessRestored = false;
+        logger.error("ticket override persisted but Discord access restore failed", {
+          channelId: channel.id
+        });
+      }
+
+      let auditDelivered = true;
+      try {
+        await this.dependencies.postOverrideAudit({
+          client: interaction.client,
+          channelId: this.config.botAuditLogChannelId!,
+          operatorId: interaction.user.id,
+          ticketChannelId: channel.id,
+          ticketChannelName: channel.name,
+          creatorDiscordId: target.creatorDiscordId,
+          completedAt: override.ticketAccess.overrideAt!,
+          idempotentReplay: override.idempotentReplay
+        });
+      } catch {
+        auditDelivered = false;
+        logger.error("ticket override Discord audit delivery failed", {
+          channelId: channel.id
+        });
+      }
+
+      await interaction.editReply({
+        content: accessRestored
+          ? [
+              "Support override applied.",
+              "",
+              `User: <@${target.creatorDiscordId}>`,
+              `Ticket: ${channel.name}`,
+              "Access: Manually allowed",
+              ...(auditDelivered ? [] : ["Audit: Backend recorded; Discord audit delivery failed"])
+            ].join("\n")
+          : [
+              "Support override recorded by CM, but Discord access could not be restored automatically.",
+              "",
+              `User: <@${target.creatorDiscordId}>`,
+              `Ticket: ${channel.name}`,
+              "Access: Backend override active; Discord permissions need staff review",
+              ...(auditDelivered ? [] : ["Audit: Backend recorded; Discord audit delivery failed"])
+            ].join("\n"),
+        allowedMentions: safeAllowedMentions
+      });
     });
+  }
   }
 
   async handleInteraction(interaction: Interaction): Promise<boolean> {
