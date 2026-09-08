@@ -36,7 +36,7 @@ These files are preserved as point-in-time evidence. Their benchmark numbers rem
 
 ## Current Tickety ticket-gate work
 
-ADR-0016 is implemented on `feature/tickety-account-link-gate` / draft PR #15. It keeps durable ticket access on the website side and adds no local database or direct Supabase credential.
+ADR-0016 is implemented in the current source. It keeps durable ticket access on the website side and adds no local database or direct Supabase credential.
 
 Core contract:
 
