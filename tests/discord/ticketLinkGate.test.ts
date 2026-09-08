@@ -451,6 +451,39 @@ test("active verified lease makes creator and staff messages without another CM 
   assert.equal(verifyCalls, 0);
 });
 
+test("startup recovery releases a half-completed verified lock even after lease expiry without proactive verification", async () => {
+  const { channel, overwrites } = fakeChannel();
+  const overwrite = overwrites.get(CREATOR_ID)!;
+  overwrite.allow = new PermissionsBitField();
+  overwrite.deny = new PermissionsBitField(GATED);
+
+  let verifyCalls = 0;
+  const expired = ticketAccess("verified", {
+    verifiedAt: "2026-09-07T08:00:00.000Z",
+    verifiedUntil: "2026-09-07T16:00:00.000Z"
+  });
+  const api = {
+    readSupportTicketAccess: async () => ({
+      ticketAccess: expired,
+      accessGranted: false
+    } satisfies SupportTicketAccessReadData),
+    verifySupportTicketAccess: async () => {
+      verifyCalls += 1;
+      throw new Error("startup must not proactively renew an expired lease");
+    }
+  } as unknown as InternalApiClient;
+  const { deps } = dependencies();
+  const controller = new TicketLinkGateController(config, fakeClient(), api, deps);
+
+  await controller.handleChannelUpdate(channel);
+
+  assert.equal(verifyCalls, 0);
+  assert.equal(overwrite.allow.has(PermissionFlagsBits.SendMessages), true);
+  assert.equal(overwrite.deny.has(PermissionFlagsBits.SendMessages), false);
+  assert.equal(overwrite.allow.has(PermissionFlagsBits.CreatePublicThreads), false);
+  assert.equal(overwrite.deny.has(PermissionFlagsBits.CreatePublicThreads), false);
+});
+
 test("expired verified lease ignores staff activity and rechecks exactly once on creator activity", async () => {
   const { channel } = fakeChannel();
   let verifyCalls = 0;
