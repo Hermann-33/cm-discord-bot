@@ -11,7 +11,7 @@ This documentation system is the durable memory and governance layer for the Che
 5. `context/HANDOFF.md` — exact next engineering/resume sequence.
 6. `decisions/ADR-0016-tickety-account-link-gate.md` — current Tickety account-link authorization/persistence/override model.
 7. `decisions/ADR-0015-single-channel-visible-ai-test.md` — current narrow live-test authorization.
-8. `context/ROADMAP.md — current project phases and release gates.
+8. `context/ROADMAP.md` — current project phases and release gates.
 9. `context/ARCHITECTURE.md` — accepted architecture/invariants.
 10. `context/DATA_STATUS.md` — backend/data dependency details; use current-state docs for deployment-status supersession.
 11. `context/CODEBASE_MAP.md` — module ownership and fragile boundaries.
@@ -51,6 +51,7 @@ Core contract:
 - website operations only: `support.tickets.access.read`, `support.tickets.verify`, `support.tickets.override`.
 
 Production rollout is separate from repository implementation and still requires website deployment, the bot client's exact operation allowlist, bot deployment, explicit slash-command registration, and live end-to-end smoke tests.
+
 ## Current AI test and remediation
 
 The bot is currently authorized for a controlled visible AI test only in Discord channel `1542084649017286727`, with no category allowlist, under ADR-0015. This is not broad rollout.
