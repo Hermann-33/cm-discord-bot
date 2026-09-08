@@ -131,12 +131,14 @@ function fakeChannel(options: {
   parentId?: string | null;
   name?: string;
   memberIds?: string[];
+  rejectRawOverwriteTarget?: boolean;
 } = {}) {
   const {
     id = CHANNEL_ID,
     parentId = TICKETY_SUPPORT_CATEGORY_ID,
     name = "support-1234",
-    memberIds = [CREATOR_ID]
+    memberIds = [CREATOR_ID],
+    rejectRawOverwriteTarget = false
   } = options;
   const overwrites = new Collection<string, FakeOverwrite>();
 
@@ -169,16 +171,25 @@ function fakeChannel(options: {
     },
     permissionOverwrites: {
       cache: overwrites,
-      edit: async (id: string, optionsValue: Record<string, boolean | null | undefined>) => {
-        let overwrite = overwrites.get(id);
+      edit: async (
+        target: string | { id: string },
+        optionsValue: Record<string, boolean | null | undefined>
+      ) => {
+        if (rejectRawOverwriteTarget && typeof target === "string") {
+          throw Object.assign(new TypeError("Supplied parameter is not a User nor a Role."), {
+            code: "InvalidType"
+          });
+        }
+        const targetId = typeof target === "string" ? target : target.id;
+        let overwrite = overwrites.get(targetId);
         if (!overwrite) {
           overwrite = {
-            id,
+            id: targetId,
             type: OverwriteType.Member,
             allow: new PermissionsBitField(),
             deny: new PermissionsBitField()
           };
-          overwrites.set(id, overwrite);
+          overwrites.set(targetId, overwrite);
         }
         const byName = new Map<string, bigint>([
           ["SendMessages", PermissionFlagsBits.SendMessages],
@@ -422,6 +433,24 @@ test("linked ticket initializes fail-closed then restores the creator without po
   const overwrite = overwrites.get(CREATOR_ID)!;
   assert.equal(overwrite.allow.has(PermissionFlagsBits.SendMessages), true);
   assert.equal(overwrite.deny.has(PermissionFlagsBits.SendMessages), false);
+});
+
+test("permission edits use a fetched GuildMember rather than a raw snowflake", async () => {
+  const { channel, overwrites } = fakeChannel({ rejectRawOverwriteTarget: true });
+  const api = {
+    readSupportTicketAccess: async () => ({ ticketAccess: null, accessGranted: false }),
+    verifySupportTicketAccess: async () => ({
+      linked: false,
+      accessGranted: false,
+      ticketAccess: ticketAccess("locked")
+    } satisfies SupportTicketVerifyData)
+  } as unknown as InternalApiClient;
+  const { deps } = dependencies();
+  const controller = new TicketLinkGateController(config, fakeClient(), api, deps);
+
+  await controller.handleChannelCreate(channel);
+
+  assert.equal(overwrites.get(CREATOR_ID)!.deny.has(PermissionFlagsBits.SendMessages), true);
 });
 
 test("unlinked ticket is locked and receives the link/recheck panel", async () => {
