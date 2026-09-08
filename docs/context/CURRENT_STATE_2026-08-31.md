@@ -9,7 +9,7 @@ repository: Hermann-33/cm-discord-bot
 default / deployed branch: master
 master baseline for the ticket-gate branch: c6b5f5d1d3f125069ecfc0467cda3b9b85693c77
 active response-reconstruction branch: task/ai-support-response-reconstruction
-active ticket-gate implementation branch: feature/tickety-account-link-gate
+ticket-gate implementation: ADR-0016 present in current source
 private corpus/spec repo: Hermann-33/CM-Ticket-Transcripts
 private corpus branch: main
 private corpus reference SHA: c9e993f17583a607402f4173296f64aac52d2ebe
@@ -119,7 +119,7 @@ After the remediation is complete:
 
 ## Tickety account-link gate implementation
 
-ADR-0016 is implemented on `feature/tickety-account-link-gate` and is deliberately separate from the AI response-reconstruction workstream.
+ADR-0016 is implemented in the current source and is deliberately separate from the AI response-reconstruction workstream.
 
 Current branch behavior:
 
