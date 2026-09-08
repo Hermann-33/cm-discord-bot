@@ -204,6 +204,7 @@ Rules:
 - `TICKET_CREATOR_MISMATCH` fails closed before Discord access is changed;
 - no direct Supabase/RPC fallback is permitted;
 - the hosted support planner cannot invoke `support.tickets.override`.
+
 ## Mutation idempotency/retry
 
 TASK-CM-ADMIN-007 adds no mutation. Existing mutation transport keeps stable logical body/idempotency and fresh timestamp/nonce/HMAC per HTTP attempt. ADR-0016 adds `support.tickets.override`; one logical ticket override keeps the same body/idempotency key across transport retry while timestamp/nonce/signature remain fresh per attempt.
