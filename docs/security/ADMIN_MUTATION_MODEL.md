@@ -42,10 +42,10 @@ POST /api/internal/integrations/v1/support/tickets/override
 Common backend properties verified from current website source/contracts:
 
 - strict request schemas;
-- canonical user/order selector resolution;
+- canonical user/order selector resolution and immutable ticket-creator binding where applicable;
 - UUID idempotency keys;
 - request-hash replay/conflict semantics;
-- transactional website-owned accounting/business logic;
+- transactional website-owned accounting/business logic as applicable;
 - negative-balance protection for Aura/wallet;
 - immutable admin/integration audit evidence;
 - stable transaction/audit identifiers;
@@ -220,6 +220,7 @@ The website owns durable override state and idempotency. `adminDiscordId` is aud
 `TICKET_CREATOR_MISMATCH` is a deterministic conflict and fails closed. The bot must not retry it using a different creator or invent a new ticket binding.
 
 Unlike Aura/wallet/refund, no second confirmation dialog is required because the operation is narrowly scoped to the current ticket, does not move money/Aura/order state, is reversible only by ticket lifecycle/business-state changes, and is already bound to an explicit allowlisted administrator plus backend idempotency/audit. A later decision is required to weaken or broaden that scope.
+
 ## Direct order entry
 
 `/cm order` is a read/navigation entry point, not a new mutation primitive. It resolves canonical `orders.details.read`, resolves the owner overview, verifies target consistency and then reuses the same order/refund/user controls.
