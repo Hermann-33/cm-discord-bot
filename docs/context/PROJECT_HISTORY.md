@@ -311,3 +311,12 @@ A linked creator in `support-2094` (`1546354201368596612`) reached the Discord a
 The bot was updated to log the sanitized Discord REST failure code/status/method/URL at the exact permission mutation boundary. The earlier all-ticket startup freshness sweep was reduced back to normal durable-state recovery, with one temporary targeted startup fresh verification only for `support-2094` so the problem can be reproduced without rechecking unrelated persisted tickets.
 
 This is an operational diagnostic exception, not a permanent expansion of the ADR-0016 polling model.
+
+
+## 2026-09-08 — Discord permission target resolution fix
+
+The support-2094 diagnostics identified a discord.js client-side `InvalidType` failure: the ticket gate was passing a creator snowflake directly to `permissionOverwrites.edit`, and discord.js could not resolve it to a User/Role in that runtime state.
+
+The gate now fetches the concrete `GuildMember` first and uses that member object for creator lock/restore permission updates. No account-link, lease, persistence, HMAC, or administrator-authorization semantics changed.
+
+The targeted support-2094 startup recheck was retained for one deployment to validate the corrected path against the real ticket.
