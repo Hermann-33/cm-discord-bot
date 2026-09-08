@@ -13,6 +13,7 @@ import {
   type ChatInputCommandInteraction,
   type Client,
   type GuildBasedChannel,
+  type GuildMember,
   type Interaction,
   type Message,
   type PermissionOverwriteOptions,
@@ -396,11 +397,34 @@ export class TicketLinkGateController {
     return next;
   }
 
+  private async fetchCreatorMember(
+    channel: TextChannel,
+    creatorDiscordId: string,
+    operation: "lock" | "restore"
+  ): Promise<GuildMember> {
+    try {
+      return await channel.guild.members.fetch(creatorDiscordId);
+    } catch (error) {
+      logger.error("Discord ticket permission target resolution failed", {
+        channelId: channel.id,
+        creatorDiscordId,
+        operation,
+        ...extractDiscordApiErrorMeta(error)
+      });
+      throw error;
+    }
+  }
+
   private async ensureLocked(channel: TextChannel, creatorDiscordId: string): Promise<void> {
     if (hasGateDeny(channel, creatorDiscordId)) return;
     try {
-      await channel.permissionOverwrites.edit(
+      const creatorMember = await this.fetchCreatorMember(
+        channel,
         creatorDiscordId,
+        "lock"
+      );
+      await channel.permissionOverwrites.edit(
+        creatorMember,
         LOCK_OPTIONS,
         { reason: "CM account-link verification gate" }
       );
@@ -480,8 +504,13 @@ export class TicketLinkGateController {
     }
 
     try {
-      await channel.permissionOverwrites.edit(
+      const creatorMember = await this.fetchCreatorMember(
+        channel,
         state.creatorDiscordId,
+        "restore"
+      );
+      await channel.permissionOverwrites.edit(
+        creatorMember,
         restoreOptions(snapshot),
         { reason: "CM account-link gate released" }
       );
