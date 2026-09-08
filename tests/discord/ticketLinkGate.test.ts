@@ -920,8 +920,8 @@ test("Tickety permission rewrite is re-locked while durable state is locked", as
   assert.equal(overwrite.deny.has(PermissionFlagsBits.SendMessages), true);
 });
 
-test("authorized /cm ticket-allow persists override, unlocks creator, and audits it", async () => {
-  const { channel, overwrites } = fakeChannel();
+test("authorized /cm ticket-allow persists override, unlocks creator, audits it, and announces the operator", async () => {
+  const { channel, overwrites, sends } = fakeChannel();
   let overrideInput: unknown;
   const api = {
     readSupportTicketAccess: async () => ({
@@ -950,11 +950,21 @@ test("authorized /cm ticket-allow persists override, unlocks creator, and audits
   });
   assert.equal(audits.length, 1);
   assert.equal(overwrites.get(CREATOR_ID)!.allow.has(PermissionFlagsBits.SendMessages), true);
+  const publicNotice = sends.find((payload) =>
+    payload.content === `Ticket lockdown has been overridden by <@${ADMIN_ID}>.`
+  );
+  assert.ok(publicNotice);
+  assert.deepEqual(publicNotice.allowedMentions, {
+    parse: [],
+    users: [],
+    roles: [],
+    repliedUser: false
+  });
   assert.equal(JSON.stringify(command.edits[0]).includes("Manually allowed"), true);
 });
 
-test("ticket override reports backend success and still audits when Discord restore fails", async () => {
-  const { channel, overwrites } = fakeChannel();
+test("ticket override reports backend success, still audits, and does not falsely announce when Discord restore fails", async () => {
+  const { channel, overwrites, sends } = fakeChannel();
   const api = {
     readSupportTicketAccess: async () => ({
       ticketAccess: ticketAccess("locked"),
@@ -980,6 +990,12 @@ test("ticket override reports backend success and still audits when Discord rest
   assert.equal(JSON.stringify(command.edits[0]).includes("override recorded by CM"), true);
   assert.equal(JSON.stringify(command.edits[0]).includes("Backend override active"), true);
   assert.equal(overwrites.get(CREATOR_ID)!.deny.has(PermissionFlagsBits.SendMessages), true);
+  assert.equal(
+    sends.some((payload) =>
+      payload.content === `Ticket lockdown has been overridden by <@${ADMIN_ID}>.`
+    ),
+    false
+  );
 
   channel.permissionOverwrites.edit = originalEdit;
   await controller.handleChannelUpdate(channel);
