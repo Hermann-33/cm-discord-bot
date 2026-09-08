@@ -320,3 +320,16 @@ The support-2094 diagnostics identified a discord.js client-side `InvalidType` f
 The gate now fetches the concrete `GuildMember` first and uses that member object for creator lock/restore permission updates. No account-link, lease, persistence, HMAC, or administrator-authorization semantics changed.
 
 The targeted support-2094 startup recheck was retained for one deployment to validate the corrected path against the real ticket.
+
+
+## 2026-09-08 — Visible ticket lockdown override notice
+
+`/cm ticket-allow` was extended so staff and the ticket creator can see who removed the CM lockdown. After a successful Discord permission restore the bot posts:
+
+```text
+Ticket lockdown has been overridden by <@operator>.
+```
+
+The notice is intentionally not posted when only the backend override succeeded but Discord access restoration failed. Existing private operator confirmation and audit logging remain in place.
+
+The temporary support-2094 startup diagnostic recheck was retired in the same revision after the underlying discord.js permission-target bug had been fixed and validated.
