@@ -68,6 +68,7 @@ Do not call the feature production-complete until all of the following are done:
 6. live linked/unlinked/recheck/expiry/restart/Tickety-rewrite/admin-override smoke tests pass.
 
 No local SQLite database, Northflank persistent volume, Supabase client or service-role credential is required.
+
 ## Controlled live test
 
 The operator explicitly authorized customer-visible AI testing only in Discord channel:
