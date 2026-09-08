@@ -484,6 +484,32 @@ test("startup recovery releases a half-completed verified lock even after lease 
   assert.equal(overwrite.deny.has(PermissionFlagsBits.CreatePublicThreads), false);
 });
 
+test("admin override recovery uses conservative defaults and never force-grants thread permissions", async () => {
+  const { channel, overwrites } = fakeChannel();
+  const overwrite = overwrites.get(CREATOR_ID)!;
+  overwrite.allow = new PermissionsBitField();
+  overwrite.deny = new PermissionsBitField(GATED);
+
+  const api = {
+    readSupportTicketAccess: async () => ({
+      ticketAccess: ticketAccess("admin_override"),
+      accessGranted: true
+    } satisfies SupportTicketAccessReadData)
+  } as unknown as InternalApiClient;
+  const { deps } = dependencies();
+  const controller = new TicketLinkGateController(config, fakeClient(), api, deps);
+
+  await controller.handleChannelUpdate(channel);
+
+  assert.equal(overwrite.allow.has(PermissionFlagsBits.SendMessages), true);
+  assert.equal(overwrite.deny.has(PermissionFlagsBits.SendMessages), false);
+  assert.equal(overwrite.allow.has(PermissionFlagsBits.AttachFiles), true);
+  assert.equal(overwrite.allow.has(PermissionFlagsBits.CreatePublicThreads), false);
+  assert.equal(overwrite.deny.has(PermissionFlagsBits.CreatePublicThreads), false);
+  assert.equal(overwrite.allow.has(PermissionFlagsBits.SendMessagesInThreads), false);
+  assert.equal(overwrite.deny.has(PermissionFlagsBits.SendMessagesInThreads), false);
+});
+
 test("expired verified lease ignores staff activity and rechecks exactly once on creator activity", async () => {
   const { channel } = fakeChannel();
   let verifyCalls = 0;
@@ -589,6 +615,46 @@ test("Check Again verifies only the encoded ticket creator and restores access w
   assert.equal(messages.size, 0);
 });
 
+test("Check Again distinguishes a verified link from a Discord permission restore failure", async () => {
+  const { channel, messages, sends } = fakeChannel();
+  let linked = false;
+  const api = {
+    readSupportTicketAccess: async () => ({ ticketAccess: null, accessGranted: false }),
+    verifySupportTicketAccess: async () => linked
+      ? {
+          linked: true,
+          accessGranted: true,
+          ticketAccess: ticketAccess("verified")
+        }
+      : {
+          linked: false,
+          accessGranted: false,
+          ticketAccess: ticketAccess("locked")
+        }
+  } as unknown as InternalApiClient;
+  const { deps } = dependencies();
+  const controller = new TicketLinkGateController(config, fakeClient(), api, deps);
+
+  await controller.handleChannelCreate(channel);
+  const customId = customIdsFromPayload(sends[0]!).find((id) => id.startsWith("cm:ticket:recheck:"))!;
+  const gateMessage = [...messages.values()][0]!;
+  linked = true;
+
+  channel.permissionOverwrites.edit = async () => {
+    throw new Error("Discord permission edit failed");
+  };
+
+  const button = fakeButtonInteraction(channel, customId);
+  button.setMessage(gateMessage);
+  assert.equal(await controller.handleInteraction(button.interaction as unknown as Interaction), true);
+
+  const reply = JSON.stringify(button.edits[0]);
+  assert.equal(reply.includes("link is verified"), true);
+  assert.equal(reply.includes("verification is temporarily unavailable"), false);
+  assert.equal(sends.length, 2);
+  assert.equal(payloadText(sends[1]!).includes("ticket access unavailable"), true);
+});
+
 test("Check Again rejects a different Discord user before calling CM", async () => {
   const { channel, messages, sends } = fakeChannel();
   let verifyCalls = 0;
@@ -667,6 +733,40 @@ test("authorized /cm ticket-allow persists override, unlocks creator, and audits
   assert.equal(audits.length, 1);
   assert.equal(overwrites.get(CREATOR_ID)!.allow.has(PermissionFlagsBits.SendMessages), true);
   assert.equal(JSON.stringify(command.edits[0]).includes("Manually allowed"), true);
+});
+
+test("ticket override reports backend success and still audits when Discord restore fails", async () => {
+  const { channel, overwrites } = fakeChannel();
+  const api = {
+    readSupportTicketAccess: async () => ({
+      ticketAccess: ticketAccess("locked"),
+      accessGranted: false
+    } satisfies SupportTicketAccessReadData),
+    overrideSupportTicketAccess: async () => ({
+      ticketAccess: ticketAccess("admin_override"),
+      idempotentReplay: false
+    } satisfies SupportTicketOverrideData)
+  } as unknown as InternalApiClient;
+  const { deps, audits } = dependencies();
+  const controller = new TicketLinkGateController(config, fakeClient(), api, deps);
+
+  await controller.handleChannelUpdate(channel);
+  const originalEdit = channel.permissionOverwrites.edit;
+  channel.permissionOverwrites.edit = async () => {
+    throw new Error("Discord permission edit failed");
+  };
+
+  const command = fakeTicketAllowInteraction(channel);
+  assert.equal(await controller.handleInteraction(command.interaction), true);
+  assert.equal(audits.length, 1);
+  assert.equal(JSON.stringify(command.edits[0]).includes("override recorded by CM"), true);
+  assert.equal(JSON.stringify(command.edits[0]).includes("Backend override active"), true);
+  assert.equal(overwrites.get(CREATOR_ID)!.deny.has(PermissionFlagsBits.SendMessages), true);
+
+  channel.permissionOverwrites.edit = originalEdit;
+  await controller.handleChannelUpdate(channel);
+  assert.equal(overwrites.get(CREATOR_ID)!.allow.has(PermissionFlagsBits.SendMessages), true);
+  assert.equal(overwrites.get(CREATOR_ID)!.deny.has(PermissionFlagsBits.SendMessages), false);
 });
 
 test("unauthorized ticket override is rejected before read or mutation", async () => {
