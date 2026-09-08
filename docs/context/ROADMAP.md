@@ -42,7 +42,7 @@ Remaining operational items include branch protection/status checks, runbooks, c
 
 ### Phase 8 — Tickety account-link gate — IMPLEMENTED / PRODUCTION ROLLOUT PENDING
 
-ADR-0016 source implementation is complete: deterministic ticket recognition, conservative creator resolution, creator-only permission gate, website-persisted eight-hour link lease, activity-triggered renewal, Check Again UI, Tickety rewrite re-enforcement, paced startup recovery, and `/cm ticket-allow`.
+ADR-0016 source implementation is complete: deterministic ticket recognition, conservative creator resolution, creator-only permission gate, website-persisted eight-hour link lease, activity-triggered runtime renewal, Check Again UI, Tickety rewrite re-enforcement, paced one-time startup fresh-verification sweep, and `/cm ticket-allow`.
 
 Remaining completion gates:
 
