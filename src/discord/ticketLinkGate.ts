@@ -1141,6 +1141,23 @@ export class TicketLinkGateController {
         });
       }
 
+      let publicNoticeDelivered = true;
+      if (accessRestored) {
+        try {
+          await channel.send({
+            content: `Ticket lockdown has been overridden by <@${interaction.user.id}>.`,
+            allowedMentions: safeAllowedMentions
+          });
+        } catch (error) {
+          publicNoticeDelivered = false;
+          logger.error("ticket override public notice delivery failed", {
+            channelId: channel.id,
+            operatorId: interaction.user.id,
+            ...extractDiscordApiErrorMeta(error)
+          });
+        }
+      }
+
       let auditDelivered = true;
       try {
         await this.dependencies.postOverrideAudit({
@@ -1168,6 +1185,7 @@ export class TicketLinkGateController {
               `User: <@${target.creatorDiscordId}>`,
               `Ticket: ${channel.name}`,
               "Access: Manually allowed",
+              ...(publicNoticeDelivered ? [] : ["Notice: Ticket-channel announcement failed"]),
               ...(auditDelivered ? [] : ["Audit: Backend recorded; Discord audit delivery failed"])
             ].join("\n")
           : [
