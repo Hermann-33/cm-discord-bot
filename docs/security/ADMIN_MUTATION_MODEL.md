@@ -1,8 +1,8 @@
-# Admin Mutation Model — Aura, Wallet and Refund
+# Admin Mutation Model — Aura, Wallet, Refund and Ticket Override
 
-Updated: 2026-08-18
+Updated: 2026-09-08
 
-ADR-0006 governs shared `/cm` authorization. ADR-0007 governs Aura/wallet confirmation. Refund retains its canonical backend preview/re-preview model.
+ADR-0006 governs shared `/cm` authorization. ADR-0007 governs Aura/wallet confirmation. ADR-0016 governs the ticket-scoped support access override. Refund retains its canonical backend preview/re-preview model.
 
 ## Global invariants
 
@@ -34,6 +34,9 @@ POST /api/internal/integrations/v1/users/wallet/adjust
 
 orders.refund.execute
 POST /api/internal/integrations/v1/orders/refund/execute
+
+support.tickets.override
+POST /api/internal/integrations/v1/support/tickets/override
 ```
 
 Common backend properties verified from current website source/contracts:
@@ -182,6 +185,41 @@ Caller does not choose refund economics. Website derives refund amount, wallet c
 
 ADR-0007 does not weaken this flow.
 
+## Support ticket override — ADR-0016
+
+Command:
+
+```text
+/cm ticket-allow
+```
+
+This mutation exists only to manually bypass the account-link requirement for the current support ticket. It does not alter the customer's website account link and does not create a global Discord-user allowlist.
+
+Inputs are bound by deterministic bot context:
+
+- current Discord ticket channel ID;
+- resolved/persisted ticket creator Discord ID;
+- invoking administrator Discord ID;
+- fixed safe override reason;
+- fresh UUID idempotency key.
+
+Flow:
+
+```text
+authorize exact guild + BOT_ADMIN_USER_IDS
+ -> require configured Discord audit channel
+ -> resolve current ticket creator safely
+ -> support.tickets.override
+ -> require admin_override response state
+ -> restore only the creator permissions changed by the CM gate
+ -> website audit + Discord audit
+```
+
+The website owns durable override state and idempotency. `adminDiscordId` is audit attribution only; it never replaces bot-side human authorization.
+
+`TICKET_CREATOR_MISMATCH` is a deterministic conflict and fails closed. The bot must not retry it using a different creator or invent a new ticket binding.
+
+Unlike Aura/wallet/refund, no second confirmation dialog is required because the operation is narrowly scoped to the current ticket, does not move money/Aura/order state, is reversible only by ticket lifecycle/business-state changes, and is already bound to an explicit allowlisted administrator plus backend idempotency/audit. A later decision is required to weaken or broaden that scope.
 ## Direct order entry
 
 `/cm order` is a read/navigation entry point, not a new mutation primitive. It resolves canonical `orders.details.read`, resolves the owner overview, verifies target consistency and then reuses the same order/refund/user controls.
@@ -211,8 +249,8 @@ Backend evidence is authoritative. As applicable it should identify:
 
 - integration client/operation;
 - idempotency key/request identity;
-- target user/order;
-- delta or refund consequence;
+- target user/order/ticket;
+- delta, refund consequence, or ticket access override;
 - reason;
 - transaction IDs;
 - admin audit event ID;
@@ -230,6 +268,7 @@ Known deterministic adjustment errors:
 INVALID_ADJUSTMENT
 INSUFFICIENT_BALANCE
 IDEMPOTENCY_CONFLICT
+TICKET_CREATOR_MISMATCH
 NOT_FOUND
 ```
 
@@ -250,6 +289,9 @@ Rate limit/authentication/operation-permission/service errors are surfaced throu
 - direct balance overwrite;
 - destructive ledger/audit edits for reversal;
 - caller-supplied refund economics;
+- global-user or role-only ticket access override;
+- hosted-AI/customer access to `support.tickets.override`;
+- changing support/staff role overwrites as part of the ticket gate;
 - manual fulfillment without a website mutation operation;
 - purchase processing as a fulfillment/admin shortcut;
 - secrets/credential values in logs, component IDs or audit messages.
