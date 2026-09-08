@@ -7,7 +7,7 @@ This document is the authoritative current-status snapshot for the Cheater's Mar
 ```text
 repository: Hermann-33/cm-discord-bot
 default / deployed branch: master
-master baseline before this documentation refresh: f8988037994146f5d51455878fb8fa9d8a987928
+master baseline for the ticket-gate branch: c6b5f5d1d3f125069ecfc0467cda3b9b85693c77
 active response-reconstruction branch: task/ai-support-response-reconstruction
 active ticket-gate implementation branch: feature/tickety-account-link-gate
 private corpus/spec repo: Hermann-33/CM-Ticket-Transcripts
@@ -139,6 +139,18 @@ Current branch behavior:
 Customer linking uses `https://cheaters.market/dashboard?tab=settings` and the existing website **Connect Discord** OAuth flow.
 
 Production rollout is still gated on website HTTP deployment, adding exactly the three support-ticket operations to the dedicated bot integration client's `allowedOperations`, deploying this bot revision, running `npm run register:commands`, and performing end-to-end Discord verification. No live command registration or production API smoke call is performed by repository validation.
+
+Repository source validation after the final ticket-gate hardening passed on head `dbc3b27675647fe4586b9f151273ce3d54ef25e1` with GitHub Actions run `34172585466`:
+
+```text
+npm ci: PASS
+npm test: PASS — 413/413
+npm run typecheck: PASS
+npm run build: PASS
+git diff --check: PASS
+```
+
+Subsequent commits in this branch are documentation reconciliation only; the merge head must remain green.
 ## Architecture and safety invariants
 
 Production remains:
@@ -167,8 +179,9 @@ For current AI-support work:
 2. `DOCS_AUDIT_2026-08-31.md`
 3. `HANDOFF.md`
 4. `../README.md`
-5. `../decisions/ADR-0015-single-channel-visible-ai-test.md`
-6. `AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md` for consumed synthetic release history
-7. `../AI_SUPPORT_SHADOW_VALIDATION.md` for prospective cohort tooling
-8. `AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md` for consumed development history
-9. accepted ADRs 0010 through 0015
+5. `../decisions/ADR-0016-tickety-account-link-gate.md`
+6. `../decisions/ADR-0015-single-channel-visible-ai-test.md`
+7. `AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md` for consumed synthetic release history
+8. `../AI_SUPPORT_SHADOW_VALIDATION.md` for prospective cohort tooling
+9. `AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md` for consumed development history
+10. accepted ADRs 0010 through 0016
