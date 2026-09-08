@@ -373,10 +373,20 @@ npm run build: PASS
 git diff --check: PASS
 ```
 
-Later hardening/documentation commits add recovery/error handling and repository truth updates. The completion gate therefore requires a fresh CI pass on the final branch head before merge.
+After the final source hardening (including conservative permission fallback, expired half-transition recovery, explicit Discord-access failure handling, and backend-success/Discord-restore distinction), source head `dbc3b27675647fe4586b9f151273ce3d54ef25e1` passed GitHub Actions CI run `34172585466`:
+
+```text
+npm ci: PASS
+npm test: PASS — 413/413
+npm run typecheck: PASS
+npm run build: PASS
+git diff --check: PASS
+```
+
+The remaining commits after that validation are documentation-only reconciliation. The merge head must retain a green CI status.
 
 ### Deployment boundary
 
 No Discord bot login, slash-command registration, production API smoke call, website edit, database migration or merge was performed from this task. Production rollout additionally requires the website support routes to be deployed, the bot integration client to receive exactly the three support-ticket operations, the bot revision to deploy, `npm run register:commands` to run once, and end-to-end linked/unlinked/recheck/expiry/restart/Tickety-rewrite/admin-override smoke verification.
 
-Verdict: `IMPLEMENTED / FINAL BRANCH CI + PRODUCTION ROLLOUT GATES PENDING`.
+Verdict: `REPOSITORY IMPLEMENTATION COMPLETE / PRODUCTION ROLLOUT GATES PENDING`.
