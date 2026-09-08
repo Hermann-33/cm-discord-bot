@@ -460,3 +460,38 @@ This proves website link verification succeeded; the failure is in the Discord p
 - all other persisted tickets are recovered without a fresh link check.
 
 The targeted startup recheck is temporary operational diagnostics and should be removed after the Discord error is identified/fixed.
+
+
+---
+
+## 2026-09-08 — TASK-CM-TICKETS-004 — permission target resolution fix
+
+### Root cause
+
+The support-2094 diagnostic logs proved CM account verification succeeded and the failure occurred locally inside discord.js before a REST request was sent:
+
+```text
+DiscordjsTypeError [InvalidType]
+Supplied parameter is not a User nor a Role.
+discordCode: InvalidType
+```
+
+The gate passed the creator Discord snowflake string directly to `channel.permissionOverwrites.edit(...)`. In this runtime/cache state, discord.js could not resolve that raw snowflake into a guild member/role object.
+
+### Fix
+
+Before every creator permission lock/restore, the gate now explicitly fetches the guild member with:
+
+```ts
+channel.guild.members.fetch(creatorDiscordId)
+```
+
+and passes the returned `GuildMember` object to `permissionOverwrites.edit(...)`.
+
+The existing structured diagnostics remain in place. Member-fetch failure and permission-overwrite failure are logged separately with sanitized Discord error metadata.
+
+### Validation
+
+A regression test now simulates the production failure by rejecting raw-string overwrite targets while allowing a fetched member object. The gate succeeds under that test, proving the permission mutation no longer relies on raw snowflake resolution.
+
+The temporary startup diagnostic recheck for support-2094 remains active for the next deployment so the corrected permission path is exercised immediately.

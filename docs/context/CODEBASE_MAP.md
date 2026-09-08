@@ -70,7 +70,7 @@ The active `task/ai-support-response-reconstruction` branch is expected to add a
 
 - `src/discord/adminAuthorization.ts` — exact-guild + explicit-user `/cm` authorization.
 - `src/discord/adminAudit.ts` — concise mention-safe mutation audit panels, including support-ticket override audit.
-- `src/discord/ticketLinkGate.ts` — Tickety recognition, creator resolution, durable website-state recovery, permission gating/re-enforcement, eight-hour activity-triggered renewal, recheck UI, `/cm ticket-allow`, structured Discord REST permission-error diagnostics, and the temporary targeted `support-2094` startup recheck.
+- `src/discord/ticketLinkGate.ts` — Tickety recognition, creator resolution, durable website-state recovery, permission gating/re-enforcement, eight-hour activity-triggered renewal, recheck UI, `/cm ticket-allow`, explicit creator `GuildMember` resolution before permission edits, structured Discord REST permission-error diagnostics, and the temporary targeted `support-2094` startup recheck.
 - `src/discord/presentation.ts` — safe text/identity/timestamp helpers.
 - `src/discord/registerCommands.ts` — manual `/refresh-leaderboard` + `/cm` registration; `/cm` currently includes `user`, `order`, and `ticket-allow`.
 - `src/discord/safeMessages.ts` — safe mention/channel/message helpers.
