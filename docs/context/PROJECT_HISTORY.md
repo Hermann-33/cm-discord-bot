@@ -281,3 +281,24 @@ The customer linking panel points to `https://cheaters.market/dashboard?tab=sett
 `/cm ticket-allow` was added as a ticket-scoped administrator bypass. It reuses ADR-0006 exact-guild + explicit `BOT_ADMIN_USER_IDS` authorization, requires the configured Discord audit channel, persists `admin_override` through the website operation, restores only CM-gated creator permissions, and writes a sanitized Discord audit. It does not create a global user bypass.
 
 The implementation does not add direct database access, local authorization persistence, a website runtime dependency on the bot, or hosted-AI mutation authority. Because `/cm` command JSON changed, production rollout requires explicit `npm run register:commands` after deployment prerequisites are satisfied.
+
+
+## 2026-09-08 — Startup fresh ticket verification sweep
+
+After the support-ticket website permissions were added to the `cm-discord-bot` client, restart recovery was strengthened so a bot restart can immediately revisit every existing non-overridden support ticket.
+
+The original ADR-0016 runtime model remains activity-driven, but process startup is now an explicit one-time exception:
+
+```text
+bot starts
+ -> paced candidate scan
+ -> read durable ticket state
+ -> skip admin_override
+ -> fresh support.tickets.verify once
+ -> restore/lock based on current link state
+ -> return to activity-driven runtime behavior
+```
+
+This also fixed the specific pre-permission recovery case: if an earlier verification failure had locked a creator and posted the CM gate notice without creating durable website state, startup now recovers the original pre-gate permission snapshot from that notice before re-verifying. A linked user can therefore be unlocked correctly after the website client permissions become available.
+
+The sweep remains paced below the website verification limit and is not recurring polling.
