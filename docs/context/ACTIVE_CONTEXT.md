@@ -19,7 +19,7 @@ repository: Hermann-33/cm-discord-bot
 default/deployed branch: master
 validated master baseline: f8988037994146f5d51455878fb8fa9d8a987928
 active remediation branch: task/ai-support-response-reconstruction
-parallel ticket-gate branch: feature/tickety-account-link-gate
+ticket-gate status: repository implementation complete; production rollout pending
 private corpus repo: Hermann-33/CM-Ticket-Transcripts
 private corpus reference SHA: c9e993f17583a607402f4173296f64aac52d2ebe
 ```
@@ -37,7 +37,7 @@ This is not a broad release. Other channels/categories/DMs remain outside visibl
 
 ## Parallel deterministic ticket-gate work
 
-`feature/tickety-account-link-gate` implements ADR-0016 without changing the AI planner/runtime authority.
+ADR-0016 is implemented without changing the AI planner/runtime authority.
 
 Key state:
 
