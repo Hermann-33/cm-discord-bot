@@ -138,10 +138,18 @@ function snapshotPermissionValue(
 }
 
 function defaultTicketyParticipantSnapshot(): TicketPermissionSnapshot {
-  return {
-    allowMask: (1 << GATED_PERMISSIONS.length) - 1,
-    denyMask: 0
-  };
+  const defaultAllowed = new Set<GatePermissionName>([
+    "SendMessages",
+    "AddReactions",
+    "UseApplicationCommands",
+    "AttachFiles",
+    "EmbedLinks"
+  ]);
+  let allowMask = 0;
+  GATED_PERMISSIONS.forEach(([name], index) => {
+    if (defaultAllowed.has(name)) allowMask |= 1 << index;
+  });
+  return { allowMask, denyMask: 0 };
 }
 
 function restoreOptions(snapshot?: TicketPermissionSnapshot): PermissionOverwriteOptions {
@@ -510,31 +518,34 @@ export class TicketLinkGateController {
       return state;
     }
 
-    if (
-      state.status === "verified" &&
-      state.verifiedUntilMs !== null &&
-      state.verifiedUntilMs > this.dependencies.nowMs()
-    ) {
-      // If a crash occurred after successful verification but before Discord
-      // permissions were restored, recover that half-completed transition.
+    if (state.status === "verified" && hasGateDeny(channel, state.creatorDiscordId)) {
+      // A crash can occur after the website has persisted verified state but
+      // before Discord permissions are restored. Repair that half-completed
+      // transition even when the lease has since expired; otherwise the
+      // creator could be unable to send the activity that is supposed to
+      // trigger the next freshness check.
       const existingGate = await this.findGateMessage(channel, state.creatorDiscordId);
       if (existingGate) {
         state.snapshot = existingGate.snapshot;
         state.gateMessageId = existingGate.message.id;
-        try {
-          await this.restoreCreatorAccess(channel, state);
-        } catch {
-          logger.error("ticket gate recovery could not restore verified access", {
-            channelId: channel.id
-          });
-          await this.markAccessUnavailable(channel, state);
-        }
+      } else {
+        state.snapshot = defaultTicketyParticipantSnapshot();
+      }
+
+      try {
+        await this.restoreCreatorAccess(channel, state);
+      } catch {
+        logger.error("ticket gate recovery could not restore verified access", {
+          channelId: channel.id
+        });
+        await this.markAccessUnavailable(channel, state);
       }
     }
 
-    // Expired verified leases are intentionally not locked by a timer or by
-    // startup reconciliation. The first creator/customer message after expiry
-    // performs the fresh verification.
+    // Expired verified leases are intentionally not renewed or proactively
+    // locked by a timer/startup pass. The first creator/customer message after
+    // expiry performs the fresh verification and is deleted if that check does
+    // not grant access.
     return state;
   }
 
