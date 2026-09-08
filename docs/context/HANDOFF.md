@@ -21,15 +21,14 @@ master/base for ticket-gate branch: c6b5f5d1d3f125069ecfc0467cda3b9b85693c77
 Northflank source: cm-discord-bot production/default branch
 private corpus: Hermann-33/CM-Ticket-Transcripts @ c9e993f17583a607402f4173296f64aac52d2ebe
 AI engineering branch: task/ai-support-response-reconstruction
-ticket-gate branch: feature/tickety-account-link-gate
-draft PR: #15
+ticket-gate source: ADR-0016 implementation complete
 ```
 
 The validated implementation/shadow branch was fast-forwarded into `master`. The previous routing/planner candidate passed consumed B0-v6 synthetic acceptance at 44/44 exact/accepted, zero fallback and 3/3 restricted safety.
 
 ## Tickety account-link gate
 
-ADR-0016 is implemented on `feature/tickety-account-link-gate`. It is a deterministic Discord/API authorization feature and is not part of the AI response-reconstruction branch.
+ADR-0016 is implemented in the current source. It is a deterministic Discord/API authorization feature and is not part of the AI response-reconstruction branch.
 
 Implemented behavior:
 
