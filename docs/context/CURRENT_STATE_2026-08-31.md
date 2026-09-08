@@ -128,12 +128,12 @@ Current branch behavior:
 - locks only the creator's participation permissions before initial verification;
 - uses only `support.tickets.access.read`, `support.tickets.verify`, and `support.tickets.override` through the existing HMAC Internal Integrations API;
 - persists authorization state on the website/Supabase side rather than in a local bot database;
-- honors the exact eight-hour verified lease without periodic polling;
+- honors the exact eight-hour verified lease without periodic polling during runtime;
 - after expiry, re-verifies only on ticket-creator/customer activity or explicit **Check Again**; staff/admin/bot messages never renew the lease;
 - deletes the triggering creator message if the fresh check is unlinked or unavailable, preventing a free post at the renewal boundary;
 - distinguishes unlinked from verification/service failure;
 - re-enforces locked creator permissions after Tickety channel permission rewrites;
-- performs paced one-time startup reconciliation;
+- performs a paced one-time startup fresh-verification sweep for every existing non-overridden support ticket;
 - adds `/cm ticket-allow`, reusing ADR-0006 exact-guild + explicit-user authorization and sanitized audit logging.
 
 Customer linking uses `https://cheaters.market/dashboard?tab=settings` and the existing website **Connect Discord** OAuth flow.
