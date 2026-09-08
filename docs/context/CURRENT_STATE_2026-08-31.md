@@ -1,4 +1,4 @@
-# Current State — 2026-08-31
+# Current State — 2026-09-08
 
 This document is the authoritative current-status snapshot for the Cheater's Market Discord bot. It supersedes deployment/status assertions in older dated AI-support handoffs, audits, release reports, and roadmap snapshots, while preserving those documents as historical evidence.
 
@@ -7,8 +7,9 @@ This document is the authoritative current-status snapshot for the Cheater's Mar
 ```text
 repository: Hermann-33/cm-discord-bot
 default / deployed branch: master
-master baseline before this documentation refresh: f8988037994146f5d51455878fb8fa9d8a987928
+master baseline for the ticket-gate branch: c6b5f5d1d3f125069ecfc0467cda3b9b85693c77
 active response-reconstruction branch: task/ai-support-response-reconstruction
+ticket-gate implementation: ADR-0016 present in current source
 private corpus/spec repo: Hermann-33/CM-Ticket-Transcripts
 private corpus branch: main
 private corpus reference SHA: c9e993f17583a607402f4173296f64aac52d2ebe
@@ -116,6 +117,41 @@ After the remediation is complete:
 5. keep it clearly classified as synthetic, not historical generalization;
 6. resume prospective fresh-ticket shadow validation for the new frozen candidate before any broad customer-facing rollout.
 
+## Tickety account-link gate implementation
+
+ADR-0016 is implemented in the current source and is deliberately separate from the AI response-reconstruction workstream.
+
+Current branch behavior:
+
+- recognizes initial Tickety text tickets in category `1382569775988871330` plus uncategorized `support-<number>` overflow channels;
+- resolves the creator only from an unambiguous non-bot member-specific permission overwrite;
+- locks only the creator's participation permissions before initial verification;
+- uses only `support.tickets.access.read`, `support.tickets.verify`, and `support.tickets.override` through the existing HMAC Internal Integrations API;
+- persists authorization state on the website/Supabase side rather than in a local bot database;
+- honors the exact eight-hour verified lease without periodic polling;
+- after expiry, re-verifies only on ticket-creator/customer activity or explicit **Check Again**; staff/admin/bot messages never renew the lease;
+- deletes the triggering creator message if the fresh check is unlinked or unavailable, preventing a free post at the renewal boundary;
+- distinguishes unlinked from verification/service failure;
+- re-enforces locked creator permissions after Tickety channel permission rewrites;
+- performs paced one-time startup reconciliation;
+- adds `/cm ticket-allow`, reusing ADR-0006 exact-guild + explicit-user authorization and sanitized audit logging.
+
+Customer linking uses `https://cheaters.market/dashboard?tab=settings` and the existing website **Connect Discord** OAuth flow.
+
+Production rollout is still gated on website HTTP deployment, adding exactly the three support-ticket operations to the dedicated bot integration client's `allowedOperations`, deploying this bot revision, running `npm run register:commands`, and performing end-to-end Discord verification. No live command registration or production API smoke call is performed by repository validation.
+
+Repository source validation after the final ticket-gate hardening passed on head `dbc3b27675647fe4586b9f151273ce3d54ef25e1` with GitHub Actions run `34172585466`:
+
+```text
+npm ci: PASS
+npm test: PASS — 413/413
+npm run typecheck: PASS
+npm run build: PASS
+git diff --check: PASS
+```
+
+Subsequent commits in this branch are documentation reconciliation only; the merge head must remain green.
+
 ## Architecture and safety invariants
 
 Production remains:
@@ -128,7 +164,7 @@ Discord
   -> database
 ```
 
-The bot has no direct database/Supabase access. The model remains a constrained semantic planner with no tools or mutation authority. Deterministic code owns canonical IDs, action authority, policy/current-state boundaries, safe procedures, restricted-topic handling, and final execution.
+The bot has no direct database/Supabase access. The ticket gate does not add SQLite, a Northflank persistence volume, a service-role credential, or a direct database fallback. The model remains a constrained semantic planner with no tools or mutation authority. Deterministic code owns canonical IDs, action authority, policy/current-state boundaries, safe procedures, restricted-topic handling, and final execution.
 
 Restricted bypass/evasion/injection/kernel/driver/spoofing/detection-avoidance content remains outside autonomous support. The existing narrow Rust NFA ordinary resource-lowering exception remains unchanged.
 
@@ -144,8 +180,9 @@ For current AI-support work:
 2. `DOCS_AUDIT_2026-08-31.md`
 3. `HANDOFF.md`
 4. `../README.md`
-5. `../decisions/ADR-0015-single-channel-visible-ai-test.md`
-6. `AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md` for consumed synthetic release history
-7. `../AI_SUPPORT_SHADOW_VALIDATION.md` for prospective cohort tooling
-8. `AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md` for consumed development history
-9. accepted ADRs 0010 through 0015
+5. `../decisions/ADR-0016-tickety-account-link-gate.md`
+6. `../decisions/ADR-0015-single-channel-visible-ai-test.md`
+7. `AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md` for consumed synthetic release history
+8. `../AI_SUPPORT_SHADOW_VALIDATION.md` for prospective cohort tooling
+9. `AI_SUPPORT_TRIAGE_VALIDATION_2026-08-25.md` for consumed development history
+10. accepted ADRs 0010 through 0016

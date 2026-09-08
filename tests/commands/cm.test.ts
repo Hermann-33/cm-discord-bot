@@ -138,7 +138,7 @@ const pendingPurchase = {
 type FakeCommandOptions = {
   userId?: string;
   channelId?: string;
-  subcommand?: "user" | "order";
+  subcommand?: "user" | "order" | "ticket-allow";
   email?: string | null;
   discordUserId?: string | null;
   reference?: string;
@@ -179,17 +179,28 @@ function fakeCommand(options: FakeCommandOptions = {}) {
   return { interaction: fake as unknown as Interaction, replies, defers, edits };
 }
 
-test("/cm registers user lookup by email or Discord user and direct order lookup", () => {
+test("/cm registers user, order, and ticket override surfaces", () => {
   const json = buildCmCommand().toJSON();
   assert.equal(json.name, "cm");
-  assert.deepEqual(json.options?.map((option) => option.name), ["user", "order"]);
+  assert.deepEqual(json.options?.map((option) => option.name), ["user", "order", "ticket-allow"]);
   const user = json.options?.[0] as { options?: { name: string; required?: boolean }[] };
   const orderCommand = json.options?.[1] as { options?: { name: string; required?: boolean }[] };
+  const ticketAllow = json.options?.[2] as { options?: unknown[] };
   assert.deepEqual(user.options?.map((option) => [option.name, option.required]), [
     ["email", false],
     ["discord_user", false]
   ]);
   assert.deepEqual(orderCommand.options?.map((option) => [option.name, option.required]), [["reference", true]]);
+  assert.deepEqual(ticketAllow.options, []);
+});
+
+test("/cm ticket-allow is delegated to the ticket gate controller", async () => {
+  const controller = new CmAdminController(config, {} as InternalApiClient);
+  const context = fakeCommand({ subcommand: "ticket-allow", email: null });
+  assert.equal(await controller.handle(context.interaction), false);
+  assert.equal(context.replies.length, 0);
+  assert.equal(context.defers.length, 0);
+  assert.equal(context.edits.length, 0);
 });
 
 test("unauthorized /cm user is rejected before backend lookup", async () => {

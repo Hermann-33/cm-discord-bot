@@ -1,6 +1,6 @@
 # Current Architecture
 
-Updated: 2026-08-31
+Updated: 2026-09-08
 
 ## System boundary
 
@@ -24,6 +24,7 @@ Current source contains:
 - private `/cm user` by email or linked Discord user;
 - private `/cm order` by public ref or order/purchase UUID;
 - private `/cm` navigation/refund/Aura/wallet controls;
+- deterministic Tickety support-ticket account-link gate and ticket-scoped `/cm ticket-allow` override;
 - authorized Share to Chat buttons that publish separate customer-facing read-only summaries;
 - AI support `messageCreate` handling behind exact guild + explicit channel/category allowlists and feature flags.
 
@@ -41,6 +42,8 @@ Manual slash registration still publishes:
 ```
 
 AI support is message-based and does not add slash commands.
+
+`/cm` now contains `user`, `order`, and `ticket-allow`; the new subcommand requires explicit command re-registration during rollout. Ticket recheck buttons and `/cm ticket-allow` are routed through `TicketLinkGateController` before the ordinary `/cm` controller.
 
 ## `/cm` authorization/session boundary
 
@@ -80,6 +83,29 @@ Private admin panels and channel-visible customer summaries remain separate rend
 
 Refund/Aura/wallet mutations remain explicit private admin operations under ADR-0007/0011. They retain preview/confirmation/fresh-state/idempotency/audit requirements. Customer AI has no mutation authority and cannot invoke these operations.
 
+## Tickety support-ticket authorization boundary
+
+```text
+Tickety text channel
+ -> TicketLinkGateController
+ -> support.tickets.access.read / verify / override
+ -> website durable ticket-access state
+ -> current website Discord link authority
+```
+
+Initial recognition is limited to category `1382569775988871330` or uncategorized `support-<number>` overflow channels. New-ticket creator resolution requires exactly one non-bot member overwrite; ambiguity is never guessed.
+
+The creator is locked before the initial freshness check to close the channel-creation race. The gate changes only creator participation permissions and never support/staff role overwrites.
+
+Verified access is an exact eight-hour website lease. The bot does not poll open tickets every eight hours and does not verify on every message. After expiry, only ticket-creator/customer activity or explicit **Check Again** causes a fresh verification. Staff/admin/bot messages do not.
+
+Known locked state is re-enforced on Discord `ChannelUpdate` so Tickety claim/move/permission rewrites cannot silently reopen customer participation. Startup reconciliation is paced one-time recovery, not recurring monitoring.
+
+Website state is authorization persistence. Discord gate-message custom IDs carry only non-secret permission snapshot metadata needed to restore the exact pre-gate state after restart. No local SQLite, Northflank volume, Supabase client, or service-role credential is introduced.
+
+`/cm ticket-allow` uses ADR-0006 human authorization and the closed `support.tickets.override` operation. It is ticket-scoped, requires the configured Discord audit channel, and does not exempt future tickets.
+
+The ticket gate executes before `cm aura` and customer AI handling, so blocked creator traffic cannot continue into those surfaces.
 ## Internal Integrations API boundary
 
 The bot uses concrete reviewed website operations only. Existing relevant read operations include:
@@ -88,6 +114,9 @@ The bot uses concrete reviewed website operations only. Existing relevant read o
 aura.leaderboards.read
 aura.lookup.read
 users.overview.read
+support.tickets.access.read
+support.tickets.verify
+support.tickets.override
 orders.details.read
 orders.fulfillment.read
 purchase-intents.lookup.read
@@ -211,4 +240,7 @@ After reconstruction: freeze a new candidate/runtime, create a fresh B0-v7-or-la
 - refund/Aura/wallet fresh-state + idempotency/audit rules;
 - no direct DB/purchase-processing/manual-fulfillment shortcuts;
 - no model-selected mutation authority;
-- kill switch remains effective and documented.
+- kill switch remains effective and documented;
+- ticket creator resolution is conservative and never guesses;
+- ticket verification expiry remains activity-triggered rather than timer-driven;
+- locked creator permission rewrites are re-enforced without altering staff roles.

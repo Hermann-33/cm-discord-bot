@@ -1,6 +1,6 @@
 # Codebase Map
 
-Updated: 2026-08-31
+Updated: 2026-09-08
 
 ## Repository boundaries
 
@@ -24,7 +24,7 @@ Never commit `.env`, generated transcripts, raw customer evidence, provider keys
 - `src/index.ts` — composition root; Discord/API/services/admin/support-AI/schedule/shutdown wiring.
 - `src/api/signing.ts` — canonical HMAC signing.
 - `src/api/client.ts` — strict Internal Integrations API transport/typed operations.
-- `src/api/schemas.ts` and `src/api/purchaseIntents.ts` — strict DTO mirrors.
+- `src/api/schemas.ts`, `src/api/purchaseIntents.ts` and `src/api/supportTickets.ts` — strict DTO mirrors.
 - `src/api/errors.ts` — stable safe API errors.
 - `src/config/env.ts` — Discord/API/admin plus AI/shadow configuration validation.
 
@@ -69,9 +69,10 @@ The active `task/ai-support-response-reconstruction` branch is expected to add a
 ## Discord/security boundaries
 
 - `src/discord/adminAuthorization.ts` — exact-guild + explicit-user `/cm` authorization.
-- `src/discord/adminAudit.ts` — concise mention-safe mutation audit panels.
+- `src/discord/adminAudit.ts` — concise mention-safe mutation audit panels, including support-ticket override audit.
+- `src/discord/ticketLinkGate.ts` — Tickety recognition, creator resolution, durable website-state recovery, permission gating/re-enforcement, eight-hour activity-triggered renewal, recheck UI and `/cm ticket-allow` execution.
 - `src/discord/presentation.ts` — safe text/identity/timestamp helpers.
-- `src/discord/registerCommands.ts` — manual `/refresh-leaderboard` + `/cm` registration.
+- `src/discord/registerCommands.ts` — manual `/refresh-leaderboard` + `/cm` registration; `/cm` currently includes `user`, `order`, and `ticket-allow`.
 - `src/discord/safeMessages.ts` — safe mention/channel/message helpers.
 - `src/discord/client.ts` — intents; Message Content is intentional for message-based customer features.
 
@@ -84,6 +85,8 @@ The active `task/ai-support-response-reconstruction` branch is expected to add a
 ## Internal Integrations API rule
 
 Production uses only explicit reviewed concrete website operations. Abstract KB operation names are not endpoint names. `catalog.current.read` remains unconfirmed/unavailable. Customer AI has read-only authority; admin refund/Aura/wallet mutation paths remain separate and explicitly confirmed/audited.
+
+The support-ticket gate adds only the closed operations `support.tickets.access.read`, `support.tickets.verify`, and `support.tickets.override`. Durable ticket access lives upstream; the bot does not add SQLite, a Northflank volume dependency, Supabase credentials, or a direct DB fallback.
 
 See `DATA_STATUS.md`.
 
@@ -136,4 +139,7 @@ Because response reconstruction changes routing/knowledge/rendering, B0-v6 does 
 - masked/raw secret separation;
 - mutation fresh-state/idempotency/audit requirements;
 - no invented API operations/direct DB shortcuts;
-- no model-selected mutation authority.
+- no model-selected mutation authority;
+- ticket-gate creator resolution must never guess ambiguous member overwrites;
+- expired ticket verification remains creator-activity-driven, not timer/poll-driven;
+- locked ticket permissions must survive Tickety rewrite events without touching staff role overwrites.

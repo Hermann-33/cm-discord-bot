@@ -1,28 +1,72 @@
 # Latest Handoff
 
-Updated: 2026-08-31
-Status: `CONTROLLED ONE-CHANNEL LIVE TEST / RESPONSE RECONSTRUCTION PENDING / BROAD RELEASE BLOCKED`
+Updated: 2026-09-08
+Status: `TICKET GATE IMPLEMENTED / PRODUCTION ROLLOUT PENDING / AI RESPONSE RECONSTRUCTION SEPARATE`
 
 ## Read order
 
 1. `CURRENT_STATE_2026-08-31.md`
 2. `DOCS_AUDIT_2026-08-31.md`
 3. `ACTIVE_CONTEXT.md`
-4. `../decisions/ADR-0015-single-channel-visible-ai-test.md`
-5. `AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md`
-6. `../AI_SUPPORT_SHADOW_VALIDATION.md`
-7. `AI_SUPPORT_HANDOVER_PROMPT.md` and accepted ADRs
+4. `../decisions/ADR-0016-tickety-account-link-gate.md`
+5. `../decisions/ADR-0015-single-channel-visible-ai-test.md`
+6. `AI_SUPPORT_RELEASE_VALIDATION_2026-08-26.md`
+7. `../AI_SUPPORT_SHADOW_VALIDATION.md`
+8. `AI_SUPPORT_HANDOVER_PROMPT.md` and accepted ADRs
 
 ## Current baseline
 
 ```text
-master: f8988037994146f5d51455878fb8fa9d8a987928 before this docs refresh
+master/base for ticket-gate branch: c6b5f5d1d3f125069ecfc0467cda3b9b85693c77
 Northflank source: cm-discord-bot production/default branch
 private corpus: Hermann-33/CM-Ticket-Transcripts @ c9e993f17583a607402f4173296f64aac52d2ebe
-active engineering branch: task/ai-support-response-reconstruction
+AI engineering branch: task/ai-support-response-reconstruction
+ticket-gate source: ADR-0016 implementation complete
 ```
 
 The validated implementation/shadow branch was fast-forwarded into `master`. The previous routing/planner candidate passed consumed B0-v6 synthetic acceptance at 44/44 exact/accepted, zero fallback and 3/3 restricted safety.
+
+## Tickety account-link gate
+
+ADR-0016 is implemented in the current source. It is a deterministic Discord/API authorization feature and is not part of the AI response-reconstruction branch.
+
+Implemented behavior:
+
+- recognize initial Tickety tickets in category `1382569775988871330` or uncategorized `support-<number>` overflow channels;
+- resolve exactly one non-bot member overwrite as creator; never guess ambiguity;
+- lock only creator participation while the website verifies the active CM Discord link;
+- persist ticket state only through `support.tickets.access.read`, `support.tickets.verify`, and `support.tickets.override` behind HMAC;
+- exact eight-hour verified lease;
+- no periodic lease polling and no repeated verification during an active lease;
+- after expiry, only creator/customer activity or explicit **Check Again** triggers re-verification;
+- staff/admin/bot messages do not renew the customer lease;
+- unlinked/verification-failure creator messages at the expiry boundary are deleted before the ticket remains locked;
+- distinct user copy for unlinked vs verification/service failure;
+- locked permission re-enforcement after Tickety rewrites;
+- paced one-time startup reconciliation;
+- `/cm ticket-allow` reuses ADR-0006 exact-guild + explicit-user authorization, requires `BOT_AUDIT_LOG_CHANNEL_ID`, persists a ticket-scoped override, restores participation, and emits sanitized Discord audit.
+
+Customer link destination:
+
+```text
+https://cheaters.market/dashboard?tab=settings
+```
+
+### Ticket-gate rollout gates
+
+Do not call the feature production-complete until all of the following are done:
+
+1. website support-ticket HTTP routes are deployed;
+2. the dedicated bot Internal API client receives exactly:
+   - `support.tickets.access.read`
+   - `support.tickets.verify`
+   - `support.tickets.override`
+3. the final bot branch head passes CI;
+4. bot revision is deployed;
+5. `npm run register:commands` is run once because `/cm ticket-allow` changes command JSON;
+6. live linked/unlinked/recheck/expiry/restart/Tickety-rewrite/admin-override smoke tests pass.
+
+No local SQLite database, Northflank persistent volume, Supabase client or service-role credential is required.
 
 ## Controlled live test
 
@@ -63,9 +107,9 @@ Root-cause direction already established:
 2. the private corpus contains the needed customer/staff conversations, but the sanitized public runtime currently loses too much response content;
 3. the final deterministic renderer needs explicit handling for all supported action types and useful case guidance rather than generic escalation.
 
-## Next engineering task
+## AI next engineering task
 
-Work on `task/ai-support-response-reconstruction`.
+The AI workstream remains separate. Work on `task/ai-support-response-reconstruction`.
 
 Use the full 1,578-ticket / 39,090-message structured corpus as the primary historical evidence source. Build deterministic extraction/coverage tooling; do not copy raw transcript text directly into production.
 
@@ -101,4 +145,4 @@ A passing synthetic result still does not replace prospective fresh-ticket shado
 
 ## Kill switch / safety
 
-Set `AI_SUPPORT_ENABLED=false` and restart/redeploy the service to stop visible AI. No mutation/direct-DB/private-corpus-runtime authority is permitted.
+Set `AI_SUPPORT_ENABLED=false` and restart/redeploy the service to stop visible AI. AI retains no mutation/direct-DB/private-corpus-runtime authority. ADR-0016's deterministic `/cm ticket-allow` is a separate explicitly authorized admin mutation and must never be exposed to the hosted planner.

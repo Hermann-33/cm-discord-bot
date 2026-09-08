@@ -134,3 +134,35 @@ export async function postAdjustmentAudit(input: {
     ));
   await sendAuditPanel(channel, panel);
 }
+
+
+export async function postTicketAccessOverrideAudit(input: {
+  client: Client;
+  channelId: string;
+  operatorId: string;
+  ticketChannelId: string;
+  ticketChannelName: string;
+  creatorDiscordId: string;
+  completedAt: string;
+  idempotentReplay: boolean;
+}): Promise<void> {
+  const channel = await fetchAuditChannel(input.client, input.channelId);
+  const replay = input.idempotentReplay
+    ? "\n> Backend returned an idempotent replay of the same ticket override."
+    : "";
+  const panel = new ContainerBuilder()
+    .addTextDisplayComponents(text(
+      `# CM Audit · Support Ticket Override\nTicket: **${escapeDiscordText(input.ticketChannelName)}** · <#${input.ticketChannelId}>`
+    ))
+    .addSeparatorComponents(separator())
+    .addTextDisplayComponents(text(
+      `### Customer\nDiscord: ${discordUserMention(input.creatorDiscordId)}`
+    ))
+    .addTextDisplayComponents(text(
+      `### Result\nAccess: **Manually allowed**${replay}`
+    ))
+    .addTextDisplayComponents(text(
+      `### Operator\n${discordUserMention(input.operatorId)}\nCompleted: ${formatDiscordTimestampPair(input.completedAt)}`
+    ));
+  await sendAuditPanel(channel, panel);
+}

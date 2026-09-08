@@ -1,8 +1,8 @@
 # Admin Console Security Model — `/cm`
 
-Updated: 2026-08-19
+Updated: 2026-09-08
 
-ADR-0005 governs customer/admin interface separation. ADR-0006 governs shared `/cm` authorization. ADR-0007 governs Aura/wallet confirmation. ADR-0008 governs the separate customer-share renderer and Discord presentation policy. ADR-0009 permits canonical customer email in the public customer identity block. ADR-0011 governs pending-purchase fallback and optional masked fulfillment support. Refund retains canonical backend preview/re-preview.
+ADR-0005 governs customer/admin interface separation. ADR-0006 governs shared `/cm` authorization. ADR-0007 governs Aura/wallet confirmation. ADR-0008 governs the separate customer-share renderer and Discord presentation policy. ADR-0009 permits canonical customer email in the public customer identity block. ADR-0011 governs pending-purchase fallback and optional masked fulfillment support. ADR-0016 governs Tickety account-link gating and the ticket-scoped `/cm ticket-allow` override. Refund retains canonical backend preview/re-preview.
 
 ## Global `/cm` authorization
 
@@ -27,7 +27,7 @@ BOT_ADMIN_USER_IDS
 BOT_AUDIT_LOG_CHANNEL_ID
 ```
 
-`BOT_ADMIN_COMMAND_CHANNEL_ID` is unsupported. Audit-channel configuration is separate from command authorization and mandatory before refund/Aura/wallet execute.
+`BOT_ADMIN_COMMAND_CHANNEL_ID` is unsupported. Audit-channel configuration is separate from command authorization and mandatory before refund/Aura/wallet execute **and** before `/cm ticket-allow`.
 
 TASK-CM-ADMIN-007 adds no environment variable.
 
@@ -174,14 +174,48 @@ Pending purchase intents have no refund control.
 
 ADR-0007 remains unchanged: fresh overview, current/change/projected private preview, explicit <=5-minute confirmation, second fresh exact relevant-balance equality, stable UUID idempotency/body, website execute, returned target/delta verification, backend audit and concise Discord audit.
 
+## `/cm ticket-allow` — ADR-0016
+
+`/cm ticket-allow` is a deterministic ticket-scoped administrator mutation and is not part of the hosted AI path.
+
+Security flow:
+
+```text
+authorizeAdminInteraction
+ -> exact configured guild
+ -> non-empty BOT_ADMIN_USER_IDS
+ -> invoker explicitly allowlisted
+ -> current text support ticket / durable ticket state
+ -> resolve persisted creator (or conservative new-ticket creator evidence)
+ -> require BOT_AUDIT_LOG_CHANNEL_ID
+ -> support.tickets.override with stable logical idempotency key/body
+ -> verify admin_override response state
+ -> restore only CM-gated creator permissions
+ -> website audit + sanitized Discord audit
+```
+
+Rules:
+
+- Discord roles alone never authorize the override;
+- the website `adminDiscordId` field is audit attribution, not human authorization;
+- the target is the current ticket creator only; there is no global user allow command;
+- an override applies only to the current ticket channel and does not bypass future tickets;
+- the bot never edits support/staff role overwrites;
+- `TICKET_CREATOR_MISMATCH` fails closed before Discord access is changed;
+- no direct Supabase/RPC fallback is permitted;
+- the hosted support planner cannot invoke `support.tickets.override`.
+
 ## Mutation idempotency/retry
 
-TASK-CM-ADMIN-007 adds no mutation. Existing mutation transport keeps stable logical body/idempotency and fresh timestamp/nonce/HMAC per HTTP attempt.
+TASK-CM-ADMIN-007 adds no mutation. Existing mutation transport keeps stable logical body/idempotency and fresh timestamp/nonce/HMAC per HTTP attempt. ADR-0016 adds `support.tickets.override`; one logical ticket override keeps the same body/idempotency key across transport retry while timestamp/nonce/signature remain fresh per attempt.
 
 ## API permission requirements
 
 ```text
 users.overview.read
+support.tickets.access.read
+support.tickets.verify
+support.tickets.override
 orders.details.read
 orders.fulfillment.read
 purchase-intents.lookup.read
@@ -191,7 +225,7 @@ users.aura.adjust
 users.wallet.adjust
 ```
 
-Website `allowedOperations` is independent. The deployed bot client must explicitly allow `purchase-intents.lookup.read` for pending lookup.
+Website `allowedOperations` is independent. The deployed bot client must explicitly allow `purchase-intents.lookup.read` for pending lookup and, for ADR-0016 rollout, exactly `support.tickets.access.read`, `support.tickets.verify`, and `support.tickets.override`.
 
 ## Mention/log/secret safety
 
@@ -200,6 +234,8 @@ Website `allowedOperations` is independent. The deployed bot client must explici
 - reasons are sanitized/truncated before private audit display;
 - raw HMAC/signing headers/API secrets/request credentials never belong in logs/components;
 - generic backend failures map to stable safe messages;
+- ticket verification failure is never presented as proof that a customer is unlinked;
+- ticket recheck custom IDs contain only channel/creator snowflakes and compact permission masks, never website IDs, emails, credentials, reasons or API secrets;
 - masked support material never leaves private authorized staff output.
 
 ## Forbidden shortcuts
@@ -219,4 +255,8 @@ Website `allowedOperations` is independent. The deployed bot client must explici
 - caller-supplied refund economics;
 - direct balance overwrite/destructive ledger edits;
 - manual fulfillment through DB/purchase processing/unrelated endpoint;
+- role-only or global-user ticket override;
+- customer or hosted-AI access to `support.tickets.override`;
+- changing staff/support role overwrites for the account-link gate;
+- treating an API outage as evidence that the account is unlinked;
 - real secrets in repo/docs/logs.

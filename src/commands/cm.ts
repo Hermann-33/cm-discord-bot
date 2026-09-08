@@ -101,7 +101,10 @@ export function buildCmCommand() {
         .setName("reference")
         .setDescription("CM public reference or order UUID")
         .setRequired(true)
-        .setMaxLength(128)));
+        .setMaxLength(128)))
+    .addSubcommand((subcommand) => subcommand
+      .setName("ticket-allow")
+      .setDescription("Manually allow the creator of this CM support ticket"));
 }
 
 export class CmAdminController {
@@ -114,6 +117,7 @@ export class CmAdminController {
 
   async handle(interaction: Interaction): Promise<boolean> {
     if (interaction.isChatInputCommand() && interaction.commandName === "cm") {
+      if (interaction.options.getSubcommand(false) === "ticket-allow") return false;
       await this.handleCommand(interaction);
       return true;
     }

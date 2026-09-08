@@ -1,6 +1,6 @@
 # Project Roadmap
 
-Updated: 2026-08-31
+Updated: 2026-09-08
 
 ## Completion rule
 
@@ -39,6 +39,21 @@ No approved execute operation exists. `purchase-intents.process` and direct data
 ### Phase 7 — Production operations hardening — PARTIAL / ONGOING
 
 Remaining operational items include branch protection/status checks, runbooks, credential rotation, controlled smoke tests and production observability.
+
+### Phase 8 — Tickety account-link gate — IMPLEMENTED / PRODUCTION ROLLOUT PENDING
+
+ADR-0016 source implementation is complete: deterministic ticket recognition, conservative creator resolution, creator-only permission gate, website-persisted eight-hour link lease, activity-triggered renewal, Check Again UI, Tickety rewrite re-enforcement, paced startup recovery, and `/cm ticket-allow`.
+
+Remaining completion gates:
+
+1. repository CI must remain fully green for the final branch head;
+2. website support-ticket HTTP routes must be production-deployed;
+3. the dedicated CM Discord bot Internal API client must receive exactly `support.tickets.access.read`, `support.tickets.verify`, and `support.tickets.override`;
+4. deploy the bot revision;
+5. explicitly run `npm run register:commands` once;
+6. perform live linked/unlinked/recheck/expired-lease/restart/Tickety-rewrite/admin-override smoke verification.
+
+No local DB, Northflank persistence volume, or direct Supabase access is part of this phase.
 
 ## AI support / transcript workstream
 
@@ -131,7 +146,7 @@ Also require privacy, restricted-topic precision, structured provider compatibil
 
 - HMAC Internal Integrations API is the website/data boundary;
 - no direct DB/Supabase/service-role access;
-- no autonomous mutations;
+- no autonomous AI mutations; deterministic admin mutations remain limited to separately reviewed `/cm` operations, including ADR-0016's ticket-scoped override;
 - private transcript repo remains data/spec-only;
 - model cannot invent IDs/policy/live state or execute tools;
 - historical evidence is not current policy/state;

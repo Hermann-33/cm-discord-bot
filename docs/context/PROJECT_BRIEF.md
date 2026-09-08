@@ -1,6 +1,6 @@
 # Project Brief
 
-Updated: 2026-08-31
+Updated: 2026-09-08
 
 ## Product purpose
 
@@ -27,7 +27,8 @@ The Cheater's Market Discord bot is the Discord-facing companion to Cheater's Ma
 - confirmed Aura and wallet adjustment;
 - Share to Chat customer-safe summaries;
 - structured Discord audit summaries;
-- bounded stateful AI support on explicitly allowlisted message surfaces.
+- bounded stateful AI support on explicitly allowlisted message surfaces;
+- deterministic Tickety support-ticket account-link gating with ticket-scoped admin override.
 
 ## Data/business boundary
 
@@ -40,12 +41,23 @@ Discord
 
 The bot is never a direct Supabase/Postgres client, has no service-role/database credential and has no table/RPC fallback. Website per-client `allowedOperations` remains an independent runtime authorization boundary.
 
+Ticket authorization uses the same boundary: `support.tickets.access.read`, `support.tickets.verify`, and `support.tickets.override`. Durable access state lives upstream; no local SQLite/Northflank volume is required.
+
 ## Admin mutation model
 
 Refund/Aura/wallet remain private admin operations under the accepted confirmation/fresh-state/idempotency/audit model. Pending purchase state is read-only until a canonical order exists. Manual fulfillment remains blocked because no dedicated website-owned execute operation exists.
 
 Customer AI support has **no mutation authority**.
 
+ADR-0016 adds one separate deterministic mutation: `/cm ticket-allow`. It is not available to AI, is scoped to the current support ticket, reuses the explicit `/cm` administrator allowlist, and records website + Discord audit attribution.
+
+## Support-ticket access model
+
+Tickety tickets are gated on the creator's active CM ↔ Discord account link. Initial tickets are recognized in category `1382569775988871330` or as uncategorized `support-<number>` overflow channels.
+
+The creator is made read-only while the website performs a freshness-sensitive verification. A successful link check creates an exact eight-hour lease. During the lease there are no repeated verification calls. After expiry, only creator/customer activity or explicit **Check Again** triggers renewal; staff/admin/bot messages and inactive tickets cause no verification work.
+
+Unlinked creators receive the existing CM Settings / **Connect Discord** flow. Service failure is fail-closed but is never presented as proof that the account is unlinked. Tickety permission rewrites are re-enforced only against the locked creator; staff/support roles are untouched.
 ## AI support model
 
 ADR-0012/0013 establish:

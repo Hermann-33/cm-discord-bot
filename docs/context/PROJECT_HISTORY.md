@@ -1,6 +1,6 @@
 # Project History
 
-Updated: 2026-08-31
+Updated: 2026-09-08
 
 This file preserves important chronology without making historical architecture authoritative over current source/ADRs.
 
@@ -247,3 +247,37 @@ This material change invalidates B0-v6 as certification for the next candidate. 
 ## 2026-08-31 — Documentation re-baseline
 
 The current documentation layer was reconciled with actual deployment state. `CURRENT_STATE_2026-08-31.md`, `DOCS_AUDIT_2026-08-31.md`, current architecture/data/brief/codebase/commands/side-project/handoff/roadmap files and ADR-0015 now own current status; dated release/benchmark documents remain immutable point-in-time evidence for their original runs.
+
+## 2026-09-08 — Tickety support-ticket account-link gate
+
+After the website/Supabase side added durable support-ticket access state behind the Internal Integrations API, the bot implemented ADR-0016 on `feature/tickety-account-link-gate` / draft PR #15.
+
+The design deliberately rejected a bot-local SQLite/Northflank-volume persistence model. Durable authorization state remains website-owned:
+
+```text
+Discord ticket
+ -> CM Discord Bot
+ -> HMAC Internal Integrations API
+ -> support ticket access service
+ -> Supabase/Postgres
+```
+
+The bot added only:
+
+```text
+support.tickets.access.read
+support.tickets.verify
+support.tickets.override
+```
+
+Initial Tickety tickets are recognized in category `1382569775988871330`, with uncategorized `support-<number>` as the documented overflow form. The creator is resolved only when exactly one non-bot member-specific permission overwrite exists.
+
+The creator is made read-only before the initial website verification. A successful account-link verification produces an exact eight-hour lease. During that lease the bot makes no repeated verification calls. After expiry there is no timer or global poll; only the ticket creator/customer's next message or explicit **Check Again** requests fresh verification. Staff/admin/bot messages never renew the customer lease, and an inactive expired ticket produces no verification traffic.
+
+If the fresh check reports unlinked, the triggering creator message is deleted and the creator is locked. Service failure also fails closed but uses distinct verification-unavailable wording rather than falsely describing the account as unlinked. Tickety permission rewrites are re-enforced through `ChannelUpdate`, and startup recovery is paced and one-time.
+
+The customer linking panel points to `https://cheaters.market/dashboard?tab=settings` and reuses the website's existing **Connect Discord** OAuth flow.
+
+`/cm ticket-allow` was added as a ticket-scoped administrator bypass. It reuses ADR-0006 exact-guild + explicit `BOT_ADMIN_USER_IDS` authorization, requires the configured Discord audit channel, persists `admin_override` through the website operation, restores only CM-gated creator permissions, and writes a sanitized Discord audit. It does not create a global user bypass.
+
+The implementation does not add direct database access, local authorization persistence, a website runtime dependency on the bot, or hosted-AI mutation authority. Because `/cm` command JSON changed, production rollout requires explicit `npm run register:commands` after deployment prerequisites are satisfied.

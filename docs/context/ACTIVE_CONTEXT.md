@@ -1,6 +1,6 @@
 # Active Context
 
-Updated: 2026-08-31
+Updated: 2026-09-08
 
 ## Read first
 
@@ -19,6 +19,7 @@ repository: Hermann-33/cm-discord-bot
 default/deployed branch: master
 validated master baseline: f8988037994146f5d51455878fb8fa9d8a987928
 active remediation branch: task/ai-support-response-reconstruction
+ticket-gate status: repository implementation complete; production rollout pending
 private corpus repo: Hermann-33/CM-Ticket-Transcripts
 private corpus reference SHA: c9e993f17583a607402f4173296f64aac52d2ebe
 ```
@@ -34,6 +35,23 @@ AI_SUPPORT_CATEGORY_IDS=
 
 This is not a broad release. Other channels/categories/DMs remain outside visible AI support.
 
+## Parallel deterministic ticket-gate work
+
+ADR-0016 is implemented without changing the AI planner/runtime authority.
+
+Key state:
+
+- website/Supabase remains durable ticket-access authority;
+- bot uses only the existing HMAC Internal Integrations API;
+- initial Tickety category: `1382569775988871330`; uncategorized `support-<number>` handles overflow;
+- exact eight-hour verified lease;
+- no global lease poll and no per-message checks during an active lease;
+- after expiry, only the creator/customer's next message or **Check Again** triggers verification;
+- staff/admin/bot messages never renew customer verification;
+- `/cm ticket-allow` reuses ADR-0006 authorization and is ticket-scoped;
+- production rollout requires site route deployment + exact client allowlist + slash registration + end-to-end smoke.
+
+This branch must not be conflated with or merged into the separate response-reconstruction workstream by accident.
 ## Current quality finding
 
 Live test input:

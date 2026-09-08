@@ -44,11 +44,25 @@ import {
   type WalletAdjustmentData
 } from "./schemas";
 import { createSignedHeaders } from "./signing";
+import {
+  supportTicketAccessReadRequestSchema,
+  supportTicketAccessReadResponseSchema,
+  supportTicketOverrideRequestSchema,
+  supportTicketOverrideResponseSchema,
+  supportTicketVerifyRequestSchema,
+  supportTicketVerifyResponseSchema,
+  type SupportTicketAccessReadData,
+  type SupportTicketOverrideData,
+  type SupportTicketVerifyData
+} from "./supportTickets";
 
 export const INTERNAL_API_PATHS = {
   leaderboards: "/api/internal/integrations/v1/aura/leaderboards",
   auraLookup: "/api/internal/integrations/v1/aura/lookup",
   userOverview: "/api/internal/integrations/v1/users/overview",
+  supportTicketAccessRead: "/api/internal/integrations/v1/support/tickets/access",
+  supportTicketVerify: "/api/internal/integrations/v1/support/tickets/verify",
+  supportTicketOverride: "/api/internal/integrations/v1/support/tickets/override",
   orderDetails: "/api/internal/integrations/v1/orders/details",
   orderFulfillment: "/api/internal/integrations/v1/orders/fulfillment",
   purchaseIntentLookup: "/api/internal/integrations/v1/purchase-intents/lookup",
@@ -71,6 +85,7 @@ const expectedStatuses: Record<InternalApiErrorCode, readonly number[]> = {
   OPERATION_FORBIDDEN: [403],
   IDENTITY_PROVIDER_UNSUPPORTED: [400],
   NOT_FOUND: [404],
+  TICKET_CREATOR_MISMATCH: [409],
   REFUND_NOT_ELIGIBLE: [409],
   ALREADY_REFUNDED: [409],
   REFUND_STATE_INVALID: [409],
@@ -173,6 +188,44 @@ export class InternalApiClient {
       userOverviewResponseSchema
     );
     return data.overview;
+  }
+
+  async readSupportTicketAccess(channelId: string): Promise<SupportTicketAccessReadData> {
+    return this.request(
+      INTERNAL_API_PATHS.supportTicketAccessRead,
+      supportTicketAccessReadRequestSchema,
+      { channelId },
+      supportTicketAccessReadResponseSchema
+    );
+  }
+
+  async verifySupportTicketAccess(
+    channelId: string,
+    creatorDiscordId: string
+  ): Promise<SupportTicketVerifyData> {
+    const data = await this.request(
+      INTERNAL_API_PATHS.supportTicketVerify,
+      supportTicketVerifyRequestSchema,
+      { channelId, creatorDiscordId },
+      supportTicketVerifyResponseSchema
+    );
+    return data.verification;
+  }
+
+  async overrideSupportTicketAccess(input: {
+    channelId: string;
+    creatorDiscordId: string;
+    adminDiscordId: string;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<SupportTicketOverrideData> {
+    const data = await this.request(
+      INTERNAL_API_PATHS.supportTicketOverride,
+      supportTicketOverrideRequestSchema,
+      input,
+      supportTicketOverrideResponseSchema
+    );
+    return data.override;
   }
 
   async fetchOrderDetails(selector: OrderLookupSelector | string): Promise<OrderDetailsData> {
