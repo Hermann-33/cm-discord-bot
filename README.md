@@ -145,9 +145,9 @@ A successful verification creates an exact eight-hour website lease. The bot per
 
 If that fresh check says unlinked, the triggering creator message is deleted and the creator is locked. API/service failure also fails closed, but uses distinct verification-unavailable copy rather than claiming the user is unlinked.
 
-Tickety permission rewrites are re-enforced while a durable ticket is locked. Normal startup reconciliation restores durable state without globally re-verifying every ticket. The current diagnostic build performs one temporary targeted fresh recheck for `support-2094` (`1546354201368596612`) so Discord permission failures can be diagnosed without touching other persisted tickets.
+Tickety permission rewrites are re-enforced while a durable ticket is locked. Startup reconciliation restores durable website state without globally re-verifying every persisted ticket.
 
-`/cm ticket-allow` is the ticket-scoped administrator bypass. It uses the same exact-guild + explicit `BOT_ADMIN_USER_IDS` authorization as every other `/cm` admin control, requires the configured audit channel, records the website override, restores participation and writes a sanitized Discord audit entry. The bypass does not carry to future tickets.
+`/cm ticket-allow` is the ticket-scoped administrator bypass. It uses the same exact-guild + explicit `BOT_ADMIN_USER_IDS` authorization as every other `/cm` admin control, requires the configured audit channel, records the website override, restores participation, posts a visible ticket-channel notice naming the operator after a successful unlock, and writes a sanitized Discord audit entry. The bypass does not carry to future tickets.
 
 ADR-0016 defines the complete gate and recovery model.
 
