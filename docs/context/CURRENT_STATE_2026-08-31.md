@@ -151,6 +151,7 @@ git diff --check: PASS
 ```
 
 Subsequent commits in this branch are documentation reconciliation only; the merge head must remain green.
+
 ## Architecture and safety invariants
 
 Production remains:
