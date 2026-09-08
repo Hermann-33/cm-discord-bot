@@ -43,7 +43,7 @@ Implemented behavior:
 - unlinked/verification-failure creator messages at the expiry boundary are deleted before the ticket remains locked;
 - distinct user copy for unlinked vs verification/service failure;
 - locked permission re-enforcement after Tickety rewrites;
-- paced one-time startup reconciliation;
+- paced one-time startup fresh-verification sweep for all existing non-overridden support tickets;
 - `/cm ticket-allow` reuses ADR-0006 exact-guild + explicit-user authorization, requires `BOT_AUDIT_LOG_CHANNEL_ID`, persists a ticket-scoped override, restores participation, and emits sanitized Discord audit.
 
 Customer link destination:
