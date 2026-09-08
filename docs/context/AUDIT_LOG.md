@@ -495,3 +495,26 @@ The existing structured diagnostics remain in place. Member-fetch failure and pe
 A regression test now simulates the production failure by rejecting raw-string overwrite targets while allowing a fetched member object. The gate succeeds under that test, proving the permission mutation no longer relies on raw snowflake resolution.
 
 The temporary startup diagnostic recheck for support-2094 remains active for the next deployment so the corrected permission path is exercised immediately.
+
+
+---
+
+## 2026-09-08 — TASK-CM-TICKETS-005 — visible ticket override notice
+
+### Behavior change
+
+A successful `/cm ticket-allow` now posts a visible message in the ticket channel:
+
+```text
+Ticket lockdown has been overridden by <@operator>.
+```
+
+The notice is sent only after the website override has persisted **and** Discord creator access has been restored successfully. If backend override persistence succeeds but Discord permission restoration fails, no public success notice is posted.
+
+The existing private command confirmation and sanitized audit-channel record remain unchanged in purpose. The visible mention is non-pinging through the existing safe allowed-mentions policy.
+
+### Cleanup
+
+The temporary support-2094 startup diagnostic recheck introduced while debugging the discord.js permission-target issue has been removed. Startup is again ordinary durable-state recovery with no ticket-specific freshness exception.
+
+No slash-command JSON, HMAC operation, database state model, authorization rule, or website API contract changed.
