@@ -882,7 +882,6 @@ export class TicketLinkGateController {
       });
     });
   }
-  }
 
   private async resolveOverrideCreator(channel: TextChannel): Promise<{
     creatorDiscordId: string;
@@ -1053,7 +1052,6 @@ export class TicketLinkGateController {
         allowedMentions: safeAllowedMentions
       });
     });
-  }
   }
 
   async handleInteraction(interaction: Interaction): Promise<boolean> {
