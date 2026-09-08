@@ -35,8 +35,6 @@ const SUPPORT_TICKET_NAME = /^support-\d+$/i;
 const RECHECK_PREFIX = "cm:ticket:recheck:";
 const RECONCILE_PACE_MS = 2_100;
 const OVERRIDE_REASON = "Manual support ticket access override.";
-const DIAGNOSTIC_RECHECK_CHANNEL_ID = "1546354201368596612";
-const DIAGNOSTIC_RECHECK_CHANNEL_NAME = "support-2094";
 
 const GATED_PERMISSIONS = [
   ["SendMessages", PermissionFlagsBits.SendMessages],
@@ -1141,6 +1139,23 @@ export class TicketLinkGateController {
         });
       }
 
+      let publicNoticeDelivered = true;
+      if (accessRestored) {
+        try {
+          await channel.send({
+            content: `Ticket lockdown has been overridden by <@${interaction.user.id}>.`,
+            allowedMentions: safeAllowedMentions
+          });
+        } catch (error) {
+          publicNoticeDelivered = false;
+          logger.error("ticket override public notice delivery failed", {
+            channelId: channel.id,
+            operatorId: interaction.user.id,
+            ...extractDiscordApiErrorMeta(error)
+          });
+        }
+      }
+
       let auditDelivered = true;
       try {
         await this.dependencies.postOverrideAudit({
@@ -1168,6 +1183,7 @@ export class TicketLinkGateController {
               `User: <@${target.creatorDiscordId}>`,
               `Ticket: ${channel.name}`,
               "Access: Manually allowed",
+              ...(publicNoticeDelivered ? [] : ["Notice: Ticket-channel announcement failed"]),
               ...(auditDelivered ? [] : ["Audit: Backend recorded; Discord audit delivery failed"])
             ].join("\n")
           : [
@@ -1230,40 +1246,7 @@ export class TicketLinkGateController {
         try {
           const persisted = await this.api.readSupportTicketAccess(channel.id);
           if (persisted.ticketAccess) {
-            const state = await this.applyPersistedState(
-              channel,
-              persisted.ticketAccess
-            );
-
-            const isDiagnosticTarget =
-              channel.id === DIAGNOSTIC_RECHECK_CHANNEL_ID &&
-              channel.name.toLowerCase() === DIAGNOSTIC_RECHECK_CHANNEL_NAME;
-
-            if (!isDiagnosticTarget || state.status === "admin_override") return;
-
-            logger.info("targeted ticket diagnostic recheck starting", {
-              channelId: channel.id,
-              channelName: channel.name,
-              creatorDiscordId: state.creatorDiscordId,
-              state: state.status
-            });
-
-            const snapshot = state.snapshot ??
-              capturePermissionSnapshot(channel, state.creatorDiscordId);
-            const blocked = await this.verifyAndApply(
-              channel,
-              state.creatorDiscordId,
-              snapshot,
-              undefined,
-              state.gateMessageId
-            );
-
-            logger.info("targeted ticket diagnostic recheck complete", {
-              channelId: channel.id,
-              channelName: channel.name,
-              creatorDiscordId: state.creatorDiscordId,
-              blocked
-            });
+            await this.applyPersistedState(channel, persisted.ticketAccess);
             return;
           }
 
@@ -1303,8 +1286,7 @@ export class TicketLinkGateController {
 
     logger.info("ticket gate startup reconciliation complete", {
       candidates: candidates.length,
-      tracked: this.states.size,
-      diagnosticRecheckChannelId: DIAGNOSTIC_RECHECK_CHANNEL_ID
+      tracked: this.states.size
     });
   }
 }

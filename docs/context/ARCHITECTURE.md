@@ -99,11 +99,11 @@ The creator is locked before the initial freshness check to close the channel-cr
 
 Verified access is an exact eight-hour website lease. The bot does not poll open tickets every eight hours and does not verify on every message. After expiry, only ticket-creator/customer activity or explicit **Check Again** causes a fresh verification. Staff/admin/bot messages do not.
 
-Known locked state is re-enforced on Discord `ChannelUpdate` so Tickety claim/move/permission rewrites cannot silently reopen customer participation. Startup reconciliation normally restores durable state only. A temporary diagnostic exception currently fresh-verifies only `support-2094` (`1546354201368596612`) once per process start; all other persisted tickets are recovered without a fresh link check.
+Known locked state is re-enforced on Discord `ChannelUpdate` so Tickety claim/move/permission rewrites cannot silently reopen customer participation. Startup reconciliation restores durable state only; persisted tickets are not globally fresh-verified merely because the process restarted.
 
 Website state is authorization persistence. Discord gate-message custom IDs carry only non-secret permission snapshot metadata needed to restore the exact pre-gate state after restart. No local SQLite, Northflank volume, Supabase client, or service-role credential is introduced.
 
-`/cm ticket-allow` uses ADR-0006 human authorization and the closed `support.tickets.override` operation. It is ticket-scoped, requires the configured Discord audit channel, and does not exempt future tickets.
+`/cm ticket-allow` uses ADR-0006 human authorization and the closed `support.tickets.override` operation. It is ticket-scoped, requires the configured Discord audit channel, and does not exempt future tickets. After Discord access is actually restored, the bot posts a visible ticket-channel notice naming the administrator who performed the override.
 
 The ticket gate executes before `cm aura` and customer AI handling, so blocked creator traffic cannot continue into those surfaces.
 ## Internal Integrations API boundary
