@@ -81,7 +81,7 @@ deny bit mask
 
 This permits exact restoration after a bot restart without adding another persistence store.
 
-If that Discord-side recovery snapshot is unavailable, the bot restores only the gated permissions to Tickety's current default participant allow state. This fallback is valid for the current CM server because Tickety uses its default participant permission configuration. It does not modify unrelated permissions.
+If that Discord-side recovery snapshot is unavailable, the bot uses a conservative Tickety-default fallback only for the gated permissions: it explicitly allows `SendMessages`, `AddReactions`, `UseApplicationCommands`, `AttachFiles`, and `EmbedLinks`, while the three thread permissions are cleared back to inheritance rather than force-granted. This matches the documented default participant surface without broadening thread authority. It does not modify unrelated permissions.
 
 ### Customer linking UI
 
@@ -128,8 +128,8 @@ The bot paces candidate recovery to stay below the website support-ticket operat
 
 - `locked` -> re-enforce the creator deny;
 - `admin_override` -> ensure the creator is unlocked;
-- active `verified` -> preserve access and repair a half-completed unlock if a gate notice proves one exists;
-- expired `verified` -> do not proactively renew or lock merely because time elapsed; wait for creator activity;
+- active `verified` -> preserve access and repair a half-completed unlock if Discord still carries the CM deny;
+- expired `verified` -> do not proactively renew or lock merely because time elapsed; if Discord is still carrying a half-completed CM deny from a crash, release that deny first so the creator can generate the activity that triggers fresh verification;
 - no durable state in a recognized initial ticket -> perform the normal initial verification.
 
 Channel deletion clears only bot runtime cache. No website delete operation exists; Discord channel snowflakes are not reused, so stale durable rows do not authorize another ticket.
@@ -179,7 +179,7 @@ Benefits:
 Costs / limitations:
 
 - creator resolution intentionally refuses ambiguous member-overwrite layouts;
-- if the permission snapshot notice is deleted and no runtime snapshot remains, unlock uses the documented Tickety-default fallback for only the gated permissions;
+- if the permission snapshot notice is deleted and no runtime snapshot remains, unlock uses the conservative documented Tickety-default fallback for only the gated permissions; thread permissions are inherited rather than force-granted;
 - startup recovery of many first-time tickets is intentionally paced;
 - the website retains ticket rows after Discord channel deletion until a future narrowly scoped cleanup operation exists.
 
