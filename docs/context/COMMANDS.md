@@ -70,11 +70,11 @@ Exactly one non-bot member-specific overwrite must resolve as the ticket creator
 
 The creator is made read-only while `support.tickets.verify` checks the authoritative website link. Visibility/history remain unchanged and staff/support role overwrites are never modified.
 
-A successful verification grants an exact eight-hour lease. There is no background eight-hour poll and no verification on every creator message while the lease remains valid. Once expired, only the ticket creator's next message or explicit **Check Again** triggers a fresh verification. Staff/admin/bot messages never renew the customer's link state.
+A successful verification grants an exact eight-hour lease. There is no background eight-hour poll and no verification on every creator message while the lease remains valid. During normal runtime once expired, only the ticket creator's next message or explicit **Check Again** triggers a fresh verification. Staff/admin/bot messages never renew the customer's link state. Process startup is the one-time exception and fresh-verifies every existing non-overridden ticket once.
 
 Unlinked or verification-unavailable creators remain read-only. An unlinked creator receives **Open CM Settings** pointing at `https://cheaters.market/dashboard?tab=settings` plus **Check Again**. Service/API failure uses distinct copy and never claims the account is unlinked.
 
-Tickety permission rewrites are re-enforced for locked tickets through `ChannelUpdate`. Startup performs a paced one-time reconciliation from durable website state; it is not periodic polling.
+Tickety permission rewrites are re-enforced for locked tickets through `ChannelUpdate`. Startup performs a paced one-time fresh verification sweep from durable website state; `admin_override` tickets are skipped and the sweep is not periodic polling.
 
 ## `/cm ticket-allow`
 

@@ -107,7 +107,10 @@ export function isRecognizedSupportTicketChannel(channel: {
 }
 
 function isRecoveryCandidate(channel: TextChannel, guildId: string): boolean {
-  return channel.guildId === guildId && SUPPORT_TICKET_NAME.test(channel.name);
+  return channel.guildId === guildId && (
+    channel.parentId === TICKETY_SUPPORT_CATEGORY_ID ||
+    SUPPORT_TICKET_NAME.test(channel.name)
+  );
 }
 
 function capturePermissionSnapshot(
@@ -480,14 +483,16 @@ export class TicketLinkGateController {
     channel: TextChannel,
     creatorDiscordId: string,
     snapshot: TicketPermissionSnapshot,
-    triggerMessage?: Message
+    triggerMessage?: Message,
+    gateMessageId?: string
   ): Promise<void> {
     const state: TicketRuntimeState = {
       channelId: channel.id,
       creatorDiscordId,
       status: "verification_unavailable",
       verifiedUntilMs: null,
-      snapshot
+      snapshot,
+      gateMessageId
     };
     this.states.set(channel.id, state);
     await this.ensureLocked(channel, creatorDiscordId);
@@ -497,6 +502,10 @@ export class TicketLinkGateController {
       } catch {
         logger.warn("ticket gate could not delete blocked creator message", { channelId: channel.id });
       }
+    }
+    if (state.gateMessageId) {
+      await this.deleteGateMessage(channel, state);
+      state.gateMessageId = undefined;
     }
     await this.trySendGateMessage(channel, state, "verification_unavailable");
   }
@@ -549,10 +558,10 @@ export class TicketLinkGateController {
       }
     }
 
-    // Expired verified leases are intentionally not renewed or proactively
-    // locked by a timer/startup pass. The first creator/customer message after
-    // expiry performs the fresh verification and is deleted if that check does
-    // not grant access.
+    // Outside the one-time startup fresh sweep, expiry alone does not renew
+    // or lock a ticket. During normal runtime the first creator/customer
+    // message after expiry performs the fresh verification and is deleted if
+    // that check does not grant access.
     return state;
   }
 
@@ -560,7 +569,8 @@ export class TicketLinkGateController {
     channel: TextChannel,
     creatorDiscordId: string,
     snapshot: TicketPermissionSnapshot,
-    triggerMessage?: Message
+    triggerMessage?: Message,
+    gateMessageId?: string
   ): Promise<boolean> {
     let verification: SupportTicketVerifyData;
     try {
@@ -573,11 +583,21 @@ export class TicketLinkGateController {
         channelId: channel.id,
         code: isInternalApiError(error) ? error.code : "UNKNOWN"
       });
-      await this.lockForFailure(channel, creatorDiscordId, snapshot, triggerMessage);
+      await this.lockForFailure(
+        channel,
+        creatorDiscordId,
+        snapshot,
+        triggerMessage,
+        gateMessageId
+      );
       return true;
     }
 
-    const state = runtimeFromAccess(verification.ticketAccess, snapshot);
+    const state = runtimeFromAccess(
+      verification.ticketAccess,
+      snapshot,
+      gateMessageId
+    );
     this.states.set(channel.id, state);
 
     if (verification.accessGranted) {
@@ -603,6 +623,10 @@ export class TicketLinkGateController {
         });
       }
     }
+    if (state.gateMessageId) {
+      await this.deleteGateMessage(channel, state);
+      state.gateMessageId = undefined;
+    }
     await this.trySendGateMessage(channel, state, "unlinked");
     return true;
   }
@@ -612,9 +636,17 @@ export class TicketLinkGateController {
     creatorDiscordId: string,
     triggerMessage?: Message
   ): Promise<boolean> {
-    const snapshot = capturePermissionSnapshot(channel, creatorDiscordId);
+    const existingGate = await this.findGateMessage(channel, creatorDiscordId);
+    const snapshot = existingGate?.snapshot ??
+      capturePermissionSnapshot(channel, creatorDiscordId);
     await this.ensureLocked(channel, creatorDiscordId);
-    return this.verifyAndApply(channel, creatorDiscordId, snapshot, triggerMessage);
+    return this.verifyAndApply(
+      channel,
+      creatorDiscordId,
+      snapshot,
+      triggerMessage,
+      existingGate?.message.id
+    );
   }
 
   private async hydrateOrInitialize(
@@ -1101,7 +1133,22 @@ export class TicketLinkGateController {
         try {
           const persisted = await this.api.readSupportTicketAccess(channel.id);
           if (persisted.ticketAccess) {
-            await this.applyPersistedState(channel, persisted.ticketAccess);
+            const state = await this.applyPersistedState(
+              channel,
+              persisted.ticketAccess
+            );
+
+            if (state.status === "admin_override") return;
+
+            const snapshot = state.snapshot ??
+              capturePermissionSnapshot(channel, state.creatorDiscordId);
+            await this.verifyAndApply(
+              channel,
+              state.creatorDiscordId,
+              snapshot,
+              undefined,
+              state.gateMessageId
+            );
             return;
           }
 
@@ -1139,7 +1186,7 @@ export class TicketLinkGateController {
       }
     }
 
-    logger.info("ticket gate startup reconciliation complete", {
+    logger.info("ticket gate startup fresh verification sweep complete", {
       candidates: candidates.length,
       tracked: this.states.size
     });

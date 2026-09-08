@@ -97,9 +97,9 @@ Initial recognition is limited to category `1382569775988871330` or uncategorize
 
 The creator is locked before the initial freshness check to close the channel-creation race. The gate changes only creator participation permissions and never support/staff role overwrites.
 
-Verified access is an exact eight-hour website lease. The bot does not poll open tickets every eight hours and does not verify on every message. After expiry, only ticket-creator/customer activity or explicit **Check Again** causes a fresh verification. Staff/admin/bot messages do not.
+Verified access is an exact eight-hour website lease. The bot does not poll open tickets every eight hours and does not verify on every message. During normal runtime after expiry, only ticket-creator/customer activity or explicit **Check Again** causes a fresh verification. Staff/admin/bot messages do not. Process startup is a deliberate one-time exception: every existing non-overridden ticket is fresh-verified once.
 
-Known locked state is re-enforced on Discord `ChannelUpdate` so Tickety claim/move/permission rewrites cannot silently reopen customer participation. Startup reconciliation is paced one-time recovery, not recurring monitoring.
+Known locked state is re-enforced on Discord `ChannelUpdate` so Tickety claim/move/permission rewrites cannot silently reopen customer participation. Startup reconciliation is a paced one-time **fresh verification sweep**, not recurring monitoring. It reads durable state, skips `admin_override`, then re-verifies every other existing ticket; recognized category tickets and `support-<number>` recovery candidates are included.
 
 Website state is authorization persistence. Discord gate-message custom IDs carry only non-secret permission snapshot metadata needed to restore the exact pre-gate state after restart. No local SQLite, Northflank volume, Supabase client, or service-role credential is introduced.
 

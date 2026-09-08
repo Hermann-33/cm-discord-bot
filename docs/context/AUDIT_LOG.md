@@ -390,3 +390,41 @@ The remaining commits after that validation are documentation-only reconciliatio
 No Discord bot login, slash-command registration, production API smoke call, website edit, database migration or merge was performed from this task. Production rollout additionally requires the website support routes to be deployed, the bot integration client to receive exactly the three support-ticket operations, the bot revision to deploy, `npm run register:commands` to run once, and end-to-end linked/unlinked/recheck/expiry/restart/Tickety-rewrite/admin-override smoke verification.
 
 Verdict: `REPOSITORY IMPLEMENTATION COMPLETE / PRODUCTION ROLLOUT GATES PENDING`.
+
+
+---
+
+## 2026-09-08 — TASK-CM-TICKETS-002 — startup fresh ticket verification
+
+### Reason
+
+The first production-style ticket was opened before the `cm-discord-bot` website client had the three support-ticket operations in `allowedOperations`. The bot correctly failed closed and posted **CM account verification unavailable**. After the website permissions were added, the desired recovery behavior was to restart the bot and freshly check all existing support tickets rather than waiting for each customer to become active.
+
+### Change
+
+Startup reconciliation is now a one-time **fresh verification sweep**:
+
+- fetch every text channel still in Tickety category `1382569775988871330` plus `support-<number>` recovery candidates;
+- read durable ticket state first;
+- preserve/skip `admin_override` tickets;
+- fresh-verify every other persisted ticket exactly once;
+- for tickets with no durable row, perform normal initial verification;
+- if a previous pre-permission/API failure left a CM gate notice but no durable row, recover the original permission snapshot from that notice before verifying so a newly linked/authorized creator can be restored correctly;
+- replace stale gate notices rather than duplicating them;
+- keep the existing ~2.1 second pacing so support-ticket verification remains below the website 30/minute client-operation limit.
+
+This is explicitly **not** recurring polling. Once startup finishes, normal runtime remains activity-driven: active leases cause no checks, and after expiry only creator activity or **Check Again** re-verifies.
+
+### Safety
+
+- no new environment variable;
+- no new database/local persistence;
+- no direct Supabase access;
+- no change to `admin_override` semantics;
+- no staff-role overwrite changes;
+- no change to HMAC signing or client authorization;
+- API failure during the startup sweep remains fail-closed.
+
+### Deployment effect
+
+Because Northflank deploys this repository's production/default `master` branch, merging the validated change to `master` is the repository-side deployment trigger. Live Northflank rollout status still requires host-side observation; repository tooling cannot inspect the Northflank service directly.
