@@ -354,7 +354,8 @@ test("authorized /cm aura executes immediately from a Discord user and returns o
     nowMs: () => 0,
     idempotencyKey: () => IDEMPOTENCY_ID,
     postAdjustmentAudit: async (input: unknown) => { auditInput = input; },
-    postRefundAudit: async () => undefined
+    postRefundAudit: async () => undefined,
+    postPurchaseApprovalAudit: async () => undefined
   };
   const controller = new CmAdminController(config, api, undefined, dependencies);
   const context = fakeCommand({
@@ -389,6 +390,7 @@ test("authorized /cm aura executes immediately from a Discord user and returns o
   assert.equal(output.includes("+250 Aura"), true);
   assert.equal(output.includes("750 Aura"), true);
   assert.equal(output.includes("Confirm"), false);
+  assert.equal(output.includes("Share to Chat"), true);
 });
 
 test("authorized /cm balance executes a signed amount immediately from email", async () => {
@@ -417,7 +419,8 @@ test("authorized /cm balance executes a signed amount immediately from email", a
     nowMs: () => 0,
     idempotencyKey: () => IDEMPOTENCY_ID,
     postAdjustmentAudit: async () => undefined,
-    postRefundAudit: async () => undefined
+    postRefundAudit: async () => undefined,
+    postPurchaseApprovalAudit: async () => undefined
   };
   const controller = new CmAdminController(config, api, undefined, dependencies);
   const context = fakeCommand({
@@ -445,6 +448,7 @@ test("authorized /cm balance executes a signed amount immediately from email", a
   assert.equal(output.includes("USD -5.25"), true);
   assert.equal(output.includes("USD 19.75"), true);
   assert.equal(output.includes("Confirm"), false);
+  assert.equal(output.includes("Share to Chat"), true);
 });
 
 test("authorized /cm refund previews for eligibility then executes immediately and returns final result", async () => {
@@ -501,7 +505,8 @@ test("authorized /cm refund previews for eligibility then executes immediately a
     nowMs: () => 0,
     idempotencyKey: () => IDEMPOTENCY_ID,
     postAdjustmentAudit: async () => undefined,
-    postRefundAudit: async (input: unknown) => { auditInput = input; }
+    postRefundAudit: async (input: unknown) => { auditInput = input; },
+    postPurchaseApprovalAudit: async () => undefined
   };
   const controller = new CmAdminController(config, api, undefined, dependencies);
   const context = fakeCommand({
@@ -528,6 +533,7 @@ test("authorized /cm refund previews for eligibility then executes immediately a
   assert.equal(output.includes("Refund Complete"), true);
   assert.equal(output.includes("USD 10.00"), true);
   assert.equal(output.includes("Confirm"), false);
+  assert.equal(output.includes("Share to Chat"), true);
 });
 
 test("authorized /cm user works from another channel in the configured guild", async () => {
