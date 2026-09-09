@@ -9,16 +9,17 @@ This documentation system is the durable memory and governance layer for the Che
 3. `context/DOCS_AUDIT_2026-08-31.md` — explains which older documents are preserved historical snapshots and what current files supersede their stale status assertions.
 4. `context/ACTIVE_CONTEXT.md` — compact current working context.
 5. `context/HANDOFF.md` — exact next engineering/resume sequence.
-6. `decisions/ADR-0017-direct-admin-mutation-slash-commands.md` — direct `/cm aura`, `/cm balance`, and `/cm refund` mutation model.
-7. `decisions/ADR-0016-tickety-account-link-gate.md` — current Tickety account-link authorization/persistence/override model.
-8. `decisions/ADR-0015-single-channel-visible-ai-test.md` — current narrow live-test authorization.
-9. `context/ROADMAP.md` — current project phases and release gates.
-10. `context/ARCHITECTURE.md` — accepted architecture/invariants.
-11. `context/DATA_STATUS.md` — backend/data dependency details; use current-state docs for deployment-status supersession.
-12. `context/CODEBASE_MAP.md` — module ownership and fragile boundaries.
-13. `context/COMMANDS.md` — command policy.
-14. `context/WORKFLOW.md` — task/audit/Git lifecycle.
-15. `context/AUDIT_LOG.md` and `context/PROJECT_HISTORY.md` — chronology.
+6. `decisions/ADR-0018-manual-pending-purchase-approval.md` — guarded manual approval for verified pending payments plus direct-result sharing.
+7. `decisions/ADR-0017-direct-admin-mutation-slash-commands.md` — direct `/cm aura`, `/cm balance`, and `/cm refund` mutation model.
+8. `decisions/ADR-0016-tickety-account-link-gate.md` — current Tickety account-link authorization/persistence/override model.
+9. `decisions/ADR-0015-single-channel-visible-ai-test.md` — current narrow live-test authorization.
+10. `context/ROADMAP.md` — current project phases and release gates.
+11. `context/ARCHITECTURE.md` — accepted architecture/invariants.
+12. `context/DATA_STATUS.md` — backend/data dependency details; use current-state docs for deployment-status supersession.
+13. `context/CODEBASE_MAP.md` — module ownership and fragile boundaries.
+14. `context/COMMANDS.md` — command policy.
+15. `context/WORKFLOW.md` — task/audit/Git lifecycle.
+16. `context/AUDIT_LOG.md` and `context/PROJECT_HISTORY.md` — chronology.
 
 ## AI-support evidence/history
 
@@ -80,6 +81,7 @@ Because this work materially changes routing/knowledge/rendering, consumed B0-v6
 - ADR-0015 — controlled single-channel customer-visible AI test
 - ADR-0016 — Tickety support-ticket account-link gate and ticket-scoped administrator override
 - ADR-0017 — direct admin Aura/balance/refund slash mutations with final-only output
+- ADR-0018 — manual pending-purchase approval and shareable direct mutation results
 
 ## Historical audits
 
