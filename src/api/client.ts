@@ -5,8 +5,12 @@ import { InternalApiClientError } from "./errors";
 import {
   purchaseIntentLookupRequestSchema,
   purchaseIntentLookupResponseSchema,
+  purchaseIntentProcessRequestSchema,
+  purchaseIntentProcessResponseSchema,
   type PurchaseIntentData,
-  type PurchaseIntentLookupSelector
+  type PurchaseIntentLookupSelector,
+  type PurchaseIntentProcessData,
+  type PurchaseIntentProcessInput
 } from "./purchaseIntents";
 import {
   auraAdjustmentRequestSchema,
@@ -66,6 +70,7 @@ export const INTERNAL_API_PATHS = {
   orderDetails: "/api/internal/integrations/v1/orders/details",
   orderFulfillment: "/api/internal/integrations/v1/orders/fulfillment",
   purchaseIntentLookup: "/api/internal/integrations/v1/purchase-intents/lookup",
+  purchaseIntentProcess: "/api/internal/integrations/v1/purchase-intents/process",
   orderRefundPreview: "/api/internal/integrations/v1/orders/refund/preview",
   orderRefundExecute: "/api/internal/integrations/v1/orders/refund/execute",
   userWalletAdjust: "/api/internal/integrations/v1/users/wallet/adjust",
@@ -86,6 +91,12 @@ const expectedStatuses: Record<InternalApiErrorCode, readonly number[]> = {
   IDENTITY_PROVIDER_UNSUPPORTED: [400],
   NOT_FOUND: [404],
   TICKET_CREATOR_MISMATCH: [409],
+  ALREADY_PROCESSED: [409],
+  INTENT_NOT_PROCESSABLE: [409],
+  PAYMENT_PROVIDER_UNSUPPORTED: [409],
+  PURCHASE_CONFIGURATION_UNSUPPORTED: [409],
+  PROCESSING_IN_PROGRESS: [409],
+  MANUAL_REVIEW_REQUIRED: [409],
   REFUND_NOT_ELIGIBLE: [409],
   ALREADY_REFUNDED: [409],
   REFUND_STATE_INVALID: [409],
@@ -258,6 +269,15 @@ export class InternalApiClient {
       purchaseIntentLookupResponseSchema
     );
     return data.purchaseIntent;
+  }
+
+  async processPurchaseIntent(input: PurchaseIntentProcessInput): Promise<PurchaseIntentProcessData> {
+    return this.request(
+      INTERNAL_API_PATHS.purchaseIntentProcess,
+      purchaseIntentProcessRequestSchema,
+      input,
+      purchaseIntentProcessResponseSchema
+    );
   }
 
   async previewOrderRefund(orderId: string): Promise<OrderRefundPreviewData> {
