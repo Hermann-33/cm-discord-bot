@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { MessageFlags, type Client, type MessageCreateOptions } from "discord.js";
-import { postAdjustmentAudit, postRefundAudit, postTicketAccessOverrideAudit } from "../../src/discord/adminAudit";
+import { postAdjustmentAudit, postPurchaseApprovalAudit, postRefundAudit, postTicketAccessOverrideAudit } from "../../src/discord/adminAudit";
 import { escapeDiscordText } from "../../src/discord/presentation";
 import { safeAllowedMentions } from "../../src/discord/safeMessages";
 
@@ -104,6 +104,31 @@ test("adjustment audit keeps only useful balance-change information and flags a 
   assert.equal(content.includes("transactionId"), false);
 });
 
+
+test("manual purchase approval audit records canonical result without process internals", async () => {
+  const { client, sends } = fakeClient();
+  await postPurchaseApprovalAudit({
+    client,
+    channelId: "123456789012345699",
+    operatorId: ADMIN_ID,
+    purchaseRef: "CM-PENDING",
+    orderRef: "CM-ORDER",
+    accountEmail: "user@example.com",
+    customerDiscordUserId: CUSTOMER_DISCORD_ID,
+    reason: "Payment verified manually in support.",
+    completedAt: COMPLETED_AT,
+    processing: false,
+    idempotentReplay: false
+  });
+
+  const content = payloadContent(sends[0]!);
+  assert.equal(content.includes("CM Audit · Manual Purchase Approval"), true);
+  assert.equal(content.includes("CM\\-PENDING"), true);
+  assert.equal(content.includes("CM\\-ORDER"), true);
+  assert.equal(content.includes("Completed"), true);
+  assert.equal(content.includes("processId"), false);
+  assert.equal(content.includes("idempotencyKey"), false);
+});
 
 test("ticket override audit records only ticket, customer, result, and operator context", async () => {
   const { client, sends } = fakeClient();
