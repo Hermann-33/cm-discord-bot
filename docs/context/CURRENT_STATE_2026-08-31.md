@@ -135,10 +135,11 @@ Current branch behavior:
 - re-enforces locked creator permissions after Tickety channel permission rewrites;
 - performs normal durable-state startup recovery without a ticket-specific diagnostic recheck;
 - adds `/cm ticket-allow`, reusing ADR-0006 exact-guild + explicit-user authorization, sanitized audit logging, and a visible ticket-channel override notice naming the operator after successful Discord access restoration.
+- adds ADR-0017 direct `/cm aura`, `/cm balance`, and `/cm refund`: explicit allowlisted slash submission executes immediately, reuses canonical website mutation/idempotency/audit primitives, and returns final-only private output while existing button/modal confirmation flows remain available;
 
 Customer linking uses `https://cheaters.market/dashboard?tab=settings` and the existing website **Connect Discord** OAuth flow.
 
-Production rollout is still gated on website HTTP deployment, adding exactly the three support-ticket operations to the dedicated bot integration client's `allowedOperations`, deploying this bot revision, running `npm run register:commands`, and performing end-to-end Discord verification. No live command registration or production API smoke call is performed by repository validation.
+Ticket-gate production prerequisites remain the deployed website support routes and the three support-ticket operation permissions. This direct-command revision reuses existing refund/Aura/wallet website operations and adds no new `allowedOperations` strings. Bot deployment plus one explicit `npm run register:commands` are required before the new subcommands appear in Discord. Repository validation does not itself register commands or execute live mutations.
 
 Repository source validation after the final ticket-gate hardening passed on head `dbc3b27675647fe4586b9f151273ce3d54ef25e1` with GitHub Actions run `34172585466`:
 
