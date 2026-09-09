@@ -9,9 +9,10 @@ This documentation system is the durable memory and governance layer for the Che
 3. `context/DOCS_AUDIT_2026-08-31.md` — explains which older documents are preserved historical snapshots and what current files supersede their stale status assertions.
 4. `context/ACTIVE_CONTEXT.md` — compact current working context.
 5. `context/HANDOFF.md` — exact next engineering/resume sequence.
-6. `decisions/ADR-0016-tickety-account-link-gate.md` — current Tickety account-link authorization/persistence/override model.
-7. `decisions/ADR-0015-single-channel-visible-ai-test.md` — current narrow live-test authorization.
-8. `context/ROADMAP.md` — current project phases and release gates.
+6. `decisions/ADR-0017-direct-admin-mutation-slash-commands.md` — direct `/cm aura`, `/cm balance`, and `/cm refund` mutation model.
+7. `decisions/ADR-0016-tickety-account-link-gate.md` — current Tickety account-link authorization/persistence/override model.
+8. `decisions/ADR-0015-single-channel-visible-ai-test.md` — current narrow live-test authorization.
+9. `context/ROADMAP.md` — current project phases and release gates.
 9. `context/ARCHITECTURE.md` — accepted architecture/invariants.
 10. `context/DATA_STATUS.md` — backend/data dependency details; use current-state docs for deployment-status supersession.
 11. `context/CODEBASE_MAP.md` — module ownership and fragile boundaries.
@@ -68,7 +69,7 @@ Because this work materially changes routing/knowledge/rendering, consumed B0-v6
 - ADR-0004 — historical admin mutation model, partially superseded by ADR-0006/0007
 - ADR-0005 — customer-message/admin-slash command split
 - ADR-0006 — guild-wide `/cm` admin authorization
-- ADR-0007 — Aura/wallet confirmation/idempotency model
+- ADR-0007 — Aura/wallet button-flow confirmation/idempotency model; superseded by ADR-0017 only for direct slash mutations
 - ADR-0008 — customer-safe sharing base policy
 - ADR-0009 — canonical customer email in shared panels
 - ADR-0010 — private ticket transcript repository boundary
@@ -78,6 +79,7 @@ Because this work materially changes routing/knowledge/rendering, consumed B0-v6
 - ADR-0014 — default-off customer-facing activation / broad-release evidence gate
 - ADR-0015 — controlled single-channel customer-visible AI test
 - ADR-0016 — Tickety support-ticket account-link gate and ticket-scoped administrator override
+- ADR-0017 — direct admin Aura/balance/refund slash mutations with final-only output
 
 ## Historical audits
 
