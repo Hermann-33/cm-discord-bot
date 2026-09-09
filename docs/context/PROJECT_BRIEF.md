@@ -1,6 +1,6 @@
 # Project Brief
 
-Updated: 2026-09-08
+Updated: 2026-09-09
 
 ## Product purpose
 
@@ -23,8 +23,8 @@ The Cheater's Market Discord bot is the Discord-facing companion to Cheater's Ma
 - linked Discord lookup/presentation;
 - order/pending-purchase/fulfillment diagnostics;
 - optional private masked fulfillment support metadata;
-- canonical order refund;
-- confirmed Aura and wallet adjustment;
+- canonical order refund through both interactive and direct admin paths;
+- Aura and wallet adjustment through both confirmed interactive controls and ADR-0017 direct slash commands;
 - Share to Chat customer-safe summaries;
 - structured Discord audit summaries;
 - bounded stateful AI support on explicitly allowlisted message surfaces;
@@ -45,7 +45,7 @@ Ticket authorization uses the same boundary: `support.tickets.access.read`, `sup
 
 ## Admin mutation model
 
-Refund/Aura/wallet remain private admin operations under the accepted confirmation/fresh-state/idempotency/audit model. Pending purchase state is read-only until a canonical order exists. Manual fulfillment remains blocked because no dedicated website-owned execute operation exists.
+Refund/Aura/wallet remain private admin operations. Existing button/modal flows keep their confirmation/fresh-state/idempotency/audit model. ADR-0017 adds direct `/cm aura`, `/cm balance`, and `/cm refund` paths where the allowlisted slash submission is the confirmation and the bot returns the final completed result. Canonical target validation, website idempotency/business rules and backend + Discord audit remain mandatory. Pending purchase state is read-only until a canonical order exists. Manual fulfillment remains blocked because no dedicated website-owned execute operation exists.
 
 Customer AI support has **no mutation authority**.
 
