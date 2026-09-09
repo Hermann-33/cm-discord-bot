@@ -63,7 +63,7 @@ test("startup refresh failure is nonfatal and still starts the retry timer", asy
   const originalError = console.error;
   console.error = () => undefined;
   try {
-    const context = harness({ hasMessage: true, results: [new Error("startup failure")] });
+    const context = harness({ hasMessage: true, results: ["failed"] });
     assert.equal(await context.schedule.start(), "running");
     assert.equal(context.values().timerDelay, LEADERBOARD_UPDATE_INTERVAL_MS);
     assert.deepEqual(context.values().refreshOptions, [{ failOnError: false }]);
