@@ -256,6 +256,21 @@ test("customer-safe pending-purchase share omits purchase/provider internals", (
   assert.equal(serialized.includes("custom_id"), false);
 });
 
+test("customer-safe manual approval share exposes only canonical order confirmation", () => {
+  const state = session();
+  state.shareView = { kind: "purchase-approval-success" };
+  const { content, serialized } = panelData(state);
+
+  assertCustomerEmailPresentAndEscaped(content);
+  assert.equal(content.includes("Manual Payment Approved"), true);
+  assert.equal(content.includes(escapeDiscordText("CM-TEST")), true);
+  assert.equal(content.includes("USD 10.00"), true);
+  assertAbsentEvenIfEscaped(content, USER_ID);
+  assertAbsentEvenIfEscaped(content, PRIVATE_PROVIDER);
+  assertAbsentEvenIfEscaped(content, PRIVATE_LICENSE_OPTION);
+  assert.equal(serialized.includes("custom_id"), false);
+});
+
 test("customer-safe fulfillment share never exposes masked support material or provider internals", () => {
   const state = session();
   state.shareView = { kind: "fulfillment", data: fulfillmentWithSupport };
