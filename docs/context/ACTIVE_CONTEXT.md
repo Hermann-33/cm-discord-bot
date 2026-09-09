@@ -1,6 +1,6 @@
 # Active Context
 
-Updated: 2026-09-08
+Updated: 2026-09-09
 
 ## Read first
 
@@ -50,7 +50,8 @@ Key state:
 - staff/admin/bot messages never renew customer verification;
 - `/cm ticket-allow` reuses ADR-0006 authorization and is ticket-scoped;
 - ADR-0017 direct `/cm aura`, `/cm balance`, and `/cm refund` reuse the same explicit admin allowlist and website mutation operations; command submission is confirmation and final-only private output is returned;
-- production rollout requires site route deployment + exact client allowlist + slash registration + end-to-end smoke.
+- ADR-0018 makes those direct final results shareable through the existing safe renderer and adds guarded manual pending-purchase approval through `purchase-intents.process`;
+- current manual-approval rollout additionally requires `purchase-intents.process` in the dedicated bot client's exact website allowlist; no new slash registration is introduced by ADR-0018.
 
 This branch must not be conflated with or merged into the separate response-reconstruction workstream by accident.
 ## Current quality finding
