@@ -467,6 +467,66 @@ export function buildAdjustmentPreviewPanel(
     .addActionRowComponents(shareRow(sessionId));
 }
 
+export function buildDirectRefundSuccessPanel(
+  refund: OrderRefundExecuteData,
+  overview: UserOverviewData,
+  reason: string,
+  auditPosted: boolean
+): ContainerBuilder {
+  const resultLines = [
+    `Wallet credit: **${formatMoney(refund.finalWalletCreditCents, refund.currency)}**`,
+    `Aura recovered: ${refund.auraRecovered}`,
+    `Completed: ${formatDiscordTimestampPair(refund.refundedAt)}`
+  ];
+  if (refund.idempotentReplay) resultLines.push("> Backend confirmed this was an idempotent replay of the same refund.");
+  if (!auditPosted) resultLines.push("> Discord audit failed to post; the backend audit remains authoritative.");
+
+  return new ContainerBuilder()
+    .addTextDisplayComponents(text(`# Refund Complete\nOrder **${orderRef(refund)}** has been refunded.`))
+    .addSeparatorComponents(separator())
+    .addTextDisplayComponents(text(
+      `### Customer\nEmail: **${escapeDiscordText(overview.identity.email ?? "Not available")}**\nDiscord: ${compactDiscordIdentity(overview)}`
+    ))
+    .addTextDisplayComponents(text(resultLines.join("\n")))
+    .addTextDisplayComponents(text(`### Reason\n${escapeDiscordText(reason)}`));
+}
+
+export function buildDirectAdjustmentSuccessPanel(
+  kind: "aura" | "wallet",
+  result: AuraAdjustmentData | WalletAdjustmentData,
+  overview: UserOverviewData,
+  reason: string,
+  auditPosted: boolean
+): ContainerBuilder {
+  const isAura = kind === "aura" && "deltaAura" in result;
+  const delta = isAura
+    ? `${signedInteger(result.deltaAura)} Aura`
+    : "deltaCents" in result
+      ? formatSignedMoney(result.deltaCents, result.currency)
+      : "—";
+  const balance = isAura
+    ? `${result.availableAura.toLocaleString()} Aura`
+    : "balanceCents" in result
+      ? formatMoney(result.balanceCents, result.currency)
+      : "—";
+  const resultLines = [
+    `Applied: **${delta}**`,
+    `New balance: **${balance}**`,
+    `Completed: ${formatDiscordTimestampPair(result.createdAt)}`
+  ];
+  if (result.idempotentReplay) resultLines.push("> Backend confirmed this was an idempotent replay of the same adjustment.");
+  if (!auditPosted) resultLines.push("> Discord audit failed to post; the backend audit remains authoritative.");
+
+  return new ContainerBuilder()
+    .addTextDisplayComponents(text(`# ${kind === "aura" ? "Aura" : "Balance"} Adjustment Complete`))
+    .addSeparatorComponents(separator())
+    .addTextDisplayComponents(text(
+      `### Customer\nEmail: **${escapeDiscordText(overview.identity.email ?? "Not available")}**\nDiscord: ${compactDiscordIdentity(overview)}`
+    ))
+    .addTextDisplayComponents(text(resultLines.join("\n")))
+    .addTextDisplayComponents(text(`### Reason\n${escapeDiscordText(reason)}`));
+}
+
 export function buildAdjustmentSuccessPanel(
   sessionId: string,
   kind: "aura" | "wallet",

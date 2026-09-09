@@ -1,6 +1,6 @@
 # Current Architecture
 
-Updated: 2026-09-08
+Updated: 2026-09-09
 
 ## System boundary
 
@@ -23,7 +23,7 @@ Current source contains:
 - operational `/refresh-leaderboard`;
 - private `/cm user` by email or linked Discord user;
 - private `/cm order` by public ref or order/purchase UUID;
-- private `/cm` navigation/refund/Aura/wallet controls;
+- private `/cm` navigation plus interactive and direct refund/Aura/wallet controls;
 - deterministic Tickety support-ticket account-link gate and ticket-scoped `/cm ticket-allow` override;
 - authorized Share to Chat buttons that publish separate customer-facing read-only summaries;
 - AI support `messageCreate` handling behind exact guild + explicit channel/category allowlists and feature flags.
@@ -43,7 +43,7 @@ Manual slash registration still publishes:
 
 AI support is message-based and does not add slash commands.
 
-`/cm` now contains `user`, `order`, and `ticket-allow`; the new subcommand requires explicit command re-registration during rollout. Ticket recheck buttons and `/cm ticket-allow` are routed through `TicketLinkGateController` before the ordinary `/cm` controller.
+`/cm` now contains `user`, `order`, `aura`, `balance`, `refund`, and `ticket-allow`. The command JSON change requires explicit `npm run register:commands` after deployment. Ticket recheck buttons and `/cm ticket-allow` are routed through `TicketLinkGateController` before the ordinary `/cm` controller; the three direct mutation subcommands are handled by `CmAdminController`.
 
 ## `/cm` authorization/session boundary
 
@@ -81,7 +81,7 @@ Private admin panels and channel-visible customer summaries remain separate rend
 
 ## Admin mutation boundary
 
-Refund/Aura/wallet mutations remain explicit private admin operations under ADR-0007/0011. They retain preview/confirmation/fresh-state/idempotency/audit requirements. Customer AI has no mutation authority and cannot invoke these operations.
+Refund/Aura/wallet mutations remain explicit private admin operations. The existing button/modal workflows retain ADR-0007/0011 preview/confirmation/fresh-state/idempotency/audit requirements. ADR-0017 adds direct `/cm aura`, `/cm balance`, and `/cm refund` paths where the allowlisted administrator's slash submission is the confirmation; these resolve canonical targets, enforce audit configuration, reuse website validation/idempotency/audit primitives, and return final-only results. Customer AI has no mutation authority and cannot invoke any of these operations.
 
 ## Tickety support-ticket authorization boundary
 
@@ -237,7 +237,7 @@ After reconstruction: freeze a new candidate/runtime, create a fresh B0-v7-or-la
 - optional fulfillment support never blocking canonical order controls;
 - masked support material never entering customer output;
 - customer-share renderer never inheriting private admin controls;
-- refund/Aura/wallet fresh-state + idempotency/audit rules;
+- interactive refund/Aura/wallet fresh-state + idempotency/audit rules and ADR-0017 direct-command target/idempotency/audit rules;
 - no direct DB/purchase-processing/manual-fulfillment shortcuts;
 - no model-selected mutation authority;
 - kill switch remains effective and documented;

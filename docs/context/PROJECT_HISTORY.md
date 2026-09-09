@@ -333,3 +333,14 @@ Ticket lockdown has been overridden by <@operator>.
 The notice is intentionally not posted when only the backend override succeeded but Discord access restoration failed. Existing private operator confirmation and audit logging remain in place.
 
 The temporary support-2094 startup diagnostic recheck was retired in the same revision after the underlying discord.js permission-target bug had been fixed and validated.
+
+
+## 2026-09-09 — Direct admin mutation slash commands
+
+Administrators requested a faster one-command path for common trusted mutations that previously required opening a private panel, completing a modal and pressing a confirmation button.
+
+ADR-0017 introduced direct `/cm aura`, `/cm balance`, and `/cm refund` subcommands. Aura/balance accept either exact CM email or linked Discord user plus a signed amount; refund accepts a canonical order reference. Optional reasons fall back to fixed auditable direct-command reasons.
+
+The new path executes through the same website-owned HMAC operations, canonical target validation, UUID idempotency and backend/Discord audit boundaries, then returns only the final completed private result. Existing interactive confirmation flows remain available.
+
+The change adds no website permission or database access. It does change Discord guild command JSON and requires explicit command registration after deployment.

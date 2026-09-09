@@ -49,6 +49,7 @@ Key state:
 - after expiry, only the creator/customer's next message or **Check Again** triggers verification;
 - staff/admin/bot messages never renew customer verification;
 - `/cm ticket-allow` reuses ADR-0006 authorization and is ticket-scoped;
+- ADR-0017 direct `/cm aura`, `/cm balance`, and `/cm refund` reuse the same explicit admin allowlist and website mutation operations; command submission is confirmation and final-only private output is returned;
 - production rollout requires site route deployment + exact client allowlist + slash registration + end-to-end smoke.
 
 This branch must not be conflated with or merged into the separate response-reconstruction workstream by accident.

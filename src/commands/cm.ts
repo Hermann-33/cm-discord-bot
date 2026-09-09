@@ -20,6 +20,12 @@ import {
   showAdjustmentModal,
   type AdjustmentDependencies
 } from "./cmAdjustments";
+import {
+  executeDirectAdjustment,
+  executeDirectRefund,
+  normalizeDirectAdjustmentReason,
+  normalizeDirectRefundReason
+} from "./cmDirectMutations";
 import { fetchOptionalOrderFulfillment } from "./cmOrderSupport";
 import { refreshSelectedPurchaseIntent } from "./cmPurchaseIntents";
 import { confirmRefund, handleRefundModal, showRefundModal, type RefundDependencies } from "./cmRefund";
@@ -102,6 +108,66 @@ export function buildCmCommand() {
         .setDescription("CM public reference or order UUID")
         .setRequired(true)
         .setMaxLength(128)))
+    .addSubcommand((subcommand) => subcommand
+      .setName("aura")
+      .setDescription("Directly add or deduct Aura for a CM user")
+      .addStringOption((option) => option
+        .setName("amount")
+        .setDescription("Signed Aura amount, e.g. +500 or -250")
+        .setRequired(true)
+        .setMaxLength(24))
+      .addStringOption((option) => option
+        .setName("email")
+        .setDescription("Exact CM account email (use this or Discord user)")
+        .setRequired(false)
+        .setMaxLength(320))
+      .addUserOption((option) => option
+        .setName("discord_user")
+        .setDescription("Linked Discord user (use this or email)")
+        .setRequired(false))
+      .addStringOption((option) => option
+        .setName("reason")
+        .setDescription("Optional audit reason")
+        .setRequired(false)
+        .setMinLength(1)
+        .setMaxLength(500)))
+    .addSubcommand((subcommand) => subcommand
+      .setName("balance")
+      .setDescription("Directly add or deduct CM wallet balance")
+      .addStringOption((option) => option
+        .setName("amount")
+        .setDescription("Signed amount, e.g. +10.00 or -5.25")
+        .setRequired(true)
+        .setMaxLength(24))
+      .addStringOption((option) => option
+        .setName("email")
+        .setDescription("Exact CM account email (use this or Discord user)")
+        .setRequired(false)
+        .setMaxLength(320))
+      .addUserOption((option) => option
+        .setName("discord_user")
+        .setDescription("Linked Discord user (use this or email)")
+        .setRequired(false))
+      .addStringOption((option) => option
+        .setName("reason")
+        .setDescription("Optional audit reason")
+        .setRequired(false)
+        .setMinLength(1)
+        .setMaxLength(500)))
+    .addSubcommand((subcommand) => subcommand
+      .setName("refund")
+      .setDescription("Directly refund a canonical CM order")
+      .addStringOption((option) => option
+        .setName("reference")
+        .setDescription("CM public reference or order UUID")
+        .setRequired(true)
+        .setMaxLength(128))
+      .addStringOption((option) => option
+        .setName("reason")
+        .setDescription("Optional refund reason")
+        .setRequired(false)
+        .setMinLength(8)
+        .setMaxLength(1000)))
     .addSubcommand((subcommand) => subcommand
       .setName("ticket-allow")
       .setDescription("Manually allow the creator of this CM support ticket"));
@@ -218,6 +284,46 @@ export class CmAdminController {
         logger.warn("CM admin order lookup failed", { code: isInternalApiError(error) ? error.code : "UNKNOWN" });
         await interaction.editReply(panelPayload(buildNoticePanel(null, "Order Lookup Failed", safeApiMessage(error))));
       }
+      return;
+    }
+
+    if (subcommand === "aura" || subcommand === "balance") {
+      const selector = parseUserSelector(interaction);
+      if (!selector) {
+        await rejectUnauthorized(interaction, "Provide exactly one user lookup: email or Discord user.");
+        return;
+      }
+      await executeDirectAdjustment({
+        interaction,
+        api: this.api,
+        config: this.config,
+        dependencies: this.dependencies,
+        kind: subcommand === "aura" ? "aura" : "wallet",
+        selector,
+        rawAmount: interaction.options.getString("amount", true),
+        reason: normalizeDirectAdjustmentReason(
+          subcommand === "aura" ? "aura" : "wallet",
+          interaction.options.getString("reason")
+        )
+      });
+      return;
+    }
+
+    if (subcommand === "refund") {
+      const selector = parseOrderSelector(interaction.options.getString("reference", true));
+      if (!selector) {
+        await rejectUnauthorized(interaction, "Reference must be a CM public reference or a valid order UUID.");
+        return;
+      }
+      await executeDirectRefund({
+        interaction,
+        api: this.api,
+        config: this.config,
+        dependencies: this.dependencies,
+        selector,
+        reason: normalizeDirectRefundReason(interaction.options.getString("reason"))
+      });
+      return;
     }
   }
 

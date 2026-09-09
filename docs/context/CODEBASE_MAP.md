@@ -60,8 +60,9 @@ The active `task/ai-support-response-reconstruction` branch is expected to add a
 - `src/commands/cmOrderSupport.ts` — best-effort fulfillment support enrichment.
 - `src/commands/cmPurchaseIntents.ts` — pending purchase refresh/owner validation/transition.
 - `src/commands/cmUserActions.ts` — refresh/navigation.
-- `src/commands/cmRefund.ts` — canonical refund workflow.
-- `src/commands/cmAdjustments.ts` — Aura/wallet adjustment workflow.
+- `src/commands/cmRefund.ts` — interactive canonical refund workflow.
+- `src/commands/cmAdjustments.ts` — interactive Aura/wallet adjustment workflow plus shared signed-delta parsers.
+- `src/commands/cmDirectMutations.ts` — ADR-0017 one-command Aura, wallet-balance and canonical-refund execution with canonical target validation, idempotency, audit and final-only private output.
 - `src/commands/cmUi.ts` — private Components V2 presentation.
 - `src/commands/cmShare.ts` — dedicated customer-safe sharing renderer.
 - `src/commands/cmSupport.ts` — safe messages/parsing/authorization/session helpers.
@@ -72,7 +73,7 @@ The active `task/ai-support-response-reconstruction` branch is expected to add a
 - `src/discord/adminAudit.ts` — concise mention-safe mutation audit panels, including support-ticket override audit.
 - `src/discord/ticketLinkGate.ts` — Tickety recognition, creator resolution, durable website-state recovery, permission gating/re-enforcement, eight-hour activity-triggered renewal, recheck UI, `/cm ticket-allow`, explicit creator `GuildMember` resolution before permission edits, structured Discord REST permission-error diagnostics, and visible operator-attributed ticket override notices.
 - `src/discord/presentation.ts` — safe text/identity/timestamp helpers.
-- `src/discord/registerCommands.ts` — manual `/refresh-leaderboard` + `/cm` registration; `/cm` currently includes `user`, `order`, and `ticket-allow`.
+- `src/discord/registerCommands.ts` — manual `/refresh-leaderboard` + `/cm` registration; `/cm` currently includes `user`, `order`, `aura`, `balance`, `refund`, and `ticket-allow`.
 - `src/discord/safeMessages.ts` — safe mention/channel/message helpers.
 - `src/discord/client.ts` — intents; Message Content is intentional for message-based customer features.
 
@@ -84,7 +85,7 @@ The active `task/ai-support-response-reconstruction` branch is expected to add a
 
 ## Internal Integrations API rule
 
-Production uses only explicit reviewed concrete website operations. Abstract KB operation names are not endpoint names. `catalog.current.read` remains unconfirmed/unavailable. Customer AI has read-only authority; admin refund/Aura/wallet mutation paths remain separate and explicitly confirmed/audited.
+Production uses only explicit reviewed concrete website operations. Abstract KB operation names are not endpoint names. `catalog.current.read` remains unconfirmed/unavailable. Customer AI has read-only authority; admin refund/Aura/wallet mutations remain deterministic allowlisted paths. Interactive paths retain explicit preview/confirm behavior, while ADR-0017 direct slash paths treat the command submission itself as confirmation and remain audited/idempotent.
 
 The support-ticket gate adds only the closed operations `support.tickets.access.read`, `support.tickets.verify`, and `support.tickets.override`. Durable ticket access lives upstream; the bot does not add SQLite, a Northflank volume dependency, Supabase credentials, or a direct DB fallback.
 

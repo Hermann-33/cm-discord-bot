@@ -1,8 +1,8 @@
 # Admin Mutation Model — Aura, Wallet, Refund and Ticket Override
 
-Updated: 2026-09-08
+Updated: 2026-09-09
 
-ADR-0006 governs shared `/cm` authorization. ADR-0007 governs Aura/wallet confirmation. ADR-0016 governs the ticket-scoped support access override. Refund retains its canonical backend preview/re-preview model.
+ADR-0006 governs shared `/cm` authorization. ADR-0007 governs the existing interactive Aura/wallet confirmation model. ADR-0016 governs the ticket-scoped support access override. ADR-0017 governs direct `/cm aura`, `/cm balance`, and `/cm refund` execution. The existing interactive refund flow retains canonical backend preview/re-preview.
 
 ## Global invariants
 
@@ -14,7 +14,7 @@ Every mutation-capable `/cm` interaction must satisfy:
 4. `BOT_ADMIN_USER_IDS` is non-empty;
 5. invoking Discord user ID is explicitly in that allowlist;
 6. every button/modal interaction re-runs the same authorization;
-7. operation-specific input and confirmation state are valid;
+7. operation-specific input and confirmation semantics are valid — interactive flows require their stored confirmation state, while ADR-0017 direct slash submission is itself the confirmation;
 8. mutation occurs only through an approved HMAC Internal Integrations API operation;
 9. `BOT_AUDIT_LOG_CHANNEL_ID` is configured before execute;
 10. backend audit remains authoritative and Discord audit is mention-safe.
@@ -66,7 +66,7 @@ For the same logical mutation:
 
 Never generate a new idempotency key simply because transport failed.
 
-## Aura adjustment — ADR-0007
+## Interactive Aura adjustment — ADR-0007
 
 ### Inputs
 
@@ -98,7 +98,7 @@ Projected negative available Aura is rejected locally and remains backend-reject
 
 The bot never edits pending/lifetime fields or writes an Aura balance directly. Website accounting/audit logic is authoritative.
 
-## Wallet adjustment — ADR-0007
+## Interactive Wallet adjustment — ADR-0007
 
 ### Inputs
 
@@ -159,9 +159,9 @@ The accepted safety model is:
 
 The in-memory proposal is therefore an operator confirmation/state-binding layer, not the business mutation implementation.
 
-## Refund — canonical backend preview remains required
+## Interactive refund — canonical backend preview/re-preview
 
-Refund keeps the existing stronger model because the website exposes:
+The existing order-panel refund flow keeps the stronger preview/confirm/re-preview model because the website exposes:
 
 ```text
 orders.refund.preview
@@ -183,7 +183,53 @@ Refund
 
 Caller does not choose refund economics. Website derives refund amount, wallet credit, Aura effects and audit/transaction IDs from the canonical order.
 
-ADR-0007 does not weaken this flow.
+ADR-0007 does not weaken this interactive flow. ADR-0017 separately defines the direct slash refund path below.
+
+## Direct Aura / balance / refund — ADR-0017
+
+The allowlisted administrator may execute the following direct slash mutations without the intermediate button/modal confirmation flow:
+
+```text
+/cm aura amount:<signed whole number> email:<email>|discord_user:<user> [reason]
+/cm balance amount:<signed decimal> email:<email>|discord_user:<user> [reason]
+/cm refund reference:<public ref|order UUID> [reason]
+```
+
+For these paths, the submitted slash command is the explicit operator confirmation.
+
+### Direct Aura / balance invariants
+
+The bot must:
+
+1. require exactly one target selector: exact email or selected Discord user;
+2. parse the amount using the same signed bounds as the interactive flow;
+3. resolve a fresh `users.overview.read`;
+4. freeze the returned canonical website user ID before execute;
+5. reject a locally projected negative balance;
+6. require `BOT_AUDIT_LOG_CHANNEL_ID`;
+7. generate one fresh UUID idempotency key for the logical mutation;
+8. call exactly one website adjustment operation;
+9. validate returned target and delta;
+10. report the final backend result and post the sanitized Discord audit.
+
+There is intentionally no five-minute proposal, confirm button, or second fresh-state equality comparison on the direct path. The website's transactional validation and negative-balance constraints remain authoritative.
+
+### Direct refund invariants
+
+The bot must:
+
+1. resolve the supplied selector through `orders.details.read`; pending purchase fallback is not used;
+2. resolve the exact canonical owner with `users.overview.read(user_id)`;
+3. require owner equality;
+4. call `orders.refund.preview` immediately before execute to validate current eligibility and exact order/user identity;
+5. generate one fresh UUID idempotency key;
+6. call `orders.refund.execute` using the frozen canonical order ID, reason and operator;
+7. validate returned order/user identity;
+8. report only the final completed result and post the sanitized Discord audit.
+
+The direct path does not expose or accept caller-supplied refund economics. The website still derives wallet credit, Aura effects and all canonical refund accounting.
+
+The existing interactive button/modal workflows remain available and retain their older confirmation semantics.
 
 ## Support ticket override — ADR-0016
 
@@ -219,7 +265,7 @@ The website owns durable override state and idempotency. `adminDiscordId` is aud
 
 `TICKET_CREATOR_MISMATCH` is a deterministic conflict and fails closed. The bot must not retry it using a different creator or invent a new ticket binding.
 
-Unlike Aura/wallet/refund, no second confirmation dialog is required because the operation is narrowly scoped to the current ticket, does not move money/Aura/order state, is reversible only by ticket lifecycle/business-state changes, and is already bound to an explicit allowlisted administrator plus backend idempotency/audit. A later decision is required to weaken or broaden that scope.
+No second confirmation dialog is required for the ticket override because the operation is narrowly scoped to the current ticket and is already bound to an explicit allowlisted administrator plus backend idempotency/audit. ADR-0017 separately permits single-submission direct Aura/balance/refund commands under its stricter canonical-target and audit rules.
 
 ## Direct order entry
 
@@ -284,8 +330,9 @@ Rate limit/authentication/operation-permission/service errors are surfaced throu
 - role-only admin authorization;
 - DM or wrong-guild mutation;
 - treating ephemeral visibility as authorization;
-- unconfirmed Aura/wallet adjustment;
-- skipping the final fresh-state equality check before first Aura/wallet execute;
+- bypassing confirmation on the existing interactive Aura/wallet or refund flows;
+- skipping the final fresh-state equality/re-preview required by those interactive flows;
+- executing a direct Aura/balance/refund mutation outside the exact ADR-0017 slash-command path;
 - changing logical idempotency key/body on retry;
 - direct balance overwrite;
 - destructive ledger/audit edits for reversal;

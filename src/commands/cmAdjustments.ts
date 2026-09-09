@@ -38,7 +38,7 @@ export type AdjustmentDependencies = {
 
 export type AdjustmentKind = "aura" | "wallet";
 
-function parseAuraDelta(value: string): number | null {
+export function parseAuraDelta(value: string): number | null {
   const normalized = value.trim();
   if (!/^[+-]?\d+$/.test(normalized)) return null;
   const parsed = Number(normalized);
@@ -46,7 +46,7 @@ function parseAuraDelta(value: string): number | null {
   return parsed;
 }
 
-function parseWalletDeltaToCents(value: string): number | null {
+export function parseWalletDeltaToCents(value: string): number | null {
   const normalized = value.trim();
   if (!/^[+-]?\d+(?:\.\d{1,2})?$/.test(normalized)) return null;
   const negative = normalized.startsWith("-");

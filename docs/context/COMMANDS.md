@@ -1,17 +1,18 @@
 # Command Catalog and Policy
 
-Updated: 2026-09-08
+Updated: 2026-09-09
 
 ## Authorities
 
 - ADR-0005 — customer vs admin command presentation.
 - ADR-0006 — shared `/cm` exact-guild + explicit-user authorization.
-- ADR-0007 — Aura/wallet confirmation/idempotency/audit.
+- ADR-0007 — existing button/modal Aura/wallet confirmation/idempotency/audit.
 - ADR-0008/0009 — separate customer-safe Share to Chat renderer and canonical email disclosure.
 - ADR-0011 — order-first pending purchase fallback/private fulfillment support boundary.
 - ADR-0014 — broad customer-facing AI activation governance.
 - ADR-0015 — controlled single-channel visible AI test.
 - ADR-0016 — Tickety support-ticket account-link gate and ticket-scoped admin override.
+- ADR-0017 — direct Aura/balance/refund slash mutations; slash submission itself is the confirmation.
 
 No command or customer-AI path may directly connect to Supabase/Postgres.
 
@@ -129,11 +130,25 @@ Canonical customer email is intentionally permitted under ADR-0009.
 
 ## Aura/wallet adjustment
 
-Private admin only. Both retain explicit confirmation, fresh-state equality, stable idempotency and audit requirements under ADR-0007.
+The existing User Operations button/modal path remains available and keeps ADR-0007's preview, five-minute confirmation, fresh-state equality, stable idempotency and audit model.
+
+ADR-0017 additionally adds direct slash mutations:
+
+```text
+/cm aura amount:<+/- whole Aura> email:<exact email> [reason:<optional>]
+/cm aura amount:<+/- whole Aura> discord_user:<user> [reason:<optional>]
+
+/cm balance amount:<+/- decimal amount> email:<exact email> [reason:<optional>]
+/cm balance amount:<+/- decimal amount> discord_user:<user> [reason:<optional>]
+```
+
+Exactly one of `email` or `discord_user` is required. Positive values add; negative values deduct. The direct command resolves a fresh user overview, freezes the canonical user ID, performs the website mutation immediately, posts the normal audit, and returns only the final completed result. There is no preview/confirm button in the direct path.
+
+If `reason` is omitted, the bot supplies a fixed auditable direct-command reason.
 
 ## Refund
 
-Canonical order only:
+The existing order-panel refund flow remains:
 
 ```text
 orders.refund.preview
@@ -142,7 +157,15 @@ orders.refund.preview
  -> orders.refund.execute
 ```
 
-Customer AI cannot invoke this path.
+ADR-0017 additionally provides:
+
+```text
+/cm refund reference:<public ref|order UUID> [reason:<optional>]
+```
+
+The direct command accepts canonical orders only. It resolves the order and owner, performs `orders.refund.preview` as an immediate eligibility/identity check, then executes `orders.refund.execute` without showing an intermediate confirmation panel. The reply is the final completed refund result.
+
+Customer AI cannot invoke either refund path.
 
 ## Authorization matrix
 
@@ -152,8 +175,11 @@ Customer AI cannot invoke this path.
 | AI support (ADR-0015 test) | customer | exact configured guild + channel `1542084649017286727` only | surface allowlist | **none** |
 | AI shadow | evaluation only | same eligibility, post-cohort-cutoff | surface allowlist | **none; no reply** |
 | `/refresh-leaderboard` | staff/admin | configured guild + command channel | permission gate | no |
-| `/cm user ...` | admin | configured guild | **mandatory user allowlist** | confirmed admin paths only |
-| `/cm order ...` | admin | configured guild | **mandatory user allowlist** | pending read-only; canonical refund/navigation |
+| `/cm user ...` | admin | configured guild | **mandatory user allowlist** | interactive admin paths |
+| `/cm order ...` | admin | configured guild | **mandatory user allowlist** | pending read-only; canonical navigation/refund buttons |
+| `/cm aura ...` | admin | configured guild | **mandatory user allowlist** | direct Aura adjustment |
+| `/cm balance ...` | admin | configured guild | **mandatory user allowlist** | direct wallet adjustment |
+| `/cm refund ...` | admin | configured guild | **mandatory user allowlist** | direct canonical-order refund |
 | `/cm ticket-allow` | admin | current CM support ticket | **mandatory user allowlist** | ticket-scoped access override |
 | Share to Chat | admin initiates; readers consume | current guild channel | **mandatory for click** | none |
 
@@ -179,4 +205,4 @@ users.wallet.adjust
 
 Website per-client `allowedOperations` is an independent runtime authorization boundary. Customer AI may use only the separately approved read subset through the deterministic lookup adapter; it never gets refund/Aura/wallet mutation authority.
 
-Top-level slash commands remain `/refresh-leaderboard` + `/cm`, but `/cm` now contains `user`, `order`, and `ticket-allow`. This feature changes command JSON, so production rollout requires one explicit `npm run register:commands` after the site/API permissions are ready. AI support itself still adds no slash command.
+Top-level slash commands remain `/refresh-leaderboard` + `/cm`. `/cm` now contains `user`, `order`, `aura`, `balance`, `refund`, and `ticket-allow`. This changes guild command JSON, so deployment requires one explicit `npm run register:commands`. The direct mutation commands reuse the already-approved website operation set; no new website permission string is required.

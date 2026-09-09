@@ -8,7 +8,7 @@ Current command surfaces:
 - staff operational slash command `/refresh-leaderboard`;
 - private admin `/cm user` lookup by exact email **or** linked Discord user;
 - private admin `/cm order reference:<CM-public-ref-or-order/purchase-UUID>` for canonical orders and pending purchases;
-- private `/cm` Aura, wallet and canonical-order refund controls;
+- private `/cm` Aura, wallet and canonical-order refund controls, including direct `/cm aura`, `/cm balance`, and `/cm refund` execution;
 - explicit customer-safe **Share to Chat** copies from meaningful `/cm` panels.
 
 ## Architecture and data boundary
@@ -221,18 +221,35 @@ ADR-0008 defines the separate public renderer; ADR-0009 permits canonical custom
 
 ## Mutations
 
-Aura and wallet adjustments retain the ADR-0007 model: signed bounded delta, reason, fresh overview, current/change/projected preview, explicit five-minute confirmation, second fresh relevant-balance equality check, stable UUID idempotency/body, website-owned execution and backend + Discord audit.
+The existing button/modal Aura and wallet flows retain ADR-0007: signed bounded delta, reason, fresh overview, current/change/projected preview, explicit five-minute confirmation, second fresh relevant-balance equality check, stable UUID idempotency/body, website-owned execution and backend + Discord audit.
 
-Refund remains canonical-order-only:
+ADR-0017 adds direct slash mutations:
 
 ```text
-orders.refund.preview
-  -> explicit confirmation
-  -> fresh exact re-preview
-  -> orders.refund.execute
+/cm aura amount:+500 discord_user:<user>
+/cm aura amount:-250 email:user@example.com
+
+/cm balance amount:+10.00 discord_user:<user>
+/cm balance amount:-5.25 email:user@example.com
+
+/cm refund reference:CM-...
 ```
 
-Pending purchase intents do not expose refund execution.
+Aura/balance require exactly one of `email` or `discord_user`. Positive amounts add; negative amounts deduct. `reason` is optional on all three direct commands; when omitted, the bot supplies a fixed direct-command audit reason.
+
+Direct Aura/balance commands resolve a fresh user overview, freeze the canonical user ID, execute immediately, audit, and return only the final completed result. They do not show a preview/confirm button.
+
+Direct refund remains canonical-order-only:
+
+```text
+orders.details.read
+  -> resolve owner
+  -> orders.refund.preview (immediate eligibility/identity check)
+  -> orders.refund.execute
+  -> final completed result
+```
+
+The existing order-panel refund preview/confirm flow remains available. Pending purchase intents do not expose refund execution.
 
 ## Develop and validate
 
@@ -254,9 +271,9 @@ Registration is explicit and never happens on startup:
 npm run register:commands
 ```
 
-Top-level commands remain `/refresh-leaderboard` and `/cm`. The `/cm` subcommands are now `user`, `order`, and `ticket-allow`.
+Top-level commands remain `/refresh-leaderboard` and `/cm`. The `/cm` subcommands are now `user`, `order`, `aura`, `balance`, `refund`, and `ticket-allow`.
 
-This task **does change guild command JSON**, so run `npm run register:commands` once after deploying the bot revision and website operation permissions. Command registration is still explicit and is never performed at bot startup.
+This revision **does change guild command JSON**, so run `npm run register:commands` once after deploying the bot revision. Command registration is still explicit and is never performed at bot startup. The new direct commands reuse website operations already used by the existing UI, so no new `allowedOperations` strings are required.
 
 ## Deployment note for pending lookup
 
