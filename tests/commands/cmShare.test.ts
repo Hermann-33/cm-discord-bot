@@ -389,7 +389,7 @@ test("Publish renders completed wallet adjustment without customer email", () =>
 
   assertAbsentEvenIfEscaped(content, CUSTOMER_EMAIL);
   assert.equal(content.includes(`Discord: <@${DISCORD_USER_ID}>`), true);
-  assert.equal(content.includes("Applied: **USD \\-5.25**"), true);
+  assert.equal(content.includes("Applied: **USD -5.25**"), true);
   assert.equal(content.includes("New balance: **USD 19.75**"), true);
   assertAbsentEvenIfEscaped(content, USER_ID);
   assert.equal(serialized.includes("custom_id"), false);
