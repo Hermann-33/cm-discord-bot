@@ -64,6 +64,8 @@ The active `task/ai-support-response-reconstruction` branch is expected to add a
 - `src/commands/cmRefund.ts` — interactive canonical refund workflow.
 - `src/commands/cmAdjustments.ts` — interactive Aura/wallet adjustment workflow plus shared signed-delta parsers.
 - `src/commands/cmDirectMutations.ts` — ADR-0017 one-command Aura, wallet-balance and canonical-refund execution with canonical target validation, idempotency, audit, final-only private output and ADR-0018 share-session creation.
+- `src/scheduler/leaderboardSchedule.ts` — five-minute leaderboard loop; ADR-0019 makes the initial configured-message refresh nonfatal so the timer still retries.
+- `src/index.ts` — Discord runtime composition; leaderboard bootstrap/start failure is logged rather than promoted into whole-process shutdown.
 - `src/commands/cmUi.ts` — private Components V2 presentation.
 - `src/commands/cmShare.ts` — dedicated customer-safe sharing renderer.
 - `src/commands/cmSupport.ts` — safe messages/parsing/authorization/session helpers.
