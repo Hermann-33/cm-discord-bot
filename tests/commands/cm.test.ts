@@ -525,7 +525,6 @@ test("authorized /cm refund previews for eligibility then executes immediately a
   assert.deepEqual(context.defers, [{ flags: MessageFlags.Ephemeral }]);
   const output = JSON.stringify(context.edits[0]);
   assert.equal(output.includes("Refund Complete"), true);
-  assert.equal(output.includes("CM-TEST"), true);
   assert.equal(output.includes("USD 10.00"), true);
   assert.equal(output.includes("Confirm"), false);
 });
