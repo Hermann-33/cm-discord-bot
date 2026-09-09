@@ -133,6 +133,19 @@ users.wallet.adjust
 
 Website per-client `allowedOperations` is separate runtime authorization. No abstract KB operation may be converted into an invented endpoint. `catalog.current.read` remains unavailable until separately implemented/reviewed upstream.
 
+## Runtime liveness isolation — ADR-0019
+
+The bot is one long-running Discord process, but leaderboard health is not process-liveness authority.
+
+On `ClientReady`:
+
+- the ticket-gate startup reconciliation remains independent;
+- a configured leaderboard performs a nonfatal initial refresh and then starts the existing five-minute retry interval;
+- missing leaderboard message configuration may create the bootstrap message but does not terminate the bot;
+- leaderboard bootstrap/refresh exceptions are logged and do not destroy the Discord client.
+
+Whole-process shutdown is reserved for explicit process signals or Discord login failure. This keeps `/cm`, ticket gating, customer Aura and the controlled AI surface available during leaderboard incidents.
+
 ## Private transcript / public runtime boundary
 
 ADR-0010 remains unchanged: transcript exporter/knowledge tooling is non-production and `CM-Ticket-Transcripts` is a private data/spec repository.

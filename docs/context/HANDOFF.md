@@ -47,6 +47,7 @@ Implemented behavior:
 - `/cm ticket-allow` reuses ADR-0006 exact-guild + explicit-user authorization, requires `BOT_AUDIT_LOG_CHANNEL_ID`, persists a ticket-scoped override, restores participation, posts a visible ticket-channel notice naming the operator after a successful unlock, and emits sanitized Discord audit.
 - ADR-0017 adds direct `/cm aura`, `/cm balance`, and `/cm refund` paths. They remain exact-guild + explicit-user-authorized and audit-gated, but the slash submission itself is confirmation and the response is the final completed result; existing interactive confirmation paths remain available.
 - ADR-0018 adds **Share to Chat** to those direct completed results and a confirmed **Approve Payment** workflow for pending purchases using the production `purchase-intents.process` operation.
+- ADR-0019 prevents leaderboard bootstrap/initial-refresh failure from shutting down the Discord runtime; after deployment, verify the five-minute backend heartbeat resumes and `/cm` commands respond.
 
 Customer link destination:
 

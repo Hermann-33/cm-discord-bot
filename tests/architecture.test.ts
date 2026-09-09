@@ -121,6 +121,17 @@ test("admin authorization is guild-wide and cannot rely on Discord roles alone",
   assert.equal(sourceText.includes("botAdminCommandChannelId"), false);
 });
 
+test("leaderboard startup cannot shut down the whole Discord runtime", () => {
+  const indexSource = readFileSync(join(process.cwd(), "src", "index.ts"), "utf8");
+  const readyStart = indexSource.indexOf("discordClient.once(Events.ClientReady");
+  const readyEnd = indexSource.indexOf("discordClient.on(Events.MessageCreate", readyStart);
+  assert.ok(readyStart >= 0 && readyEnd > readyStart);
+  const readyBlock = indexSource.slice(readyStart, readyEnd);
+  assert.equal(readyBlock.includes("shutdown(0)"), false);
+  assert.equal(readyBlock.includes("shutdown(1)"), false);
+  assert.equal(readyBlock.includes("bot remains online"), true);
+});
+
 test("environment example contains only the approved root variable surface", () => {
   const names = readFileSync(join(process.cwd(), ".env.example"), "utf8")
     .split(/\r?\n/)

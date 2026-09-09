@@ -114,11 +114,10 @@ discordClient.once(Events.ClientReady, async () => {
   try {
     const startResult = await leaderboardSchedule.start();
     if (startResult === "bootstrap-complete") {
-      await shutdown(0);
+      logger.warn("leaderboard bootstrap complete; bot remains online without scheduled leaderboard refresh");
     }
   } catch (error) {
-    logger.error("sanitized update failure", sanitizeError(error));
-    await shutdown(1);
+    logger.error("leaderboard startup failed; bot remains online", sanitizeError(error));
   }
 });
 

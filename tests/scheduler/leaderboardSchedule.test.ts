@@ -54,15 +54,22 @@ test("bootstrap creates one message and does not start the timer", async () => {
 test("performs an immediate startup refresh then starts the five-minute timer", async () => {
   const context = harness({ hasMessage: true });
   assert.equal(await context.schedule.start(), "running");
-  assert.deepEqual(context.values().refreshOptions, [{ failOnError: true }]);
+  assert.deepEqual(context.values().refreshOptions, [{ failOnError: false }]);
   assert.equal(context.values().timerDelay, LEADERBOARD_UPDATE_INTERVAL_MS);
   assert.equal(LEADERBOARD_UPDATE_INTERVAL_MS, 300_000);
 });
 
-test("startup refresh failure propagates and does not start the timer", async () => {
-  const context = harness({ hasMessage: true, results: [new Error("startup failure")] });
-  await assert.rejects(() => context.schedule.start(), /startup failure/);
-  assert.equal(context.values().timerDelay, undefined);
+test("startup refresh failure is nonfatal and still starts the retry timer", async () => {
+  const originalError = console.error;
+  console.error = () => undefined;
+  try {
+    const context = harness({ hasMessage: true, results: ["failed"] });
+    assert.equal(await context.schedule.start(), "running");
+    assert.equal(context.values().timerDelay, LEADERBOARD_UPDATE_INTERVAL_MS);
+    assert.deepEqual(context.values().refreshOptions, [{ failOnError: false }]);
+  } finally {
+    console.error = originalError;
+  }
 });
 
 test("scheduled refresh uses nonfatal mode and continues after failure", async () => {
@@ -71,7 +78,7 @@ test("scheduled refresh uses nonfatal mode and continues after failure", async (
   await context.schedule.runScheduledRefresh();
   await context.schedule.runScheduledRefresh();
   assert.deepEqual(context.values().refreshOptions, [
-    { failOnError: true },
+    { failOnError: false },
     { failOnError: false },
     { failOnError: false }
   ]);

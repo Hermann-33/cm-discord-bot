@@ -353,3 +353,10 @@ TASK-CM-ADMIN-009 / ADR-0018 made ADR-0017 direct Aura/balance/refund completion
 Pending purchase support was extended from ADR-0011 read-only state to an explicit allowlisted **Approve Payment** workflow backed by the production `purchase-intents.process` Internal Integrations operation. The bot captures reason/evidence and confirmation state but leaves amount, payment/provider interpretation, order creation, accounting, fulfillment and durable effects to CM. Active processing is never blindly resubmitted with a new idempotency key.
 
 Customer AI remains read-only and manual fulfillment remains unavailable.
+
+
+## 2026-09-09 — Runtime liveness isolated from leaderboard health
+
+TASK-CM-RUNTIME-001 / ADR-0019 repaired a production command outage where the replacement Discord process stopped after deployment. Database nonce timing proved the old process's five-minute heartbeat ended at the deploy boundary and the replacement emitted only startup reconciliation traffic before disappearing.
+
+The obsolete leaderboard-era fatal startup behavior was removed as process-liveness authority. Initial leaderboard refresh now fails nonfatally and retains the five-minute retry loop; missing-message bootstrap and startup exceptions no longer destroy the Discord client. Commands, ticket gating, customer Aura and AI support stay online during leaderboard incidents.

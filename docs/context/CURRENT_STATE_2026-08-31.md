@@ -153,6 +153,14 @@ git diff --check: PASS
 
 Repository validation must remain green after the ticket-override public-notice change.
 
+## 2026-09-09 runtime incident and ADR-0019
+
+A post-deployment command outage showed that the process-level leaderboard startup policy was stale. Live Internal Integrations nonce timing showed a normal five-minute request heartbeat before the deployment, startup reconciliation traffic from the replacement instance, then no further backend traffic.
+
+ADR-0019 changes the runtime boundary: leaderboard bootstrap/initial-refresh failures are nonfatal to the Discord process. A configured leaderboard still retries every five minutes; missing-message bootstrap leaves the bot online without scheduled edits until configuration is completed.
+
+This runtime isolation changes no command authorization, API signing, website operation contract, database boundary, AI authority or ticket-gate semantics.
+
 ## Architecture and safety invariants
 
 Production remains:

@@ -318,6 +318,12 @@ If accepted outputs are returned, continue with a 20-record smoke benchmark. The
 
 These commands use already-consumed development records, keep new final holdouts out of model selection, never send routing exemplars or raw historical evidence to the model, and do not execute the production bot.
 
+## Runtime availability
+
+Leaderboard health is isolated from the rest of the Discord runtime. A failed initial leaderboard refresh is logged and retried by the existing five-minute schedule; it does not terminate `/cm`, ticket gating, customer Aura, or AI support.
+
+If `DISCORD_LEADERBOARD_MESSAGE_ID` is absent, the bot can create the bootstrap leaderboard message and remains online, but scheduled edits stay disabled until that message ID is stored and the service is restarted/redeployed.
+
 ## Production notes
 
 Use a single bot replica unless the in-memory session/scheduler architecture is redesigned. Keep Discord/API credentials only in the host secret store, collect structured logs without request bodies/credentials, and keep the bot limited to the exact website operations required by deployed source.
