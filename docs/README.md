@@ -13,12 +13,12 @@ This documentation system is the durable memory and governance layer for the Che
 7. `decisions/ADR-0016-tickety-account-link-gate.md` — current Tickety account-link authorization/persistence/override model.
 8. `decisions/ADR-0015-single-channel-visible-ai-test.md` — current narrow live-test authorization.
 9. `context/ROADMAP.md` — current project phases and release gates.
-9. `context/ARCHITECTURE.md` — accepted architecture/invariants.
-10. `context/DATA_STATUS.md` — backend/data dependency details; use current-state docs for deployment-status supersession.
-11. `context/CODEBASE_MAP.md` — module ownership and fragile boundaries.
-12. `context/COMMANDS.md` — command policy.
-13. `context/WORKFLOW.md` — task/audit/Git lifecycle.
-14. `context/AUDIT_LOG.md` and `context/PROJECT_HISTORY.md` — chronology.
+10. `context/ARCHITECTURE.md` — accepted architecture/invariants.
+11. `context/DATA_STATUS.md` — backend/data dependency details; use current-state docs for deployment-status supersession.
+12. `context/CODEBASE_MAP.md` — module ownership and fragile boundaries.
+13. `context/COMMANDS.md` — command policy.
+14. `context/WORKFLOW.md` — task/audit/Git lifecycle.
+15. `context/AUDIT_LOG.md` and `context/PROJECT_HISTORY.md` — chronology.
 
 ## AI-support evidence/history
 
