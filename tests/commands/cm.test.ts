@@ -323,7 +323,8 @@ test("authorized /cm aura executes immediately from a Discord user and returns o
         provider: "discord",
         externalUserId: DISCORD_CUSTOMER_ID,
         username: "customer",
-        displayName: "Customer"
+        displayName: "Customer",
+        linkedAt: "2026-08-10T00:00:00.000Z"
       }]
     }
   } satisfies UserOverviewData;
