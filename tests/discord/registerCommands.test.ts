@@ -12,15 +12,38 @@ test("refresh leaderboard registration JSON matches the frozen legacy command fi
   assert.deepEqual(JSON.parse(JSON.stringify(buildRefreshLeaderboardCommand())), expected);
 });
 
-test("CM admin command registers user, order, and ticket override surfaces", () => {
+test("CM admin command registers direct mutation and existing admin surfaces", () => {
   const command = buildCmCommand().toJSON();
   assert.equal(command.name, "cm");
-  assert.deepEqual(command.options?.map((option) => option.name), ["user", "order", "ticket-allow"]);
+  assert.deepEqual(
+    command.options?.map((option) => option.name),
+    ["user", "order", "aura", "balance", "refund", "ticket-allow"]
+  );
   const user = command.options?.[0] as { options?: { name: string; required?: boolean; type?: number }[] };
-  const ticketAllow = command.options?.[2] as { options?: unknown[] };
+  const aura = command.options?.[2] as { options?: { name: string; required?: boolean; type?: number }[] };
+  const balance = command.options?.[3] as { options?: { name: string; required?: boolean; type?: number }[] };
+  const refund = command.options?.[4] as { options?: { name: string; required?: boolean; type?: number }[] };
+  const ticketAllow = command.options?.[5] as { options?: unknown[] };
+
   assert.deepEqual(user.options?.map((option) => [option.name, option.required, option.type]), [
     ["email", false, 3],
     ["discord_user", false, 6]
+  ]);
+  assert.deepEqual(aura.options?.map((option) => [option.name, option.required, option.type]), [
+    ["amount", true, 3],
+    ["email", false, 3],
+    ["discord_user", false, 6],
+    ["reason", false, 3]
+  ]);
+  assert.deepEqual(balance.options?.map((option) => [option.name, option.required, option.type]), [
+    ["amount", true, 3],
+    ["email", false, 3],
+    ["discord_user", false, 6],
+    ["reason", false, 3]
+  ]);
+  assert.deepEqual(refund.options?.map((option) => [option.name, option.required, option.type]), [
+    ["reference", true, 3],
+    ["reason", false, 3]
   ]);
   assert.deepEqual(ticketAllow.options, []);
 });
