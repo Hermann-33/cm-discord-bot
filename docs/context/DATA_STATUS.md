@@ -176,7 +176,7 @@ users.aura.adjust
 users.wallet.adjust
 ```
 
-Their existing confirmation/state-equality/idempotency/audit models are unchanged. Customer AI support has no authority to call them.
+The existing interactive UI paths retain their confirmation/state-equality/idempotency/audit models. ADR-0017 direct `/cm aura`, `/cm balance`, and `/cm refund` reuse these same website operations without adding new operation permissions; direct slash submission is the confirmation, canonical target/eligibility checks still run, and backend idempotency/audit remains authoritative. Customer AI support has no authority to call them.
 
 ## Stable relevant errors
 
