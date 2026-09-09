@@ -335,6 +335,15 @@ export async function confirmPurchaseApproval(
     logger.warn("CM purchase approval execute failed", {
       code: isInternalApiError(error) ? error.code : "UNKNOWN"
     });
+    if (proposal.submitted) {
+      session.shareView = { kind: "purchase-intent" };
+      await interaction.editReply(panelPayload(buildPurchaseApprovalProcessingPanel(
+        session.id,
+        session.selectedPurchaseIntent ?? selected
+      )));
+      return;
+    }
+
     if (
       isInternalApiError(error, "ALREADY_PROCESSED")
       || isInternalApiError(error, "INTENT_NOT_PROCESSABLE")
