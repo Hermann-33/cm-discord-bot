@@ -408,5 +408,8 @@ test("success panels keep outcomes but omit backend bookkeeping", () => {
   assert.equal(refundData.content.includes("Wallet credit:"), true);
   assert.equal(refundData.content.includes("Aura recovered:"), true);
   assert.equal(adjustmentData.content.includes("Applied:"), true);
+  assert.equal(adjustmentData.serialized.includes("Share to Chat"), true);
+  assert.equal(adjustmentData.serialized.includes("Publish"), true);
+  assert.equal(refundData.serialized.includes("Publish"), false);
   assert.equal(adjustmentData.content.includes("New balance:"), true);
 });
