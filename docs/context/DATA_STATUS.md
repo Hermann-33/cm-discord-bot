@@ -32,7 +32,7 @@ users.aura.adjust
 
 This catalog is not the bot source surface and is not proof of a deployed client's permission. Website clients have explicit non-empty `allowedOperations`; there is no wildcard/master bypass.
 
-`purchase-intents.process` remains forbidden to the Discord bot AI-support design as well as ordinary bot operations. `support.tickets.override` is the narrow ADR-0016 exception for deterministic, explicitly authorized ticket access; customer AI cannot call it.
+`purchase-intents.process` remains forbidden to customer AI and ordinary read-only support routing. ADR-0018 permits it only through the explicit allowlisted admin manual-payment approval workflow. `support.tickets.override` remains the separate ADR-0016 deterministic ticket-access mutation; customer AI cannot call either operation.
 
 ## Current production/admin bot operation surface
 
@@ -132,7 +132,7 @@ The selector-only overreach documented in the old V3 development checkpoint was 
 
 `orders.fulfillment.read` remains read-only diagnostics. Optional support data is bounded/masked. Raw/decrypted license/account secrets are outside the DTO and strict schemas reject unexpected fields.
 
-No manual-fulfillment execute operation exists. The bot must not call DB functions, invent an endpoint or reuse `purchase-intents.process` as a substitute.
+No manual-fulfillment execute operation exists. The bot must not call DB functions, invent an endpoint or use `purchase-intents.process` as a substitute for fulfillment. ADR-0018 uses that operation only for its documented purpose: manually finalizing a human-verified payment.
 
 ## Share to Chat data source
 
