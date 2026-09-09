@@ -518,3 +518,51 @@ The existing private command confirmation and sanitized audit-channel record rem
 The temporary support-2094 startup diagnostic recheck introduced while debugging the discord.js permission-target issue has been removed. Startup is again ordinary durable-state recovery with no ticket-specific freshness exception.
 
 No slash-command JSON, HMAC operation, database state model, authorization rule, or website API contract changed.
+
+
+---
+
+## 2026-09-09 — TASK-CM-ADMIN-008 — direct Aura balance and refund commands
+
+### Product change
+
+Added explicit allowlisted direct mutation subcommands:
+
+```text
+/cm aura amount:<signed Aura> email:<email>|discord_user:<user> [reason]
+/cm balance amount:<signed decimal> email:<email>|discord_user:<user> [reason]
+/cm refund reference:<public ref|order UUID> [reason]
+```
+
+The operator's slash-command submission is the confirmation for these ADR-0017 paths. Successful commands return the final completed private Components V2 result directly; there is no intermediate modal, preview panel or confirm button.
+
+The existing button/modal Aura, wallet and refund workflows remain available and retain their previous confirmation semantics.
+
+### Security / data boundary
+
+Direct commands preserve:
+
+- exact configured guild;
+- non-empty explicit `BOT_ADMIN_USER_IDS`;
+- invoker explicitly allowlisted;
+- `BOT_AUDIT_LOG_CHANNEL_ID` required before execute;
+- HMAC Internal Integrations API only;
+- no direct Supabase/Postgres access;
+- fresh canonical user/order resolution;
+- bounded signed adjustment parsing;
+- local negative-balance defense in depth;
+- website transactional/business validation;
+- UUID idempotency;
+- returned target/delta/order validation;
+- backend immutable audit plus sanitized Discord audit;
+- no customer/hosted-AI mutation authority.
+
+Direct refund calls the canonical refund preview immediately as an eligibility/order-owner check, but does not display a user-facing confirmation preview before execution.
+
+No new website operation or permission string is added; the commands reuse `users.overview.read`, `orders.details.read`, `orders.refund.preview`, `orders.refund.execute`, `users.aura.adjust`, and `users.wallet.adjust`.
+
+### Governance
+
+ADR-0017 supersedes ADR-0004/ADR-0007 confirmation requirements only for the three direct slash-command paths. Existing interactive flows remain governed by their prior confirmation model.
+
+Discord guild command JSON changes and therefore requires explicit `npm run register:commands` after deployment.
