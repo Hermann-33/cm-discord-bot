@@ -468,6 +468,7 @@ export function buildAdjustmentPreviewPanel(
 }
 
 export function buildDirectRefundSuccessPanel(
+  sessionId: string,
   refund: OrderRefundExecuteData,
   overview: UserOverviewData,
   reason: string,
@@ -488,10 +489,12 @@ export function buildDirectRefundSuccessPanel(
       `### Customer\nEmail: **${escapeDiscordText(overview.identity.email ?? "Not available")}**\nDiscord: ${compactDiscordIdentity(overview)}`
     ))
     .addTextDisplayComponents(text(resultLines.join("\n")))
-    .addTextDisplayComponents(text(`### Reason\n${escapeDiscordText(reason)}`));
+    .addTextDisplayComponents(text(`### Reason\n${escapeDiscordText(reason)}`))
+    .addActionRowComponents(shareRow(sessionId));
 }
 
 export function buildDirectAdjustmentSuccessPanel(
+  sessionId: string,
   kind: "aura" | "wallet",
   result: AuraAdjustmentData | WalletAdjustmentData,
   overview: UserOverviewData,
@@ -524,7 +527,8 @@ export function buildDirectAdjustmentSuccessPanel(
       `### Customer\nEmail: **${escapeDiscordText(overview.identity.email ?? "Not available")}**\nDiscord: ${compactDiscordIdentity(overview)}`
     ))
     .addTextDisplayComponents(text(resultLines.join("\n")))
-    .addTextDisplayComponents(text(`### Reason\n${escapeDiscordText(reason)}`));
+    .addTextDisplayComponents(text(`### Reason\n${escapeDiscordText(reason)}`))
+    .addActionRowComponents(shareRow(sessionId));
 }
 
 export function buildAdjustmentSuccessPanel(
