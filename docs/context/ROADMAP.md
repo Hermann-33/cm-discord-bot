@@ -26,7 +26,7 @@ Exact guild + explicit admin allowlist + per-interaction authorization.
 
 ### Phase 4 — Order/Aura/wallet controls — COMPLETE
 
-Direct order lookup, confirmed Aura/wallet adjustment and canonical refund with audit/idempotency controls.
+Direct order lookup, interactive confirmed Aura/wallet adjustment and canonical refund with audit/idempotency controls. ADR-0017 additionally provides one-command direct Aura, wallet-balance and canonical-refund execution for explicitly allowlisted administrators, with final-only private output.
 
 ### Phase 5 — Customer-safe sharing / Discord admin UX — COMPLETE
 
@@ -50,7 +50,7 @@ Remaining completion gates:
 2. website support-ticket HTTP routes must be production-deployed;
 3. the dedicated CM Discord bot Internal API client must receive exactly `support.tickets.access.read`, `support.tickets.verify`, and `support.tickets.override`;
 4. deploy the bot revision;
-5. explicitly run `npm run register:commands` once;
+5. explicitly run `npm run register:commands` once so the new `aura`, `balance`, and `refund` `/cm` subcommands are registered;
 6. perform live linked/unlinked/recheck/expired-lease/restart/Tickety-rewrite/admin-override smoke verification.
 
 No local DB, Northflank persistence volume, or direct Supabase access is part of this phase.
