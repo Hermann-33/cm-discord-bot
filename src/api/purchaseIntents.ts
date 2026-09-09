@@ -23,6 +23,34 @@ export const purchaseIntentLookupRequestSchema = z.object({
   selector: purchaseIntentLookupSelectorSchema
 }).strict();
 
+const purchaseIntentOperatorSchema = z.object({
+  provider: z.literal("discord"),
+  externalUserId: z.string().regex(/^\d{17,20}$/),
+  username: z.string().trim().min(1).max(100).nullable().optional(),
+  displayName: z.string().trim().min(1).max(100).nullable().optional()
+}).strict();
+
+export const purchaseIntentProcessRequestSchema = z.object({
+  selector: purchaseIntentLookupSelectorSchema,
+  reason: z.string().trim().min(8).max(1_000),
+  evidenceReference: z.string().trim().min(1).max(500).optional(),
+  idempotencyKey: uuidSchema,
+  operator: purchaseIntentOperatorSchema.optional()
+}).strict();
+
+/**
+ * The process endpoint has a larger durable-processing DTO than the bot needs.
+ * Consume only the documented stable fields and re-resolve canonical purchase/order
+ * state through the strict lookup endpoints after processing.
+ */
+export const purchaseIntentProcessResponseSchema = z.object({
+  processing: z.object({
+    status: z.enum(["processed", "processing"])
+  }).passthrough(),
+  effectsStatus: z.enum(["not_applicable", "pending", "completed", "manual_review_required"]).optional(),
+  idempotentReplay: z.boolean().optional()
+}).passthrough();
+
 export const purchaseIntentLookupResponseSchema = z.object({
   purchaseIntent: z.object({
     purchaseIntentId: uuidSchema,
@@ -51,3 +79,5 @@ export const purchaseIntentLookupResponseSchema = z.object({
 
 export type PurchaseIntentLookupSelector = z.infer<typeof purchaseIntentLookupSelectorSchema>;
 export type PurchaseIntentData = z.infer<typeof purchaseIntentLookupResponseSchema>["purchaseIntent"];
+export type PurchaseIntentProcessInput = z.infer<typeof purchaseIntentProcessRequestSchema>;
+export type PurchaseIntentProcessData = z.infer<typeof purchaseIntentProcessResponseSchema>;
