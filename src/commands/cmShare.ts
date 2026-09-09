@@ -89,6 +89,13 @@ function customerIdentityBlock(session: CmAdminSession): string {
   return `${email}\nDiscord: ${discordUserMention(identity.externalUserId)}`;
 }
 
+function customerDiscordOnlyBlock(session: CmAdminSession): string {
+  const identity = findDiscordIdentity(session.overview);
+  return identity
+    ? `Discord: ${discordUserMention(identity.externalUserId)}`
+    : "Discord: **Not linked**";
+}
+
 function buildUserShare(session: CmAdminSession): ContainerBuilder {
   const overview = session.overview;
   const latest = overview.recentOrders[0];
@@ -289,6 +296,72 @@ export function buildPublicSharePanel(session: CmAdminSession): ContainerBuilder
   }
 
   return null;
+}
+
+export function buildAdjustmentPublishPanel(session: CmAdminSession): ContainerBuilder | null {
+  const view = session.shareView;
+  if (view.kind !== "adjustment-success") return null;
+
+  const container = new ContainerBuilder()
+    .addTextDisplayComponents(text(`# ${view.adjustmentKind === "aura" ? "Aura" : "Wallet"} Adjustment Complete`))
+    .addSeparatorComponents(separator())
+    .addTextDisplayComponents(text(`### Customer\n${customerDiscordOnlyBlock(session)}`));
+
+  if (view.adjustmentKind === "aura") {
+    const result = view.data;
+    return container.addTextDisplayComponents(text(
+      `### Result\nApplied: **${signedInteger(result.deltaAura)} Aura**\nNew balance: **${result.availableAura.toLocaleString()} Aura**\nCompleted: ${formatDiscordTimestampPair(result.createdAt)}`
+    ));
+  }
+
+  const result = view.data;
+  return container.addTextDisplayComponents(text(
+    `### Result\nApplied: **${formatSignedMoney(result.deltaCents, result.currency)}**\nNew balance: **${formatMoney(result.balanceCents, result.currency)}**\nCompleted: ${formatDiscordTimestampPair(result.createdAt)}`
+  ));
+}
+
+export async function publishCurrentAdjustment(
+  interaction: ButtonInteraction,
+  session: CmAdminSession
+): Promise<void> {
+  const panel = buildAdjustmentPublishPanel(session);
+  if (!panel) {
+    await interaction.reply({
+      content: "This session does not contain a completed Aura or wallet adjustment to publish.",
+      flags: MessageFlags.Ephemeral,
+      allowedMentions: safeAllowedMentions
+    });
+    return;
+  }
+
+  const channel = interaction.channel;
+  if (!isShareChannel(channel)) {
+    await interaction.reply({
+      content: "This Discord channel cannot receive the published CM adjustment panel.",
+      flags: MessageFlags.Ephemeral,
+      allowedMentions: safeAllowedMentions
+    });
+    return;
+  }
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  try {
+    await channel.send({
+      components: [panel],
+      flags: MessageFlags.IsComponentsV2,
+      allowedMentions: safeAllowedMentions
+    });
+    await interaction.editReply({
+      content: "Published the adjustment without the customer's email address.",
+      allowedMentions: safeAllowedMentions
+    });
+  } catch (error) {
+    logger.warn("CM adjustment publish failed", sanitizeError(error));
+    await interaction.editReply({
+      content: "The adjustment could not be published to this channel.",
+      allowedMentions: safeAllowedMentions
+    });
+  }
 }
 
 export async function shareCurrentPanel(
