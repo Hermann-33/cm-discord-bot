@@ -13,6 +13,7 @@ Updated: 2026-09-09
 - ADR-0015 — controlled single-channel visible AI test.
 - ADR-0016 — Tickety support-ticket account-link gate and ticket-scoped admin override.
 - ADR-0017 — direct Aura/balance/refund slash mutations; slash submission itself is the confirmation.
+- ADR-0018 — manual pending-purchase approval and shareable direct mutation results.
 
 No command or customer-AI path may directly connect to Supabase/Postgres.
 
@@ -112,7 +113,7 @@ orders.details.read
   -> stable NOT_FOUND only: purchase-intents.lookup.read
 ```
 
-Owner identity is resolved and checked exactly before an operator session opens. Pending purchase state is read-only and may transition to the canonical order after refresh.
+Owner identity is resolved and checked exactly before an operator session opens. Pending purchase state may transition to the canonical order after refresh. ADR-0018 additionally permits an allowlisted admin to approve an independently verified payment through the website-owned `purchase-intents.process` mutation after reason/evidence capture and explicit confirmation.
 
 Other order errors never trigger pending fallback.
 
@@ -142,7 +143,7 @@ ADR-0017 additionally adds direct slash mutations:
 /cm balance amount:<+/- decimal amount> discord_user:<user> [reason:<optional>]
 ```
 
-Exactly one of `email` or `discord_user` is required. Positive values add; negative values deduct. The direct command resolves a fresh user overview, freezes the canonical user ID, performs the website mutation immediately, posts the normal audit, and returns only the final completed result. There is no preview/confirm button in the direct path.
+Exactly one of `email` or `discord_user` is required. Positive values add; negative values deduct. The direct command resolves a fresh user overview, freezes the canonical user ID, performs the website mutation immediately, posts the normal audit, and returns only the final completed result. There is no preview/confirm button in the direct path. The final result now creates an operator-bound session so **Share to Chat** can reuse the existing customer-safe renderer.
 
 If `reason` is omitted, the bot supplies a fixed auditable direct-command reason.
 
@@ -176,7 +177,7 @@ Customer AI cannot invoke either refund path.
 | AI shadow | evaluation only | same eligibility, post-cohort-cutoff | surface allowlist | **none; no reply** |
 | `/refresh-leaderboard` | staff/admin | configured guild + command channel | permission gate | no |
 | `/cm user ...` | admin | configured guild | **mandatory user allowlist** | interactive admin paths |
-| `/cm order ...` | admin | configured guild | **mandatory user allowlist** | pending read-only; canonical navigation/refund buttons |
+| `/cm order ...` | admin | configured guild | **mandatory user allowlist** | pending lookup/manual payment approval; canonical navigation/refund buttons |
 | `/cm aura ...` | admin | configured guild | **mandatory user allowlist** | direct Aura adjustment |
 | `/cm balance ...` | admin | configured guild | **mandatory user allowlist** | direct wallet adjustment |
 | `/cm refund ...` | admin | configured guild | **mandatory user allowlist** | direct canonical-order refund |
@@ -197,12 +198,13 @@ support.tickets.override
 orders.details.read
 orders.fulfillment.read
 purchase-intents.lookup.read
+purchase-intents.process
 orders.refund.preview
 orders.refund.execute
 users.aura.adjust
 users.wallet.adjust
 ```
 
-Website per-client `allowedOperations` is an independent runtime authorization boundary. Customer AI may use only the separately approved read subset through the deterministic lookup adapter; it never gets refund/Aura/wallet mutation authority.
+Website per-client `allowedOperations` is an independent runtime authorization boundary. Manual pending-purchase approval requires `purchase-intents.process` in the dedicated bot client's allowlist. Customer AI may use only the separately approved read subset through the deterministic lookup adapter; it never gets refund/Aura/wallet/purchase-processing mutation authority.
 
-Top-level slash commands remain `/refresh-leaderboard` + `/cm`. `/cm` now contains `user`, `order`, `aura`, `balance`, `refund`, and `ticket-allow`. This changes guild command JSON, so deployment requires one explicit `npm run register:commands`. The direct mutation commands reuse the already-approved website operation set; no new website permission string is required.
+Top-level slash commands remain `/refresh-leaderboard` + `/cm`. `/cm` contains `user`, `order`, `aura`, `balance`, `refund`, and `ticket-allow`. ADR-0018 adds only component/modal controls, so it does not change guild command JSON. It does require the website bot credential to add exactly `purchase-intents.process`.
