@@ -1,8 +1,8 @@
-# Admin Mutation Model — Aura, Wallet, Refund and Ticket Override
+# Admin Mutation Model — Aura, Wallet, Refund, Purchase Approval and Ticket Override
 
 Updated: 2026-09-09
 
-ADR-0006 governs shared `/cm` authorization. ADR-0007 governs the existing interactive Aura/wallet confirmation model. ADR-0016 governs the ticket-scoped support access override. ADR-0017 governs direct `/cm aura`, `/cm balance`, and `/cm refund` execution. The existing interactive refund flow retains canonical backend preview/re-preview.
+ADR-0006 governs shared `/cm` authorization. ADR-0007 governs the existing interactive Aura/wallet confirmation model. ADR-0016 governs the ticket-scoped support access override. ADR-0017 governs direct `/cm aura`, `/cm balance`, and `/cm refund` execution. ADR-0018 governs manual pending-purchase approval and shareable direct results. The existing interactive refund flow retains canonical backend preview/re-preview.
 
 ## Global invariants
 
@@ -34,6 +34,9 @@ POST /api/internal/integrations/v1/users/wallet/adjust
 
 orders.refund.execute
 POST /api/internal/integrations/v1/orders/refund/execute
+
+purchase-intents.process
+POST /api/internal/integrations/v1/purchase-intents/process
 
 support.tickets.override
 POST /api/internal/integrations/v1/support/tickets/override
@@ -270,6 +273,27 @@ No second confirmation dialog is required for the ticket override because the op
 ## Direct order entry
 
 `/cm order` is a read/navigation entry point, not a new mutation primitive. It resolves canonical `orders.details.read`, resolves the owner overview, verifies target consistency and then reuses the same order/refund/user controls.
+
+## Manual pending-purchase approval — ADR-0018
+
+Manual approval is a payment-finalization mutation, not a status override. It is available only from an authorized pending-purchase session after staff independently verifies payment.
+
+```text
+Approve Payment
+  -> reason/evidence modal
+  -> fresh purchase lookup + exact owner
+  -> private confirmation <= 5 minutes
+  -> fresh purchase lookup
+  -> purchase-intents.process with stable idempotency key
+  -> canonical purchase/order refresh
+  -> backend audit + Discord audit
+```
+
+The bot never supplies accepted amount, provider, catalog identity, fulfillment mode or order contents. CM derives those from canonical state.
+
+If the process operation reports active processing, the session disables approval resubmission and only exposes refresh. The same logical action never receives a new idempotency key merely because completion is asynchronous.
+
+Customer AI cannot call this mutation.
 
 ## Manual fulfillment — forbidden until backend operation exists
 

@@ -1,6 +1,6 @@
 # ADR-0011 — Pending purchase lookup and fulfillment support view
 
-Status: Accepted
+Status: Accepted; pending-purchase mutation restrictions superseded by ADR-0018
 
 Date: 2026-08-19
 
@@ -31,7 +31,9 @@ If a purchase intent already contains `orderId`, the bot attempts the canonical 
 
 ### Pending purchase controls
 
-A purchase intent without a canonical order is read-only support state. The private panel may show safe purchase/payment status, amount, dates and customer identity, but order-only controls are unavailable until the canonical order exists.
+> ADR-0018 supersedes this section only for the explicit allowlisted **Approve Payment** workflow backed by `purchase-intents.process`. Refund/delivery/manual-fulfillment restrictions remain.
+
+At the time of ADR-0011, a purchase intent without a canonical order was read-only support state. The private panel may show safe purchase/payment status, amount, dates and customer identity, but order-only controls are unavailable until the canonical order exists.
 
 In particular, a pending purchase does not expose:
 
@@ -41,7 +43,7 @@ In particular, a pending purchase does not expose:
 - manual fulfillment;
 - any direct database action.
 
-`purchase-intents.process` remains forbidden to the bot and is not a lookup/fulfillment shortcut.
+`purchase-intents.process` remains forbidden as a lookup/fulfillment shortcut and remains unavailable to customer AI. ADR-0018 now permits it only as the explicit admin manual-payment approval mutation.
 
 ### Fulfillment support metadata
 

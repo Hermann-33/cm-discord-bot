@@ -205,6 +205,18 @@ export function buildPublicSharePanel(session: CmAdminSession): ContainerBuilder
   if (view.kind === "order") return buildOrderShare(session);
   if (view.kind === "purchase-intent") return buildPurchaseIntentShare(session);
 
+  if (view.kind === "purchase-approval-success") {
+    const order = session.selectedOrder;
+    if (!order) return null;
+    return new ContainerBuilder()
+      .addTextDisplayComponents(text(`# Manual Payment Approved\nOrder **${orderRef(order)}** is confirmed.`))
+      .addSeparatorComponents(separator())
+      .addTextDisplayComponents(text(`### Customer\n${customerIdentityBlock(session)}`))
+      .addTextDisplayComponents(text(
+        `### Result\nStatus: **${escapeDiscordText(order.status)}**\nAmount: **${formatMoney(order.amountCents, order.currency)}**`
+      ));
+  }
+
   if (view.kind === "fulfillment") {
     const data = view.data;
     const container = new ContainerBuilder()

@@ -23,6 +23,7 @@ export async function refreshUserPanel(
       10
     );
     session.selectedPurchaseIntent = undefined;
+    session.purchaseApprovalProposal = undefined;
     session.shareView = { kind: "user" };
     await interaction.editReply(panelPayload(buildUserPanel(session.id, session.overview)));
   } catch (error) {
@@ -60,6 +61,7 @@ export async function openOrder(
     session.selectedOrder = order;
     session.selectedPurchaseIntent = undefined;
     session.refundProposal = undefined;
+    session.purchaseApprovalProposal = undefined;
     session.shareView = { kind: "order" };
     await interaction.editReply(panelPayload(buildOrderPanel(
       session.id,
@@ -100,6 +102,7 @@ export async function refreshSelectedOrder(
     session.selectedOrder = order;
     session.selectedPurchaseIntent = undefined;
     session.refundProposal = undefined;
+    session.purchaseApprovalProposal = undefined;
     session.shareView = { kind: "order" };
     await interaction.editReply(panelPayload(buildOrderPanel(
       session.id,

@@ -47,11 +47,24 @@ export type WalletAdjustmentProposal = {
 
 export type UserAdjustmentProposal = AuraAdjustmentProposal | WalletAdjustmentProposal;
 
+export type PurchaseApprovalProposal = {
+  purchaseIntentId: string;
+  userId: string;
+  sourceStatus: string;
+  reason: string;
+  evidenceReference?: string;
+  operator: InternalIntegrationOperator;
+  idempotencyKey: string;
+  expiresAtMs: number;
+  submitted: boolean;
+};
+
 export type CmShareView =
   | { kind: "user" }
   | { kind: "orders"; page: number }
   | { kind: "order" }
   | { kind: "purchase-intent" }
+  | { kind: "purchase-approval-success" }
   | { kind: "fulfillment"; data: OrderFulfillmentData }
   | { kind: "refund-preview" }
   | { kind: "refund-success"; data: OrderRefundExecuteData }
@@ -67,6 +80,7 @@ export type CmAdminSession = {
   selectedPurchaseIntent?: PurchaseIntentData;
   refundProposal?: RefundProposal;
   adjustmentProposal?: UserAdjustmentProposal;
+  purchaseApprovalProposal?: PurchaseApprovalProposal;
   shareView: CmShareView;
   createdAtMs: number;
   touchedAtMs: number;

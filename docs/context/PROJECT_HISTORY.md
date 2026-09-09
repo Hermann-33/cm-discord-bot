@@ -1,6 +1,6 @@
 # Project History
 
-Updated: 2026-09-08
+Updated: 2026-09-09
 
 This file preserves important chronology without making historical architecture authoritative over current source/ADRs.
 
@@ -344,3 +344,12 @@ ADR-0017 introduced direct `/cm aura`, `/cm balance`, and `/cm refund` subcomman
 The new path executes through the same website-owned HMAC operations, canonical target validation, UUID idempotency and backend/Discord audit boundaries, then returns only the final completed private result. Existing interactive confirmation flows remain available.
 
 The change adds no website permission or database access. It does change Discord guild command JSON and requires explicit command registration after deployment.
+
+
+## 2026-09-09 — Direct-result sharing and manual pending-purchase approval
+
+TASK-CM-ADMIN-009 / ADR-0018 made ADR-0017 direct Aura/balance/refund completion panels shareable through the existing safe public renderer.
+
+Pending purchase support was extended from ADR-0011 read-only state to an explicit allowlisted **Approve Payment** workflow backed by the production `purchase-intents.process` Internal Integrations operation. The bot captures reason/evidence and confirmation state but leaves amount, payment/provider interpretation, order creation, accounting, fulfillment and durable effects to CM. Active processing is never blindly resubmitted with a new idempotency key.
+
+Customer AI remains read-only and manual fulfillment remains unavailable.

@@ -47,6 +47,7 @@ test("API client exposes only explicitly approved bot operations", () => {
     "/api/internal/integrations/v1/orders/details",
     "/api/internal/integrations/v1/orders/fulfillment",
     "/api/internal/integrations/v1/purchase-intents/lookup",
+    "/api/internal/integrations/v1/purchase-intents/process",
     "/api/internal/integrations/v1/orders/refund/preview",
     "/api/internal/integrations/v1/orders/refund/execute",
     "/api/internal/integrations/v1/users/aura/adjust",
@@ -56,7 +57,6 @@ test("API client exposes only explicitly approved bot operations", () => {
   }
 
   for (const forbidden of [
-    "/api/internal/integrations/v1/purchase-intents/process",
     "/api/internal/integrations/v1/orders/fulfillment/manual",
     "internal_integration_adjust_aura_balance",
     "internal_integration_adjust_wallet_balance"
@@ -71,6 +71,7 @@ test("AI support is planner-only and cannot reach mutation methods", () => {
     "executeOrderRefund(",
     "executeAuraAdjustment(",
     "executeWalletAdjustment(",
+    "processPurchaseIntent(",
     "overrideSupportTicketAccess("
   ]) {
     assert.equal(aiSupportSourceText.includes(forbidden), false, `AI support references mutation method ${forbidden}`);

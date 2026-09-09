@@ -230,7 +230,8 @@ export function buildOrdersPanel(
 export function buildPurchaseIntentPanel(
   sessionId: string,
   purchase: PurchaseIntentData,
-  overview: UserOverviewData
+  overview: UserOverviewData,
+  options: { approvalProcessing?: boolean } = {}
 ): ContainerBuilder {
   const reference = purchase.publicRef ? escapeDiscordText(purchase.publicRef) : "Pending purchase";
   const purchaseLines = [
@@ -247,6 +248,18 @@ export function buildPurchaseIntentPanel(
     ...(purchase.expiresAt ? [`Expires: ${formatDiscordTimestampPair(purchase.expiresAt)}`] : [])
   ];
 
+  const approvalAllowed = ["pending", "processing", "failed", "expired", "underpaid"]
+    .includes(purchase.status.toLowerCase());
+  const approvalButton = button(
+    `cm:purchase:approve:${sessionId}`,
+    options.approvalProcessing
+      ? "Approval Processing"
+      : approvalAllowed
+        ? "Approve Payment"
+        : "Approval Unavailable",
+    ButtonStyle.Danger
+  ).setDisabled(Boolean(options.approvalProcessing) || !approvalAllowed);
+
   return new ContainerBuilder()
     .addTextDisplayComponents(text(`# Pending Purchase ${reference}\nStatus: **${escapeDiscordText(purchase.status)}**`))
     .addSeparatorComponents(separator())
@@ -255,10 +268,93 @@ export function buildPurchaseIntentPanel(
     ))
     .addTextDisplayComponents(text(`### Purchase\n${purchaseLines.join("\n")}`))
     .addTextDisplayComponents(text(`### Payment\n${paymentLines.join("\n")}`))
-    .addTextDisplayComponents(text("> No completed order exists yet. Order-only controls remain unavailable until CM creates the canonical order."))
+    .addTextDisplayComponents(text(
+      options.approvalProcessing
+        ? "> Manual approval was submitted. Refresh until CM creates the canonical order; do not submit another approval."
+        : "> No completed order exists yet. Use manual approval only after payment has been independently verified."
+    ))
+    .addActionRowComponents(
+      new ActionRowBuilder<ButtonBuilder>().addComponents(
+        approvalButton,
+        button(`cm:purchase:refresh:${sessionId}`, "Refresh Purchase", ButtonStyle.Primary),
+        button(`cm:user:home:${sessionId}`, "User Operations")
+      )
+    )
+    .addActionRowComponents(shareRow(sessionId));
+}
+
+export function buildPurchaseApprovalPreviewPanel(
+  sessionId: string,
+  purchase: PurchaseIntentData,
+  reason: string,
+  evidenceReference?: string,
+  note?: string
+): ContainerBuilder {
+  const lines = [
+    `Purchase: **${escapeDiscordText(purchase.publicRef ?? "Pending purchase")}**`,
+    `Current status: **${escapeDiscordText(purchase.status)}**`,
+    `Amount: **${formatMoney(purchase.amountCents, purchase.currency)}**`
+  ];
+  const container = new ContainerBuilder()
+    .addTextDisplayComponents(text("# Manual Payment Approval"))
+    .addSeparatorComponents(separator())
+    .addTextDisplayComponents(text(lines.join("\n")))
+    .addTextDisplayComponents(text(`### Reason\n${escapeDiscordText(reason)}`));
+  if (evidenceReference) {
+    container.addTextDisplayComponents(text(`### Evidence Reference\n${escapeDiscordText(evidenceReference)}`));
+  }
+  if (note) container.addTextDisplayComponents(text(`> ${escapeDiscordText(note)}`));
+  return container.addActionRowComponents(
+    new ActionRowBuilder<ButtonBuilder>().addComponents(
+      button(`cm:purchase:confirm:${sessionId}`, "Confirm Manual Approval", ButtonStyle.Danger),
+      button(`cm:purchase:cancel:${sessionId}`, "Cancel")
+    )
+  );
+}
+
+export function buildPurchaseApprovalProcessingPanel(
+  sessionId: string,
+  purchase: PurchaseIntentData
+): ContainerBuilder {
+  return new ContainerBuilder()
+    .addTextDisplayComponents(text("# Manual Approval Processing"))
+    .addSeparatorComponents(separator())
+    .addTextDisplayComponents(text(
+      `Purchase **${escapeDiscordText(purchase.publicRef ?? "Pending purchase")}** was accepted for processing. CM has not exposed the canonical order yet.`
+    ))
+    .addTextDisplayComponents(text("> Do not submit another approval. Refresh this purchase until the canonical order appears."))
     .addActionRowComponents(
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         button(`cm:purchase:refresh:${sessionId}`, "Refresh Purchase", ButtonStyle.Primary),
+        button(`cm:user:home:${sessionId}`, "User Operations")
+      )
+    );
+}
+
+export function buildPurchaseApprovalSuccessPanel(
+  sessionId: string,
+  purchaseRef: string,
+  order: OrderDetailsData,
+  overview: UserOverviewData,
+  auditPosted: boolean
+): ContainerBuilder {
+  const resultLines = [
+    "Approval: **Completed**",
+    `Order: **${orderRef(order)}**`,
+    `Status: **${escapeDiscordText(order.status)}**`,
+    `Amount: **${formatMoney(order.amountCents, order.currency)}**`
+  ];
+  if (!auditPosted) resultLines.push("> Discord audit failed to post; the backend audit remains authoritative.");
+  return new ContainerBuilder()
+    .addTextDisplayComponents(text(`# Manual Approval Complete\nPurchase **${escapeDiscordText(purchaseRef)}** has been approved.`))
+    .addSeparatorComponents(separator())
+    .addTextDisplayComponents(text(
+      `### Customer\nEmail: ${escapeDiscordText(overview.identity.email ?? "—")}\nDiscord: ${compactDiscordIdentity(overview)}`
+    ))
+    .addTextDisplayComponents(text(`### Result\n${resultLines.join("\n")}`))
+    .addActionRowComponents(
+      new ActionRowBuilder<ButtonBuilder>().addComponents(
+        button(`cm:order:refresh:${sessionId}`, "Open Order", ButtonStyle.Primary),
         button(`cm:user:home:${sessionId}`, "User Operations")
       )
     )
@@ -468,6 +564,7 @@ export function buildAdjustmentPreviewPanel(
 }
 
 export function buildDirectRefundSuccessPanel(
+  sessionId: string,
   refund: OrderRefundExecuteData,
   overview: UserOverviewData,
   reason: string,
@@ -488,10 +585,12 @@ export function buildDirectRefundSuccessPanel(
       `### Customer\nEmail: **${escapeDiscordText(overview.identity.email ?? "Not available")}**\nDiscord: ${compactDiscordIdentity(overview)}`
     ))
     .addTextDisplayComponents(text(resultLines.join("\n")))
-    .addTextDisplayComponents(text(`### Reason\n${escapeDiscordText(reason)}`));
+    .addTextDisplayComponents(text(`### Reason\n${escapeDiscordText(reason)}`))
+    .addActionRowComponents(shareRow(sessionId));
 }
 
 export function buildDirectAdjustmentSuccessPanel(
+  sessionId: string,
   kind: "aura" | "wallet",
   result: AuraAdjustmentData | WalletAdjustmentData,
   overview: UserOverviewData,
@@ -524,7 +623,8 @@ export function buildDirectAdjustmentSuccessPanel(
       `### Customer\nEmail: **${escapeDiscordText(overview.identity.email ?? "Not available")}**\nDiscord: ${compactDiscordIdentity(overview)}`
     ))
     .addTextDisplayComponents(text(resultLines.join("\n")))
-    .addTextDisplayComponents(text(`### Reason\n${escapeDiscordText(reason)}`));
+    .addTextDisplayComponents(text(`### Reason\n${escapeDiscordText(reason)}`))
+    .addActionRowComponents(shareRow(sessionId));
 }
 
 export function buildAdjustmentSuccessPanel(

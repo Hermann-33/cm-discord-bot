@@ -12,7 +12,7 @@ import { isInternalApiError } from "../api/errors";
 import type { PurchaseIntentLookupSelector } from "../api/purchaseIntents";
 import type { OrderDetailsData, OrderLookupSelector, UserLookupSelector } from "../api/schemas";
 import type { AppConfig } from "../config/env";
-import { postAdjustmentAudit, postRefundAudit } from "../discord/adminAudit";
+import { postAdjustmentAudit, postPurchaseApprovalAudit, postRefundAudit } from "../discord/adminAudit";
 import { logger } from "../logger";
 import {
   confirmAdjustment,
@@ -27,6 +27,12 @@ import {
   normalizeDirectRefundReason
 } from "./cmDirectMutations";
 import { fetchOptionalOrderFulfillment } from "./cmOrderSupport";
+import {
+  confirmPurchaseApproval,
+  handlePurchaseApprovalModal,
+  showPurchaseApprovalModal,
+  type PurchaseApprovalDependencies
+} from "./cmPurchaseApproval";
 import { refreshSelectedPurchaseIntent } from "./cmPurchaseIntents";
 import { confirmRefund, handleRefundModal, showRefundModal, type RefundDependencies } from "./cmRefund";
 import { shareCurrentPanel } from "./cmShare";
@@ -43,13 +49,14 @@ import {
 } from "./cmUi";
 import { openFulfillment, openOrder, refreshSelectedOrder, refreshUserPanel } from "./cmUserActions";
 
-export type CmAdminControllerDependencies = RefundDependencies & AdjustmentDependencies;
+export type CmAdminControllerDependencies = RefundDependencies & AdjustmentDependencies & PurchaseApprovalDependencies;
 
 const productionDependencies: CmAdminControllerDependencies = {
   nowMs: Date.now,
   idempotencyKey: randomUUID,
   postRefundAudit,
-  postAdjustmentAudit
+  postAdjustmentAudit,
+  postPurchaseApprovalAudit
 };
 
 function parseOrderSelector(value: string): OrderLookupSelector | null {
@@ -298,6 +305,7 @@ export class CmAdminController {
         api: this.api,
         config: this.config,
         dependencies: this.dependencies,
+        sessions: this.sessions,
         kind: subcommand === "aura" ? "aura" : "wallet",
         selector,
         rawAmount: interaction.options.getString("amount", true),
@@ -320,6 +328,7 @@ export class CmAdminController {
         api: this.api,
         config: this.config,
         dependencies: this.dependencies,
+        sessions: this.sessions,
         selector,
         reason: normalizeDirectRefundReason(interaction.options.getString("reason"))
       });
@@ -376,6 +385,19 @@ export class CmAdminController {
       await refreshSelectedPurchaseIntent(interaction, session, this.api);
       return;
     }
+    if (domain === "purchase" && action === "approve") {
+      await showPurchaseApprovalModal(interaction, session);
+      return;
+    }
+    if (domain === "purchase" && action === "cancel") {
+      session.purchaseApprovalProposal = undefined;
+      await refreshSelectedPurchaseIntent(interaction, session, this.api);
+      return;
+    }
+    if (domain === "purchase" && action === "confirm") {
+      await confirmPurchaseApproval(interaction, session, this.api, this.config, this.dependencies);
+      return;
+    }
     if (domain === "adjust" && (action === "aura" || action === "wallet")) {
       await showAdjustmentModal(interaction, session, action);
       return;
@@ -424,6 +446,10 @@ export class CmAdminController {
     const session = await requireSession(interaction, this.sessions, parts[3] ?? "");
     if (!session) return;
 
+    if (domain === "purchase" && action === "approve-modal") {
+      await handlePurchaseApprovalModal(interaction, session, this.api, this.dependencies);
+      return;
+    }
     if (domain === "refund" && action === "modal") {
       await handleRefundModal(interaction, session, this.api, this.dependencies);
       return;

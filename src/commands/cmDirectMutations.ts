@@ -16,6 +16,7 @@ import {
   parseAuraDelta,
   parseWalletDeltaToCents
 } from "./cmAdjustments";
+import type { CmSessionStore } from "./cmSessions";
 import { safeApiMessage } from "./cmSupport";
 import {
   buildDirectAdjustmentSuccessPanel,
@@ -54,6 +55,7 @@ export async function executeDirectAdjustment(input: {
   api: InternalApiClient;
   config: AppConfig;
   dependencies: DirectMutationDependencies;
+  sessions: CmSessionStore;
   kind: "aura" | "wallet";
   selector: UserLookupSelector;
   rawAmount: string;
@@ -64,6 +66,7 @@ export async function executeDirectAdjustment(input: {
     api,
     config,
     dependencies,
+    sessions,
     kind,
     selector,
     rawAmount,
@@ -148,8 +151,10 @@ export async function executeDirectAdjustment(input: {
         logger.error("sanitized Discord direct adjustment audit failure", sanitizeError(auditError));
       }
 
+      const session = sessions.create(interaction.user.id, overview);
+      session.shareView = { kind: "adjustment-success", adjustmentKind: "aura", data: result };
       await interaction.editReply(panelPayload(
-        buildDirectAdjustmentSuccessPanel("aura", result, overview, reason, auditPosted)
+        buildDirectAdjustmentSuccessPanel(session.id, "aura", result, overview, reason, auditPosted)
       ));
       return;
     }
@@ -202,8 +207,10 @@ export async function executeDirectAdjustment(input: {
       logger.error("sanitized Discord direct adjustment audit failure", sanitizeError(auditError));
     }
 
+    const session = sessions.create(interaction.user.id, overview);
+    session.shareView = { kind: "adjustment-success", adjustmentKind: "wallet", data: result };
     await interaction.editReply(panelPayload(
-      buildDirectAdjustmentSuccessPanel("wallet", result, overview, reason, auditPosted)
+      buildDirectAdjustmentSuccessPanel(session.id, "wallet", result, overview, reason, auditPosted)
     ));
   } catch (error) {
     logger.warn("CM direct adjustment failed", {
@@ -222,6 +229,7 @@ export async function executeDirectRefund(input: {
   api: InternalApiClient;
   config: AppConfig;
   dependencies: DirectMutationDependencies;
+  sessions: CmSessionStore;
   selector: OrderLookupSelector;
   reason: string;
 }): Promise<void> {
@@ -230,6 +238,7 @@ export async function executeDirectRefund(input: {
     api,
     config,
     dependencies,
+    sessions,
     selector,
     reason
   } = input;
@@ -295,8 +304,11 @@ export async function executeDirectRefund(input: {
       logger.error("sanitized Discord direct refund audit failure", sanitizeError(auditError));
     }
 
+    const session = sessions.create(interaction.user.id, overview);
+    session.selectedOrder = order;
+    session.shareView = { kind: "refund-success", data: refund };
     await interaction.editReply(panelPayload(
-      buildDirectRefundSuccessPanel(refund, overview, reason, auditPosted)
+      buildDirectRefundSuccessPanel(session.id, refund, overview, reason, auditPosted)
     ));
   } catch (error) {
     logger.warn("CM direct refund failed", {

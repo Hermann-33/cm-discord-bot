@@ -33,13 +33,14 @@ support.tickets.override
 orders.details.read
 orders.fulfillment.read
 purchase-intents.lookup.read
+purchase-intents.process
 orders.refund.preview
 orders.refund.execute
 users.aura.adjust
 users.wallet.adjust
 ```
 
-Backend per-client `allowedOperations` remains an independent deployment authorization boundary. `purchase-intents.process` and manual fulfillment are not bot operations.
+Backend per-client `allowedOperations` remains an independent deployment authorization boundary. `purchase-intents.process` is used only by the explicit allowlisted manual-approval flow. Manual fulfillment is not a bot operation.
 
 ## Requirements
 
@@ -82,7 +83,7 @@ OPENROUTER_MODEL
 OPENROUTER_DATA_COLLECTION
 ```
 
-`BOT_ADMIN_USER_IDS` is a comma-separated explicit Discord user-ID allowlist. `/cm` fails closed when it is empty. `BOT_AUDIT_LOG_CHANNEL_ID` is required before refund/Aura/wallet execution. `BOT_ADMIN_COMMAND_CHANNEL_ID` is not supported.
+`BOT_ADMIN_USER_IDS` is a comma-separated explicit Discord user-ID allowlist. `/cm` fails closed when it is empty. `BOT_AUDIT_LOG_CHANNEL_ID` is required before refund/Aura/wallet/manual-purchase-approval execution. `BOT_ADMIN_COMMAND_CHANNEL_ID` is not supported.
 
 `GROQ_API_KEY` is optional until AI support is enabled. When present, the default primary hosted triage candidate is `openai/gpt-oss-120b` with `GROQ_REASONING_EFFORT=low`. The planner payload is minimized and sanitized before it leaves the bot. See `docs/GROQ_SUPPORT_TRIAGE.md`.
 
@@ -190,7 +191,7 @@ orders.details.read
 
 Authentication/authorization/rate-limit/service failures never trigger the purchase-intent fallback.
 
-A pending purchase is read-only support state. It has no refund or delivery controls until the website creates the canonical order. The bot does not call `purchase-intents.process`.
+A pending purchase has no refund or delivery controls until the website creates the canonical order. For an independently verified payment, an allowlisted admin may use **Approve Payment**. The bot gathers a reason/evidence reference, requires a private five-minute confirmation, re-resolves the exact purchase owner, then calls the website-owned `purchase-intents.process` operation with a stable idempotency key. The bot never supplies the accepted amount or constructs the order. If CM reports processing, the panel locks against resubmission and only permits refresh until the canonical order appears.
 
 ## Fulfillment support view
 
@@ -251,6 +252,8 @@ orders.details.read
 
 The existing order-panel refund preview/confirm flow remains available. Pending purchase intents do not expose refund execution.
 
+ADR-0018 adds manual pending-purchase approval through `purchase-intents.process`. This is an interactive high-trust admin path with reason/evidence capture, five-minute confirmation, fresh target/owner validation, stable idempotency, website-owned business logic and backend + Discord audit. Final manual-approval results and final direct Aura/balance/refund results expose **Share to Chat** through the existing customer-safe renderer.
+
 ## Develop and validate
 
 ```powershell
@@ -273,7 +276,7 @@ npm run register:commands
 
 Top-level commands remain `/refresh-leaderboard` and `/cm`. The `/cm` subcommands are now `user`, `order`, `aura`, `balance`, `refund`, and `ticket-allow`.
 
-This revision **does change guild command JSON**, so run `npm run register:commands` once after deploying the bot revision. Command registration is still explicit and is never performed at bot startup. The new direct commands reuse website operations already used by the existing UI, so no new `allowedOperations` strings are required.
+The direct-command revision changed guild command JSON and requires `npm run register:commands` once when those commands have not yet been registered. ADR-0018 adds only buttons/modals, so it does **not** add another slash-command registration change.
 
 ## Deployment note for pending lookup
 
@@ -285,7 +288,13 @@ support.tickets.verify
 support.tickets.override
 ```
 
-`purchase-intents.lookup.read` remains required for pending order lookup. Endpoint existence does not grant any permission; the website client's exact `allowedOperations` list remains authoritative.
+`purchase-intents.lookup.read` remains required for pending order lookup. Manual pending-purchase approval additionally requires exactly:
+
+```text
+purchase-intents.process
+```
+
+Endpoint existence does not grant any permission; the website client's exact `allowedOperations` list remains authoritative.
 
 ## Non-production transcript tooling
 

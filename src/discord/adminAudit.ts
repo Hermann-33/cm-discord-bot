@@ -136,6 +136,39 @@ export async function postAdjustmentAudit(input: {
 }
 
 
+export async function postPurchaseApprovalAudit(input: {
+  client: Client;
+  channelId: string;
+  operatorId: string;
+  purchaseRef: string;
+  orderRef?: string | null;
+  accountEmail?: string | null;
+  customerDiscordUserId?: string | null;
+  reason: string;
+  completedAt: string;
+  processing: boolean;
+  idempotentReplay: boolean;
+}): Promise<void> {
+  const channel = await fetchAuditChannel(input.client, input.channelId);
+  const replay = input.idempotentReplay
+    ? "\n> Backend returned an idempotent replay of the same manual approval request."
+    : "";
+  const result = input.processing
+    ? "Approval: **Processing**"
+    : `Approval: **Completed**${input.orderRef ? `\nOrder: **${escapeDiscordText(input.orderRef)}**` : ""}`;
+  const panel = new ContainerBuilder()
+    .addTextDisplayComponents(text(`# CM Audit · Manual Purchase Approval\nPurchase **${escapeDiscordText(input.purchaseRef)}**`))
+    .addSeparatorComponents(separator())
+    .addTextDisplayComponents(text(`### Customer\n${customerLines(input.accountEmail, input.customerDiscordUserId)}`))
+    .addTextDisplayComponents(text(
+      `### Result\n${result}\nReason: ${escapeDiscordText(input.reason)}${replay}`
+    ))
+    .addTextDisplayComponents(text(
+      `### Operator\n${discordUserMention(input.operatorId)}\nCompleted: ${formatDiscordTimestampPair(input.completedAt)}`
+    ));
+  await sendAuditPanel(channel, panel);
+}
+
 export async function postTicketAccessOverrideAudit(input: {
   client: Client;
   channelId: string;
