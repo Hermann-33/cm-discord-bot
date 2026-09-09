@@ -49,6 +49,7 @@ export async function refreshSelectedPurchaseIntent(
         session.selectedOrder = order;
         session.selectedPurchaseIntent = undefined;
         session.refundProposal = undefined;
+        session.purchaseApprovalProposal = undefined;
         session.shareView = { kind: "order" };
         await interaction.editReply(panelPayload(buildOrderPanel(
           session.id,
@@ -66,7 +67,12 @@ export async function refreshSelectedPurchaseIntent(
     session.selectedPurchaseIntent = purchase;
     session.refundProposal = undefined;
     session.shareView = { kind: "purchase-intent" };
-    await interaction.editReply(panelPayload(buildPurchaseIntentPanel(session.id, purchase, overview)));
+    await interaction.editReply(panelPayload(buildPurchaseIntentPanel(
+      session.id,
+      purchase,
+      overview,
+      { approvalProcessing: Boolean(session.purchaseApprovalProposal?.submitted) }
+    )));
   } catch (error) {
     await interaction.editReply(panelPayload(buildNoticePanel(
       session.id,
