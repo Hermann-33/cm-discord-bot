@@ -298,6 +298,7 @@ export class CmAdminController {
         api: this.api,
         config: this.config,
         dependencies: this.dependencies,
+        sessions: this.sessions,
         kind: subcommand === "aura" ? "aura" : "wallet",
         selector,
         rawAmount: interaction.options.getString("amount", true),
@@ -320,6 +321,7 @@ export class CmAdminController {
         api: this.api,
         config: this.config,
         dependencies: this.dependencies,
+        sessions: this.sessions,
         selector,
         reason: normalizeDirectRefundReason(interaction.options.getString("reason"))
       });
