@@ -265,7 +265,7 @@ test("User Operations clearly shows when Discord is not linked", () => {
   assert.equal(serialized.includes("Share to Chat"), true);
 });
 
-test("Pending Purchase shows safe support state without exposing mutation controls", () => {
+test("Pending Purchase exposes guarded manual approval without leaking provider internals", () => {
   const { content, serialized } = panelData(buildPurchaseIntentPanel(
     SESSION_ID,
     pendingPurchase,
@@ -277,6 +277,7 @@ test("Pending Purchase shows safe support state without exposing mutation contro
   assert.equal(content.includes("Status: **pending**"), true);
   assert.equal(content.includes("Payment status: **waiting**"), true);
   assert.equal(content.includes(`Discord: <@${DISCORD_USER_ID}>`), true);
+  assert.equal(serialized.includes("Approve Payment"), true);
   assert.equal(serialized.includes("Refresh Purchase"), true);
   assert.equal(serialized.includes("User Operations"), true);
   assert.equal(serialized.includes("Share to Chat"), true);
