@@ -582,3 +582,35 @@ Added ADR-0018.
 - no direct database/Supabase/service-role path was introduced;
 - rollout requires exactly `purchase-intents.process` on the bot website credential;
 - no additional slash-command registration change is introduced by this task.
+
+
+## 2026-09-09 — TASK-CM-RUNTIME-001 — command outage / leaderboard startup isolation
+
+### Incident evidence
+
+After the ADR-0018 deployment, Discord commands stopped responding. Live Supabase-side Internal Integrations evidence showed:
+
+- the previous bot instance produced the expected single request approximately every five minutes through 04:13 UTC;
+- PR #21 merged at 04:17 UTC;
+- the replacement instance produced startup/ticket reconciliation requests during 04:18–04:19 UTC;
+- no further bot nonces were recorded after 04:19:27 UTC despite the prior five-minute heartbeat pattern.
+
+This ruled out `purchase-intents.process` permission as the common cause of all commands failing: command attempts were no longer reaching the Internal Integrations API.
+
+### Root cause
+
+The Discord `ClientReady` path still treated leaderboard initialization as whole-process authority. A bootstrap-complete result caused `shutdown(0)`; any initial leaderboard start/refresh exception caused `shutdown(1)`. Both paths destroy the Discord client.
+
+That behavior was valid for the old leaderboard-centric bot but is invalid now that the same process owns `/cm`, ticket gating, customer Aura and AI support.
+
+### Fix
+
+ADR-0019:
+
+- configured-message initial leaderboard refresh now uses nonfatal mode;
+- the existing five-minute retry timer starts even if the first refresh fails;
+- bootstrap-complete no longer exits the process;
+- leaderboard startup exceptions are sanitized/logged without destroying Discord;
+- SIGINT/SIGTERM and Discord login failure remain whole-process shutdown paths.
+
+No API signing, authorization, command JSON, environment schema, database access or website code changed.
