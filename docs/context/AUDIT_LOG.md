@@ -566,3 +566,19 @@ No new website operation or permission string is added; the commands reuse `user
 ADR-0017 supersedes ADR-0004/ADR-0007 confirmation requirements only for the three direct slash-command paths. Existing interactive flows remain governed by their prior confirmation model.
 
 Discord guild command JSON changes and therefore requires explicit `npm run register:commands` after deployment.
+
+
+## 2026-09-09 — TASK-CM-ADMIN-009 — share direct results and approve pending purchases
+
+Added ADR-0018.
+
+- direct Aura, wallet-balance and refund success panels now create operator-bound sessions and expose **Share to Chat** through the existing customer-safe renderer;
+- pending purchase panels expose **Approve Payment** only on documented processable states;
+- manual approval captures reason and optional evidence, performs a fresh owner-bound preview, requires a five-minute confirmation, then calls the website-owned `purchase-intents.process` operation with one stable idempotency key;
+- the bot never supplies accepted amount, provider, catalog target, fulfillment mode or order contents;
+- a processing result disables resubmission and falls back to canonical purchase refresh until an order appears;
+- backend audit remains authoritative and a sanitized Discord audit is emitted;
+- customer AI remains mutation-free;
+- no direct database/Supabase/service-role path was introduced;
+- rollout requires exactly `purchase-intents.process` on the bot website credential;
+- no additional slash-command registration change is introduced by this task.
