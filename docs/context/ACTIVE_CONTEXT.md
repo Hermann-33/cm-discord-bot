@@ -51,7 +51,8 @@ Key state:
 - `/cm ticket-allow` reuses ADR-0006 authorization and is ticket-scoped;
 - ADR-0017 direct `/cm aura`, `/cm balance`, and `/cm refund` reuse the same explicit admin allowlist and website mutation operations; command submission is confirmation and final-only private output is returned;
 - ADR-0018 makes those direct final results shareable through the existing safe renderer and adds guarded manual pending-purchase approval through `purchase-intents.process`;
-- current manual-approval rollout additionally requires `purchase-intents.process` in the dedicated bot client's exact website allowlist; no new slash registration is introduced by ADR-0018.
+- current manual-approval rollout additionally requires `purchase-intents.process` in the dedicated bot client's exact website allowlist; no new slash registration is introduced by ADR-0018;
+- ADR-0019 isolates leaderboard startup/refresh failure from whole-process liveness so commands, ticket gating and AI remain online if leaderboard initialization fails.
 
 This branch must not be conflated with or merged into the separate response-reconstruction workstream by accident.
 ## Current quality finding
