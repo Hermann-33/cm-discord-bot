@@ -32,7 +32,7 @@ export class LeaderboardSchedule {
       return "bootstrap-complete";
     }
 
-    await this.service.refreshNow({ failOnError: true });
+    await this.service.refreshNow({ failOnError: false });
     this.interval = this.timers.setInterval(() => {
       void this.runScheduledRefresh();
     }, LEADERBOARD_UPDATE_INTERVAL_MS);
