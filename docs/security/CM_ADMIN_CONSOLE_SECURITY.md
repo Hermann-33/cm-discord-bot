@@ -1,8 +1,8 @@
 # Admin Console Security Model — `/cm`
 
-Updated: 2026-09-08
+Updated: 2026-09-09
 
-ADR-0005 governs customer/admin interface separation. ADR-0006 governs shared `/cm` authorization. ADR-0007 governs Aura/wallet confirmation. ADR-0008 governs the separate customer-share renderer and Discord presentation policy. ADR-0009 permits canonical customer email in the public customer identity block. ADR-0011 governs pending-purchase fallback and optional masked fulfillment support. ADR-0016 governs Tickety account-link gating and the ticket-scoped `/cm ticket-allow` override. Refund retains canonical backend preview/re-preview.
+ADR-0005 governs customer/admin interface separation. ADR-0006 governs shared `/cm` authorization. ADR-0007 governs the existing interactive Aura/wallet confirmation model. ADR-0008 governs the separate customer-share renderer and Discord presentation policy. ADR-0009 permits canonical customer email in the public customer identity block. ADR-0011 governs pending-purchase fallback and optional masked fulfillment support. ADR-0016 governs Tickety account-link gating and the ticket-scoped `/cm ticket-allow` override. ADR-0017 governs direct `/cm aura`, `/cm balance`, and `/cm refund` execution. The existing interactive refund flow retains canonical backend preview/re-preview.
 
 ## Global `/cm` authorization
 
@@ -27,9 +27,9 @@ BOT_ADMIN_USER_IDS
 BOT_AUDIT_LOG_CHANNEL_ID
 ```
 
-`BOT_ADMIN_COMMAND_CHANNEL_ID` is unsupported. Audit-channel configuration is separate from command authorization and mandatory before refund/Aura/wallet execute **and** before `/cm ticket-allow`.
+`BOT_ADMIN_COMMAND_CHANNEL_ID` is unsupported. Audit-channel configuration is separate from command authorization and mandatory before refund/Aura/wallet execute — interactive or direct — **and** before `/cm ticket-allow`.
 
-TASK-CM-ADMIN-007 adds no environment variable.
+ADR-0017 adds no environment variable.
 
 ## Private session safety
 
@@ -153,9 +153,9 @@ Pending Purchase public summaries may include public ref, safe item/variant/game
 
 Because Share to Chat publishes in the current channel, the authorized administrator remains responsible for choosing an appropriate disclosure channel.
 
-## Refund
+## Interactive Refund
 
-Canonical-order-only security flow remains:
+The existing order-panel canonical-order-only security flow remains:
 
 1. authorized selected canonical order;
 2. reason 8–1000;
@@ -170,9 +170,46 @@ Canonical-order-only security flow remains:
 
 Pending purchase intents have no refund control.
 
-## Aura / Wallet adjustments
+## Interactive Aura / Wallet adjustments
 
-ADR-0007 remains unchanged: fresh overview, current/change/projected private preview, explicit <=5-minute confirmation, second fresh exact relevant-balance equality, stable UUID idempotency/body, website execute, returned target/delta verification, backend audit and concise Discord audit.
+ADR-0007 remains unchanged for the existing button/modal path: fresh overview, current/change/projected private preview, explicit <=5-minute confirmation, second fresh exact relevant-balance equality, stable UUID idempotency/body, website execute, returned target/delta verification, backend audit and concise Discord audit.
+
+## Direct Aura / Balance / Refund — ADR-0017
+
+The direct slash paths are intentionally one-action mutations available only to the same explicit `BOT_ADMIN_USER_IDS` allowlist:
+
+```text
+/cm aura amount:<signed whole Aura> email:<email>|discord_user:<user> [reason]
+/cm balance amount:<signed decimal> email:<email>|discord_user:<user> [reason]
+/cm refund reference:<public ref|order UUID> [reason]
+```
+
+For these commands the slash submission is the operator confirmation; there is no intermediate modal or confirm button.
+
+Direct Aura/balance requirements:
+
+1. exactly one user selector;
+2. fresh `users.overview.read`;
+3. canonical returned user ID frozen before execute;
+4. shared signed-delta parsing/bounds;
+5. projected negative balance rejected locally;
+6. mandatory audit-channel configuration;
+7. fresh logical UUID idempotency key;
+8. website execute;
+9. returned target/delta verification;
+10. final-only private result plus sanitized Discord audit.
+
+Direct refund requirements:
+
+1. `orders.details.read` only; no pending-purchase fallback;
+2. exact owner resolution/equality;
+3. immediate `orders.refund.preview` for current eligibility and order/user identity;
+4. one fresh logical UUID idempotency key;
+5. `orders.refund.execute`;
+6. returned order/user verification;
+7. final-only private result plus sanitized Discord audit.
+
+Caller-supplied refund economics remain impossible. The website owns balance/refund accounting and immutable audit evidence. Existing interactive flows remain available with their prior confirmation rules.
 
 ## `/cm ticket-allow` — ADR-0016
 
@@ -207,7 +244,7 @@ Rules:
 
 ## Mutation idempotency/retry
 
-TASK-CM-ADMIN-007 adds no mutation. Existing mutation transport keeps stable logical body/idempotency and fresh timestamp/nonce/HMAC per HTTP attempt. ADR-0016 adds `support.tickets.override`; one logical ticket override keeps the same body/idempotency key across transport retry while timestamp/nonce/signature remain fresh per attempt.
+Existing mutation transport keeps stable logical body/idempotency and fresh timestamp/nonce/HMAC per HTTP attempt. ADR-0016 adds `support.tickets.override`; one logical ticket override keeps the same body/idempotency key across transport retry while timestamp/nonce/signature remain fresh per attempt. ADR-0017 direct mutations each create exactly one logical UUID idempotency identity for the submitted command and rely on the same transport rule.
 
 ## API permission requirements
 
@@ -249,8 +286,9 @@ Website `allowedOperations` is independent. The deployed bot client must explici
 - exposing pending purchase internal IDs/provider state;
 - exposing masked support material through Share to Chat;
 - interpreting missing optional support as manual fulfillment;
-- Aura/wallet execute without final fresh-state equality;
-- refund execute without canonical fresh preview equality;
+- bypassing final fresh-state equality/re-preview on the existing interactive mutation flows;
+- using the direct mutation behavior outside the explicit ADR-0017 `/cm aura`, `/cm balance`, or `/cm refund` path;
+- direct refund execute without the immediate canonical preview identity/eligibility check;
 - changing mutation idempotency body/key on retry;
 - caller-supplied refund economics;
 - direct balance overwrite/destructive ledger edits;
