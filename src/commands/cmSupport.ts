@@ -12,6 +12,12 @@ export function safeApiMessage(error: unknown): string {
   if (isInternalApiError(error, "NOT_FOUND")) return "The requested CM record was not found.";
   if (isInternalApiError(error, "OPERATION_FORBIDDEN")) return "The bot credential is not permitted to use this CM operation.";
   if (isInternalApiError(error, "RATE_LIMITED")) return "CM rate limiting is active. Try again shortly.";
+  if (isInternalApiError(error, "ALREADY_PROCESSED")) return "This purchase has already been processed into a canonical order.";
+  if (isInternalApiError(error, "INTENT_NOT_PROCESSABLE")) return "This purchase is not in a state that CM can manually approve.";
+  if (isInternalApiError(error, "PAYMENT_PROVIDER_UNSUPPORTED")) return "CM does not support manual approval for this payment provider.";
+  if (isInternalApiError(error, "PURCHASE_CONFIGURATION_UNSUPPORTED")) return "CM cannot safely process this purchase configuration manually.";
+  if (isInternalApiError(error, "PROCESSING_IN_PROGRESS")) return "A manual approval process is already running for this purchase.";
+  if (isInternalApiError(error, "MANUAL_REVIEW_REQUIRED")) return "CM moved this purchase to manual review instead of finalizing it automatically.";
   if (isInternalApiError(error, "ALREADY_REFUNDED")) return "This order is already refunded.";
   if (isInternalApiError(error, "REFUND_NOT_ELIGIBLE")) return "This order is not eligible for refund.";
   if (isInternalApiError(error, "REFUND_STATE_INVALID")) return "CM rejected the refund because the order state is inconsistent.";
