@@ -4,7 +4,15 @@ import { MessageFlags, type Interaction } from "discord.js";
 import type { InternalApiClient } from "../../src/api/client";
 import { InternalApiClientError } from "../../src/api/errors";
 import type { PurchaseIntentData } from "../../src/api/purchaseIntents";
-import type { OrderDetailsData, OrderFulfillmentData, UserOverviewData } from "../../src/api/schemas";
+import type {
+  AuraAdjustmentData,
+  OrderDetailsData,
+  OrderFulfillmentData,
+  OrderRefundExecuteData,
+  OrderRefundPreviewData,
+  UserOverviewData,
+  WalletAdjustmentData
+} from "../../src/api/schemas";
 import { buildCmCommand, CmAdminController } from "../../src/commands/cm";
 import type { AppConfig } from "../../src/config/env";
 
@@ -16,10 +24,13 @@ const DISCORD_CUSTOMER_ID = "123456789012345682";
 const USER_ID = "550e8400-e29b-41d4-a716-446655440000";
 const ORDER_ID = "550e8400-e29b-41d4-a716-446655440001";
 const PURCHASE_INTENT_ID = "550e8400-e29b-41d4-a716-446655440010";
+const IDEMPOTENCY_ID = "550e8400-e29b-41d4-a716-446655440011";
+const AUDIT_CHANNEL_ID = "123456789012345699";
 
 const config = {
   discordGuildId: GUILD_ID,
-  botAdminUserIds: [ADMIN_ID]
+  botAdminUserIds: [ADMIN_ID],
+  botAuditLogChannelId: AUDIT_CHANNEL_ID
 } as unknown as AppConfig;
 
 const overview = {
@@ -138,10 +149,12 @@ const pendingPurchase = {
 type FakeCommandOptions = {
   userId?: string;
   channelId?: string;
-  subcommand?: "user" | "order" | "ticket-allow";
+  subcommand?: "user" | "order" | "aura" | "balance" | "refund" | "ticket-allow";
   email?: string | null;
   discordUserId?: string | null;
   reference?: string;
+  amount?: string;
+  reason?: string | null;
 };
 
 function fakeCommand(options: FakeCommandOptions = {}) {
@@ -149,9 +162,11 @@ function fakeCommand(options: FakeCommandOptions = {}) {
     userId = ADMIN_ID,
     channelId = ADMIN_CHANNEL_ID,
     subcommand = "user",
-    email = subcommand === "user" ? "user@example.com" : null,
+    email = ["user", "aura", "balance"].includes(subcommand) ? "user@example.com" : null,
     discordUserId = null,
-    reference = "CM-TEST"
+    reference = "CM-TEST",
+    amount = subcommand === "balance" ? "+10.00" : "+250",
+    reason = null
   } = options;
   const replies: unknown[] = [];
   const defers: unknown[] = [];
@@ -164,9 +179,15 @@ function fakeCommand(options: FakeCommandOptions = {}) {
     guildId: GUILD_ID,
     channelId,
     user: { id: userId, username: "admin", globalName: "Admin" },
+    client: {},
     options: {
       getSubcommand: () => subcommand,
-      getString: (name: string) => name === "email" ? email : name === "reference" ? reference : null,
+      getString: (name: string) =>
+        name === "email" ? email
+          : name === "reference" ? reference
+            : name === "amount" ? amount
+              : name === "reason" ? reason
+                : null,
       getUser: (name: string) => name === "discord_user" && discordUserId ? { id: discordUserId } : null
     },
     replied: false,
@@ -179,18 +200,40 @@ function fakeCommand(options: FakeCommandOptions = {}) {
   return { interaction: fake as unknown as Interaction, replies, defers, edits };
 }
 
-test("/cm registers user, order, and ticket override surfaces", () => {
+test("/cm registers direct aura, balance, refund, and existing admin surfaces", () => {
   const json = buildCmCommand().toJSON();
   assert.equal(json.name, "cm");
-  assert.deepEqual(json.options?.map((option) => option.name), ["user", "order", "ticket-allow"]);
+  assert.deepEqual(
+    json.options?.map((option) => option.name),
+    ["user", "order", "aura", "balance", "refund", "ticket-allow"]
+  );
   const user = json.options?.[0] as { options?: { name: string; required?: boolean }[] };
   const orderCommand = json.options?.[1] as { options?: { name: string; required?: boolean }[] };
-  const ticketAllow = json.options?.[2] as { options?: unknown[] };
+  const aura = json.options?.[2] as { options?: { name: string; required?: boolean }[] };
+  const balance = json.options?.[3] as { options?: { name: string; required?: boolean }[] };
+  const refund = json.options?.[4] as { options?: { name: string; required?: boolean }[] };
+  const ticketAllow = json.options?.[5] as { options?: unknown[] };
   assert.deepEqual(user.options?.map((option) => [option.name, option.required]), [
     ["email", false],
     ["discord_user", false]
   ]);
   assert.deepEqual(orderCommand.options?.map((option) => [option.name, option.required]), [["reference", true]]);
+  assert.deepEqual(aura.options?.map((option) => [option.name, option.required]), [
+    ["amount", true],
+    ["email", false],
+    ["discord_user", false],
+    ["reason", false]
+  ]);
+  assert.deepEqual(balance.options?.map((option) => [option.name, option.required]), [
+    ["amount", true],
+    ["email", false],
+    ["discord_user", false],
+    ["reason", false]
+  ]);
+  assert.deepEqual(refund.options?.map((option) => [option.name, option.required]), [
+    ["reference", true],
+    ["reason", false]
+  ]);
   assert.deepEqual(ticketAllow.options, []);
 });
 
@@ -266,6 +309,225 @@ test("/cm user rejects a missing lookup before backend access", async () => {
   assert.equal(await controller.handle(context.interaction), true);
   assert.equal(calls, 0);
   assert.equal((context.replies[0] as { flags: number }).flags, MessageFlags.Ephemeral);
+});
+
+test("authorized /cm aura executes immediately from a Discord user and returns only the final result", async () => {
+  let lookupSelector: unknown;
+  let executedInput: unknown;
+  let auditInput: unknown;
+  const linkedOverview = {
+    ...overview,
+    identity: {
+      ...overview.identity,
+      externalIdentities: [{
+        provider: "discord",
+        externalUserId: DISCORD_CUSTOMER_ID,
+        username: "customer",
+        displayName: "Customer"
+      }]
+    }
+  } satisfies UserOverviewData;
+  const result = {
+    userId: USER_ID,
+    deltaAura: 250,
+    availableAura: 750,
+    pendingAura: 0,
+    lifetimeEarnedAura: 1250,
+    lifetimeRedeemedAura: 500,
+    transactionId: "550e8400-e29b-41d4-a716-446655440020",
+    auditEventId: "550e8400-e29b-41d4-a716-446655440021",
+    createdAt: "2026-09-09T00:00:00.000Z",
+    idempotentReplay: false
+  } satisfies AuraAdjustmentData;
+  const api = {
+    fetchUserOverview: async (selector: unknown) => {
+      lookupSelector = selector;
+      return linkedOverview;
+    },
+    executeAuraAdjustment: async (input: unknown) => {
+      executedInput = input;
+      return result;
+    }
+  } as unknown as InternalApiClient;
+  const dependencies = {
+    nowMs: () => 0,
+    idempotencyKey: () => IDEMPOTENCY_ID,
+    postAdjustmentAudit: async (input: unknown) => { auditInput = input; },
+    postRefundAudit: async () => undefined
+  };
+  const controller = new CmAdminController(config, api, undefined, dependencies);
+  const context = fakeCommand({
+    subcommand: "aura",
+    email: null,
+    discordUserId: DISCORD_CUSTOMER_ID,
+    amount: "+250"
+  });
+
+  assert.equal(await controller.handle(context.interaction), true);
+  assert.deepEqual(lookupSelector, {
+    kind: "external_identity",
+    provider: "discord",
+    externalUserId: DISCORD_CUSTOMER_ID
+  });
+  assert.deepEqual(executedInput, {
+    selector: { kind: "user_id", value: USER_ID },
+    deltaAura: 250,
+    reason: "Direct Aura adjustment via Discord admin command.",
+    idempotencyKey: IDEMPOTENCY_ID,
+    operator: {
+      provider: "discord",
+      externalUserId: ADMIN_ID,
+      username: "admin",
+      displayName: "Admin"
+    }
+  });
+  assert.equal((auditInput as { delta: number }).delta, 250);
+  assert.deepEqual(context.defers, [{ flags: MessageFlags.Ephemeral }]);
+  const output = JSON.stringify(context.edits[0]);
+  assert.equal(output.includes("Aura Adjustment Complete"), true);
+  assert.equal(output.includes("+250 Aura"), true);
+  assert.equal(output.includes("750 Aura"), true);
+  assert.equal(output.includes("Confirm"), false);
+});
+
+test("authorized /cm balance executes a signed amount immediately from email", async () => {
+  let executedInput: unknown;
+  const result = {
+    userId: USER_ID,
+    deltaCents: -525,
+    balanceCents: 1975,
+    currency: "USD",
+    transactionId: "550e8400-e29b-41d4-a716-446655440022",
+    auditEventId: "550e8400-e29b-41d4-a716-446655440023",
+    createdAt: "2026-09-09T00:00:00.000Z",
+    idempotentReplay: false
+  } satisfies WalletAdjustmentData;
+  const api = {
+    fetchUserOverview: async (selector: unknown) => {
+      assert.deepEqual(selector, { kind: "email", value: "user@example.com" });
+      return overview;
+    },
+    executeWalletAdjustment: async (input: unknown) => {
+      executedInput = input;
+      return result;
+    }
+  } as unknown as InternalApiClient;
+  const dependencies = {
+    nowMs: () => 0,
+    idempotencyKey: () => IDEMPOTENCY_ID,
+    postAdjustmentAudit: async () => undefined,
+    postRefundAudit: async () => undefined
+  };
+  const controller = new CmAdminController(config, api, undefined, dependencies);
+  const context = fakeCommand({
+    subcommand: "balance",
+    email: "user@example.com",
+    amount: "-5.25",
+    reason: "Manual balance correction"
+  });
+
+  assert.equal(await controller.handle(context.interaction), true);
+  assert.deepEqual(executedInput, {
+    selector: { kind: "user_id", value: USER_ID },
+    deltaCents: -525,
+    reason: "Manual balance correction",
+    idempotencyKey: IDEMPOTENCY_ID,
+    operator: {
+      provider: "discord",
+      externalUserId: ADMIN_ID,
+      username: "admin",
+      displayName: "Admin"
+    }
+  });
+  const output = JSON.stringify(context.edits[0]);
+  assert.equal(output.includes("Balance Adjustment Complete"), true);
+  assert.equal(output.includes("USD -5.25"), true);
+  assert.equal(output.includes("USD 19.75"), true);
+  assert.equal(output.includes("Confirm"), false);
+});
+
+test("authorized /cm refund previews for eligibility then executes immediately and returns final result", async () => {
+  let executeInput: unknown;
+  let auditInput: unknown;
+  const preview = {
+    status: "eligible",
+    orderId: ORDER_ID,
+    publicRef: "CM-TEST",
+    userId: USER_ID,
+    purchaseKind: "product",
+    productSlug: "product",
+    accountSlug: null,
+    currency: "USD",
+    grossRefundCents: 1000,
+    finalWalletCreditCents: 1000,
+    auraAwarded: 0,
+    auraRecovered: 0,
+    auraRecoveredAvailable: 0,
+    auraRecoveredPending: 0,
+    auraUnrecoverable: 0,
+    auraConvertible: 0,
+    auraDeductionCents: 0,
+    auraResidual: 0
+  } satisfies OrderRefundPreviewData;
+  const refund = {
+    ...preview,
+    status: "refunded",
+    walletTransactionId: "550e8400-e29b-41d4-a716-446655440024",
+    auraTransactionIds: [],
+    auditEventId: "550e8400-e29b-41d4-a716-446655440025",
+    refundedAt: "2026-09-09T00:00:00.000Z",
+    idempotentReplay: false
+  } satisfies OrderRefundExecuteData;
+  const api = {
+    fetchOrderDetails: async (selector: unknown) => {
+      assert.deepEqual(selector, { kind: "public_ref", value: "CM-TEST" });
+      return order;
+    },
+    fetchUserOverview: async (selector: unknown) => {
+      assert.deepEqual(selector, { kind: "user_id", value: USER_ID });
+      return overview;
+    },
+    previewOrderRefund: async (orderId: string) => {
+      assert.equal(orderId, ORDER_ID);
+      return preview;
+    },
+    executeOrderRefund: async (input: unknown) => {
+      executeInput = input;
+      return refund;
+    }
+  } as unknown as InternalApiClient;
+  const dependencies = {
+    nowMs: () => 0,
+    idempotencyKey: () => IDEMPOTENCY_ID,
+    postAdjustmentAudit: async () => undefined,
+    postRefundAudit: async (input: unknown) => { auditInput = input; }
+  };
+  const controller = new CmAdminController(config, api, undefined, dependencies);
+  const context = fakeCommand({
+    subcommand: "refund",
+    email: null,
+    reference: "cm-test"
+  });
+
+  assert.equal(await controller.handle(context.interaction), true);
+  assert.deepEqual(executeInput, {
+    orderId: ORDER_ID,
+    reason: "Direct refund via Discord admin command.",
+    idempotencyKey: IDEMPOTENCY_ID,
+    operator: {
+      provider: "discord",
+      externalUserId: ADMIN_ID,
+      username: "admin",
+      displayName: "Admin"
+    }
+  });
+  assert.equal((auditInput as { orderRef: string }).orderRef, "CM-TEST");
+  assert.deepEqual(context.defers, [{ flags: MessageFlags.Ephemeral }]);
+  const output = JSON.stringify(context.edits[0]);
+  assert.equal(output.includes("Refund Complete"), true);
+  assert.equal(output.includes("CM-TEST"), true);
+  assert.equal(output.includes("USD 10.00"), true);
+  assert.equal(output.includes("Confirm"), false);
 });
 
 test("authorized /cm user works from another channel in the configured guild", async () => {
