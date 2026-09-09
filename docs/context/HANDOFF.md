@@ -45,6 +45,7 @@ Implemented behavior:
 - locked permission re-enforcement after Tickety rewrites;
 - normal startup durable-state recovery without a ticket-specific diagnostic recheck;
 - `/cm ticket-allow` reuses ADR-0006 exact-guild + explicit-user authorization, requires `BOT_AUDIT_LOG_CHANNEL_ID`, persists a ticket-scoped override, restores participation, posts a visible ticket-channel notice naming the operator after a successful unlock, and emits sanitized Discord audit.
+- ADR-0017 adds direct `/cm aura`, `/cm balance`, and `/cm refund` paths. They remain exact-guild + explicit-user-authorized and audit-gated, but the slash submission itself is confirmation and the response is the final completed result; existing interactive confirmation paths remain available.
 
 Customer link destination:
 
@@ -63,7 +64,7 @@ Do not call the feature production-complete until all of the following are done:
    - `support.tickets.override`
 3. the final bot branch head passes CI;
 4. bot revision is deployed;
-5. `npm run register:commands` is run once because `/cm ticket-allow` changes command JSON;
+5. `npm run register:commands` is run once after deployment because `/cm` now also includes `aura`, `balance`, and `refund` direct subcommands;
 6. live linked/unlinked/recheck/expiry/restart/Tickety-rewrite/admin-override smoke tests pass.
 
 No local SQLite database, Northflank persistent volume, Supabase client or service-role credential is required.
