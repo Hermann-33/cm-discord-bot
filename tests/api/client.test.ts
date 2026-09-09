@@ -301,3 +301,49 @@ test("timeout covers stalled response body consumption", async () => {
     (error) => error instanceof InternalApiClientError && error.code === "REQUEST_TIMEOUT"
   );
 });
+
+
+test("manual purchase processing sends only the approved server-owned contract", async () => {
+  let capturedUrl = "";
+  let capturedBody = "";
+  const fetchMock = (async (url: unknown, init?: RequestInit) => {
+    capturedUrl = String(url);
+    capturedBody = String(init?.body);
+    return success({
+      processing: { status: "processed", processId: "550e8400-e29b-41d4-a716-446655440099" },
+      effectsStatus: "pending",
+      idempotentReplay: false,
+      serverOwnedExtra: "ignored by bot"
+    });
+  }) as typeof fetch;
+
+  const client = new InternalApiClient(config, dependencies(fetchMock));
+  const result = await client.processPurchaseIntent({
+    selector: { kind: "public_ref", value: "CM-PENDING" },
+    reason: "Payment verified manually after callback failure.",
+    evidenceReference: "Discord ticket 1234",
+    idempotencyKey: "550e8400-e29b-41d4-a716-446655440011",
+    operator: {
+      provider: "discord",
+      externalUserId: DISCORD_ID,
+      username: "admin",
+      displayName: "Admin"
+    }
+  });
+
+  assert.equal(capturedUrl, `https://example.test${INTERNAL_API_PATHS.purchaseIntentProcess}`);
+  assert.deepEqual(JSON.parse(capturedBody), {
+    selector: { kind: "public_ref", value: "CM-PENDING" },
+    reason: "Payment verified manually after callback failure.",
+    evidenceReference: "Discord ticket 1234",
+    idempotencyKey: "550e8400-e29b-41d4-a716-446655440011",
+    operator: {
+      provider: "discord",
+      externalUserId: DISCORD_ID,
+      username: "admin",
+      displayName: "Admin"
+    }
+  });
+  assert.equal(result.processing.status, "processed");
+  assert.equal(result.effectsStatus, "pending");
+});
