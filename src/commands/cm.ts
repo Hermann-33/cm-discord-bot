@@ -35,7 +35,7 @@ import {
 } from "./cmPurchaseApproval";
 import { refreshSelectedPurchaseIntent } from "./cmPurchaseIntents";
 import { confirmRefund, handleRefundModal, showRefundModal, type RefundDependencies } from "./cmRefund";
-import { shareCurrentPanel } from "./cmShare";
+import { publishCurrentAdjustment, shareCurrentPanel } from "./cmShare";
 import { CmSessionStore } from "./cmSessions";
 import { authorize, parseNonNegativeInteger, rejectUnauthorized, requireSession, safeApiMessage } from "./cmSupport";
 import {
@@ -351,6 +351,10 @@ export class CmAdminController {
 
     if (domain === "share" && action === "current") {
       await shareCurrentPanel(interaction, session);
+      return;
+    }
+    if (domain === "publish" && action === "adjustment") {
+      await publishCurrentAdjustment(interaction, session);
       return;
     }
     if (domain === "user" && action === "home") {

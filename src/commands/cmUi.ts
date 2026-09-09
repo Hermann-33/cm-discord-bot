@@ -47,6 +47,13 @@ function shareRow(sessionId: string): ActionRowBuilder<ButtonBuilder> {
   );
 }
 
+function adjustmentShareRow(sessionId: string): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    button(`cm:share:current:${sessionId}`, "Share to Chat", ButtonStyle.Success),
+    button(`cm:publish:adjustment:${sessionId}`, "Publish", ButtonStyle.Primary)
+  );
+}
+
 function formatMoney(cents: number, currency: string): string {
   const safeCurrency = escapeDiscordText(currency.toUpperCase());
   return `${safeCurrency} ${(cents / 100).toFixed(2)}`;
@@ -624,7 +631,7 @@ export function buildDirectAdjustmentSuccessPanel(
     ))
     .addTextDisplayComponents(text(resultLines.join("\n")))
     .addTextDisplayComponents(text(`### Reason\n${escapeDiscordText(reason)}`))
-    .addActionRowComponents(shareRow(sessionId));
+    .addActionRowComponents(adjustmentShareRow(sessionId));
 }
 
 export function buildAdjustmentSuccessPanel(
@@ -661,7 +668,7 @@ export function buildAdjustmentSuccessPanel(
         button(`cm:user:home:${sessionId}`, "User Operations", ButtonStyle.Primary)
       )
     )
-    .addActionRowComponents(shareRow(sessionId));
+    .addActionRowComponents(adjustmentShareRow(sessionId));
 }
 
 export function buildBlockedPanel(

@@ -2,8 +2,19 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { MessageFlags, type ButtonInteraction, type MessageCreateOptions } from "discord.js";
 import type { PurchaseIntentData } from "../../src/api/purchaseIntents";
-import type { OrderDetailsData, OrderFulfillmentData, UserOverviewData } from "../../src/api/schemas";
-import { buildPublicSharePanel, shareCurrentPanel } from "../../src/commands/cmShare";
+import type {
+  AuraAdjustmentData,
+  OrderDetailsData,
+  OrderFulfillmentData,
+  UserOverviewData,
+  WalletAdjustmentData
+} from "../../src/api/schemas";
+import {
+  buildAdjustmentPublishPanel,
+  buildPublicSharePanel,
+  publishCurrentAdjustment,
+  shareCurrentPanel
+} from "../../src/commands/cmShare";
 import type { CmAdminSession } from "../../src/commands/cmSessions";
 import { escapeDiscordText } from "../../src/discord/presentation";
 import { safeAllowedMentions } from "../../src/discord/safeMessages";
@@ -135,6 +146,30 @@ const selectedPurchaseIntent = {
   expiresAt: "2026-08-10T01:00:00.000Z",
   createdAt: CREATED_AT
 } satisfies PurchaseIntentData;
+
+const auraAdjustment = {
+  userId: USER_ID,
+  deltaAura: 250,
+  availableAura: 750,
+  pendingAura: 25,
+  lifetimeEarnedAura: 1250,
+  lifetimeRedeemedAura: 500,
+  transactionId: "550e8400-e29b-41d4-a716-446655440020",
+  auditEventId: "550e8400-e29b-41d4-a716-446655440021",
+  createdAt: CREATED_AT,
+  idempotentReplay: false
+} satisfies AuraAdjustmentData;
+
+const walletAdjustment = {
+  userId: USER_ID,
+  deltaCents: -525,
+  balanceCents: 1975,
+  currency: "USD",
+  transactionId: "550e8400-e29b-41d4-a716-446655440022",
+  auditEventId: "550e8400-e29b-41d4-a716-446655440023",
+  createdAt: CREATED_AT,
+  idempotentReplay: false
+} satisfies WalletAdjustmentData;
 
 const fulfillmentWithSupport = {
   order: {
@@ -322,6 +357,82 @@ test("customer-safe refund preview includes customer email without exposing admi
   assertAbsentEvenIfEscaped(content, USER_ID);
   assert.equal(serialized.includes("idempotency"), false);
   assert.equal(serialized.includes("custom_id"), false);
+});
+
+test("Publish renders completed Aura adjustment without customer email", () => {
+  const state = session();
+  state.shareView = { kind: "adjustment-success", adjustmentKind: "aura", data: auraAdjustment };
+
+  const panel = buildAdjustmentPublishPanel(state);
+  assert.ok(panel);
+  const json = panel.toJSON();
+  const content = collectContent(json);
+  const serialized = JSON.stringify(json);
+
+  assertAbsentEvenIfEscaped(content, CUSTOMER_EMAIL);
+  assert.equal(content.includes(`Discord: <@${DISCORD_USER_ID}>`), true);
+  assert.equal(content.includes("Applied: **+250 Aura**"), true);
+  assert.equal(content.includes("New balance: **750 Aura**"), true);
+  assertAbsentEvenIfEscaped(content, USER_ID);
+  assert.equal(serialized.includes("custom_id"), false);
+});
+
+test("Publish renders completed wallet adjustment without customer email", () => {
+  const state = session();
+  state.shareView = { kind: "adjustment-success", adjustmentKind: "wallet", data: walletAdjustment };
+
+  const panel = buildAdjustmentPublishPanel(state);
+  assert.ok(panel);
+  const json = panel.toJSON();
+  const content = collectContent(json);
+  const serialized = JSON.stringify(json);
+
+  assertAbsentEvenIfEscaped(content, CUSTOMER_EMAIL);
+  assert.equal(content.includes(`Discord: <@${DISCORD_USER_ID}>`), true);
+  assert.equal(content.includes("Applied: **USD -5.25**"), true);
+  assert.equal(content.includes("New balance: **USD 19.75**"), true);
+  assertAbsentEvenIfEscaped(content, USER_ID);
+  assert.equal(serialized.includes("custom_id"), false);
+});
+
+test("normal Share to Chat for adjustment still includes customer email", () => {
+  const state = session();
+  state.shareView = { kind: "adjustment-success", adjustmentKind: "aura", data: auraAdjustment };
+  const { content } = panelData(state);
+  assertCustomerEmailPresentAndEscaped(content);
+});
+
+test("Publish posts the email-free adjustment panel and acknowledges only the admin", async () => {
+  const state = session();
+  state.shareView = { kind: "adjustment-success", adjustmentKind: "aura", data: auraAdjustment };
+  const sends: MessageCreateOptions[] = [];
+  const replies: unknown[] = [];
+  const channel = {
+    isTextBased: () => true,
+    send: async (payload: MessageCreateOptions) => {
+      sends.push(payload);
+      return {};
+    }
+  };
+  const fake = {
+    channel,
+    replied: false,
+    deferred: false,
+    deferReply: async (payload: unknown) => { replies.push(payload); fake.deferred = true; },
+    editReply: async (payload: unknown) => { replies.push(payload); },
+    reply: async (payload: unknown) => { replies.push(payload); }
+  };
+
+  await publishCurrentAdjustment(fake as unknown as ButtonInteraction, state);
+
+  assert.equal(sends.length, 1);
+  assert.equal(sends[0]?.flags, MessageFlags.IsComponentsV2);
+  assert.deepEqual(sends[0]?.allowedMentions, safeAllowedMentions);
+  const publicJson = JSON.stringify((sends[0]?.components?.[0] as { toJSON(): unknown }).toJSON());
+  assert.equal(publicJson.includes(CUSTOMER_EMAIL), false);
+  assert.equal(publicJson.includes(escapeDiscordText(CUSTOMER_EMAIL, 320)), false);
+  assert.equal(publicJson.includes("custom_id"), false);
+  assert.deepEqual(replies[0], { flags: MessageFlags.Ephemeral });
 });
 
 test("Share to Chat posts a buttonless Components V2 copy and gives only the admin an ephemeral acknowledgement", async () => {
